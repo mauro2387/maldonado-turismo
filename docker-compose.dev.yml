@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: maldonado-postgres
+    environment:
+      POSTGRES_USER: maldonado_user
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_DB: maldonado_turismo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./apps/backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - maldonado-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maldonado_user -d maldonado_turismo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Storage
+  minio:
+    image: minio/minio:latest
+    container_name: maldonado-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - maldonado-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: maldonado-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@maldonado.gub.uy
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - maldonado-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-data:
+  minio-data:
+  pgadmin-data:
+
+networks:
+  maldonado-network:
+    driver: bridge

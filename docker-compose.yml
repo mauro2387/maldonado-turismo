@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: maldonado-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - maldonado-network
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../docker/backend/Dockerfile
+    container_name: maldonado-backend
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: maldonado_user
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: maldonado_turismo
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_ENDPOINT: minio
+      STORAGE_PORT: 9000
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - maldonado-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../../docker/frontend/Dockerfile
+    container_name: maldonado-frontend
+    environment:
+      VITE_API_URL: https://api.maldonado.gub.uy/api/v1
+    networks:
+      - maldonado-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: maldonado-postgres
+    environment:
+      POSTGRES_USER: maldonado_user
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: maldonado_turismo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - maldonado-network
+    restart: unless-stopped
+
+  # MinIO Storage
+  minio:
+    image: minio/minio:latest
+    container_name: maldonado-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    networks:
+      - maldonado-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:
+
+networks:
+  maldonado-network:
+    driver: bridge
