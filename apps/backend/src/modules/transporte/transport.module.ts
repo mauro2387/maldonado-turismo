@@ -36,6 +36,7 @@ import { LineSpeedService } from './line-speed.service';
 import { CatchBusService } from './catch-bus.service';
 import { FeedHealthService } from './feed-health.service';
 import { TransportHealthController } from './transport-health.controller';
+import { StopScheduleController } from './stop-schedule.controller';
 import { DestinationsService } from './destinations.service';
 import { SchedulesService } from './schedules.service';
 import { DestinationsController } from './destinations.controller';
@@ -78,6 +79,7 @@ import { TripPlannerController } from './trip-planner.controller';
     WalkingController,
     LinesController,
       TransportHealthController,
+      StopScheduleController,
   ],
   providers: [
     TransportService,

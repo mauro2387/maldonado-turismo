@@ -10,7 +10,7 @@ import {
   RouteOff,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
-import { routePlannerService, TripOption, TripLeg } from '@services/routePlannerService';
+import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
 import { destinationsService, Destination } from '@services/destinationsService';
 import { TripMap, TripLegend, rideColor, legLine } from '@components/transporte/TripMap';
 import { LineTag } from '@components/ui/LineTag';
@@ -50,6 +50,14 @@ export default function PlanificadorPage() {
   const [suggestions, setSuggestions] = useState<Destination[]>([]);
   const [destination, setDestination] = useState<Destination | null>(null);
   const [options, setOptions] = useState<TripOption[]>([]);
+  /**
+   * La última vuelta desde el destino.
+   *
+   * Se muestra junto con la ida y no en otra pantalla: la pregunta
+   * "¿y cómo vuelvo?" hay que contestarla **antes** de salir. Nadie se la
+   * hace hasta que ya es tarde, y para entonces está parado en la Ruta 10.
+   */
+  const [returnTrip, setReturnTrip] = useState<LastReturn | null>(null);
   const [selected, setSelected] = useState(0);
   const [ready, setReady] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -112,6 +120,7 @@ export default function PlanificadorPage() {
         if (cancelled) return;
         setOptions(result.options);
         setReady(result.ready);
+        setReturnTrip(result.return_trip ?? null);
       })
       .catch((err: any) => {
         if (!cancelled) setError(err?.message || 'No pudimos calcular el viaje');
@@ -245,6 +254,33 @@ export default function PlanificadorPage() {
 
         {!searching && options.length > 0 && (
           <>
+            {/* La vuelta, antes que las opciones de ida: es lo que decide si
+                el viaje se hace o no, y verlo después de elegir cómo ir es
+                verlo tarde. */}
+            {returnTrip?.available && (
+              <div
+                className={`mb-3 rounded-card px-3 py-2.5 text-data ${
+                  returnTrip.finished ? 'bg-warn-soft text-warn' : 'bg-sand-100 text-ink-500'
+                }`}
+              >
+                {returnTrip.finished ? (
+                  <>
+                    <span className="font-bold">Hoy ya no podés volver en ómnibus.</span>{' '}
+                    La última vuelta salió {returnTrip.last_at}
+                    {returnTrip.line_label ? ` (línea ${returnTrip.line_label})` : ''}.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold text-ink-900">
+                      Última vuelta {returnTrip.last_at}
+                    </span>
+                    {returnTrip.line_label ? ` · línea ${returnTrip.line_label}` : ''}
+                    {returnTrip.stop_name ? ` desde ${returnTrip.stop_name}` : ''}
+                  </>
+                )}
+              </div>
+            )}
+
             <p className="mb-3 section-label">
               {options.length} {options.length === 1 ? 'forma de llegar' : 'formas de llegar'}
             </p>

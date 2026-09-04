@@ -201,6 +201,37 @@ export interface Walk {
 }
 
 /**
+ * Lo que le queda hoy a una línea en una parada, según el papel.
+ *
+ * `finished` es el dato que cambia lo que hace la persona: con `false`
+ * conviene esperar, con `true` hay que buscar otra cosa. A las 23:40 en San
+ * Carlos, esa diferencia es un taxi de treinta kilómetros.
+ */
+export interface StopLineToday {
+  line_label: string;
+  operator: string;
+  headsign: string | null;
+  next_in_minutes: number | null;
+  next_at: string | null;
+  previous_ago_minutes: number | null;
+  previous_at: string | null;
+  last_at: string;
+  finished: boolean;
+  /** El que viene es el último del día: si lo perdés, no hay otro. */
+  is_last: boolean;
+  services_today: number;
+}
+
+export interface StopScheduleToday {
+  /** False cuando no hay horarios cargados para la temporada de hoy. */
+  available: boolean;
+  lines: StopLineToday[];
+  last_at: string | null;
+  /** Ninguna línea pasa más hoy por esta parada. */
+  finished: boolean;
+}
+
+/**
  * Si está entrando el GPS de cada empresa.
  *
  * Sirve para no mentir. Con el feed caído la app decía "No hay ómnibus en
@@ -433,6 +464,19 @@ export const transportService = {
       '/transport/shapes',
       Object.keys(params).length > 0 ? { params } : undefined,
     );
+  },
+
+  /**
+   * Qué le queda hoy a esta parada, según el horario publicado.
+   *
+   * Es la otra mitad de la respuesta: las llegadas dicen qué está pasando
+   * ahora, esto dice qué **debería** pasar. Sin esto, a las 23:40 la app decía
+   * "ningún ómnibus en camino" tanto si faltaban veinte minutos como si el
+   * servicio se había terminado a las 22 — y son dos cosas que llevan a hacer
+   * cosas distintas.
+   */
+  getStopSchedule: async (stopId: string | number): Promise<StopScheduleToday> => {
+    return api.get<StopScheduleToday>(`/transport/stops/${stopId}/schedule`);
   },
 
   /**

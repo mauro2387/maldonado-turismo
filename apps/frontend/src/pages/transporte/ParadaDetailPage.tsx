@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Armchair,
 } from 'lucide-react';
-import { transportService, BusStop } from '@services/transportService';
+import { transportService, BusStop, StopScheduleToday } from '@services/transportService';
 import { useStopArrivals } from '@hooks/useDepartures';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
@@ -58,6 +58,34 @@ export default function ParadaDetailPage() {
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
+
+  /**
+   * El horario publicado de esta parada.
+   *
+   * Es la otra mitad de la respuesta: las llegadas dicen qué está pasando
+   * ahora; esto, qué debería pasar. Sin esto, a las 23:40 la pantalla decía
+   * "ningún ómnibus en camino" tanto si faltaban veinte minutos como si el
+   * servicio se había terminado a las 22.
+   */
+  const [schedule, setSchedule] = useState<StopScheduleToday | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    transportService
+      .getStopSchedule(id)
+      .then((data) => {
+        if (!cancelled) setSchedule(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSchedule(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -178,6 +206,22 @@ export default function ParadaDetailPage() {
         </div>
       )}
 
+      {/* ---------- Qué tan firme es la ubicación ----------
+          La coordenada de una parada del feed es una estimación, y `accuracy_m`
+          dice dentro de qué radio está el cartel de verdad. Con más de una
+          cuadra de error, mandar a alguien a "esperá acá" es mandarlo a un
+          punto donde no hay ningún cartel. Decirlo es la contraparte del
+          marcador punteado del mapa: la parada existe y el ómnibus para, lo que
+          no sabemos con precisión es dónde está el cartel.
+          El corte son 60 m porque una cuadra de Maldonado son 80-100. */}
+      {typeof stop.accuracy_m === 'number' && stop.accuracy_m > 60 && (
+        <div className="mt-4 rounded-card bg-sand-100 px-3 py-2.5 text-data text-ink-500">
+          El ómnibus para acá, pero el cartel todavía no está ubicado con
+          precisión: puede estar hasta {Math.round(stop.accuracy_m)} m de este
+          punto. Mirá alrededor cuando llegues.
+        </div>
+      )}
+
       {/* ---------- Próximos ómnibus ---------- */}
       <section className="mt-6" aria-labelledby="proximos">
         <div className="flex items-center justify-between">
@@ -195,6 +239,24 @@ export default function ParadaDetailPage() {
               <ArrivalRow key={arrival.vehicle_id} arrival={arrival} />
             ))}
           </div>
+        ) : schedule?.finished ? (
+          /* Se terminó el servicio por hoy. Es la respuesta que faltaba: hasta
+             ahora esto decía "ningún ómnibus en camino", que no distingue
+             *falta un rato* de *ya no hay más*. En San Carlos esa diferencia
+             es un taxi de treinta kilómetros. */
+          <EmptyState
+            icon={Bus}
+            title="Hoy ya no pasa más por acá"
+            description={`El último salió a las ${schedule.last_at}. Mirá los horarios de mañana o buscá otra parada.`}
+          />
+        ) : schedule?.lines.length ? (
+          /* No hay ninguno reportando, pero el papel dice que viene. Se muestra
+             el horario y se dice de dónde sale, que no es lo mismo que el GPS. */
+          <EmptyState
+            icon={Bus}
+            title="Ninguno reportando ahora"
+            description={`Por horario, el próximo es la línea ${schedule.lines[0].line_label} a las ${schedule.lines[0].next_at}.`}
+          />
         ) : (
           <EmptyState
             icon={Bus}
@@ -203,6 +265,73 @@ export default function ParadaDetailPage() {
           />
         )}
       </section>
+
+      {/* ---------- Lo que queda hoy, por horario ----------
+          Contesta las dos preguntas de la noche: a qué hora pasa el último, y
+          si el que uno espera ya pasó. Es el papel, no el GPS: dice lo que
+          debería pasar, y por eso sigue sirviendo cuando el feed se cae. */}
+      {schedule?.available && schedule.lines.length > 0 && (
+        <section className="mt-6" aria-labelledby="horario-hoy">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="horario-hoy" className="section-label">
+              Hoy por horario
+            </h2>
+            {schedule.last_at && (
+              <span className="text-xs text-ink-400">
+                último de la parada {schedule.last_at}
+              </span>
+            )}
+          </div>
+
+          <div className="card mt-3 flex flex-col gap-3">
+            {schedule.lines.map((linea) => (
+              <div
+                key={`${linea.operator}-${linea.line_label}-${linea.headsign ?? ''}`}
+                className="flex items-baseline gap-2.5"
+              >
+                <span className="flex h-6 min-w-6 flex-none items-center justify-center rounded-chip bg-sand-100 px-1.5 text-xs font-extrabold text-ink-900">
+                  {linea.line_label}
+                </span>
+
+                <p className="min-w-0 flex-1 text-data">
+                  {linea.finished ? (
+                    <span className="text-ink-400">
+                      Hoy ya no pasa. El último fue a las{' '}
+                      <span className="font-bold text-ink-600">{linea.last_at}</span>.
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-bold text-ink-900">
+                        {linea.next_at}
+                        {linea.next_in_minutes !== null && linea.next_in_minutes <= 60
+                          ? ` · en ${linea.next_in_minutes} min`
+                          : ''}
+                      </span>
+                      {/* Que sea el último del día cambia la decisión: no es
+                          "esperá al que viene", es "si lo perdés, no hay otro". */}
+                      {linea.is_last ? (
+                        <span className="ml-1.5 font-bold text-warn">es el último</span>
+                      ) : (
+                        <span className="text-ink-400"> · último {linea.last_at}</span>
+                      )}
+                      {linea.previous_ago_minutes !== null && (
+                        <span className="block text-ink-400">
+                          El anterior pasó hace {linea.previous_ago_minutes} min.
+                        </span>
+                      )}
+                    </>
+                  )}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-2 px-1 text-xs text-ink-400">
+            Horario publicado por las empresas. Los minutos reales dependen del
+            tránsito.
+          </p>
+        </section>
+      )}
 
       {/* ---------- Servicios ---------- */}
       {services.length > 0 && (

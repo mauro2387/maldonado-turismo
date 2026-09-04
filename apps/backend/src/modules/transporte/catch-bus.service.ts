@@ -42,6 +42,28 @@ import { cumulativeDistances, distanceAlongPolyline, distanceMeters, LngLat } fr
 const AHEAD_MARGIN_M = 60;
 
 /**
+ * Cuánto error de posición de la parada se regala antes de cobrarlo.
+ *
+ * Es el mismo criterio y el mismo número que usa el planificador
+ * (`HUNTING_FREE_M`), y estar alineados importa: son dos pantallas que
+ * contestan la misma pregunta -¿dónde me subo?- y si una descarta lo que la
+ * otra acepta, la app se contradice sola.
+ *
+ * Antes acá se descartaba con un booleano: `if (!stop.reliable) continue`.
+ * Cuando `reliable` pasó a significar "error medido ≤ 60 m" -que es más
+ * honesto que la dispersión de las muestras que medía antes- eso dejó afuera
+ * al **57% de las paradas** de golpe, y el efecto en esta pantalla es
+ * exactamente el que se estaba tratando de arreglar: más "no llegás" de los
+ * debidos.
+ *
+ * Una parada con 90 m de error no es inservible: es media cuadra de buscar el
+ * cartel. Así que no se descarta, se cobra: los metros que pasan de este piso
+ * se suman a la caminata, y ahí compite con las demás en vez de desaparecer.
+ * Lo único que se descarta es la parada que nunca se pudo ubicar.
+ */
+const HUNTING_FREE_M = 60;
+
+/**
  * Hasta dónde se busca. Más de un kilómetro caminando para tomar un coche que
  * ya viene no es una sugerencia útil: para eso está el planificador.
  */
@@ -114,6 +136,8 @@ interface Candidate {
   stop: StopOnRoute;
   straightMeters: number;
   busMinutes: number;
+  /** Metros extra por buscar el cartel, según el error de la parada. */
+  huntingMeters: number;
 }
 
 const NO_ROUTE: CatchResult = {
@@ -174,14 +198,18 @@ export class CatchBusService {
     let nearestAhead: number | null = null;
 
     for (const stop of sequence.stops) {
-      // La coordenada de una parada del feed es una estimación; a las que
-      // todavía tienen mucha incertidumbre no se manda a nadie a caminar.
-      if (!stop.reliable) continue;
+      // Lo único que se descarta es la parada que **nunca se pudo ubicar**:
+      // sin coordenada medida no hay a dónde mandar a nadie. El error grande
+      // no descarta, se cobra abajo. Ver HUNTING_FREE_M.
+      if (stop.accuracyM === null && !stop.reliable) continue;
+
+      const huntingMeters = Math.max(0, (stop.accuracyM ?? 0) - HUNTING_FREE_M);
 
       const remaining = stop.alongMeters - along.alongMeters;
       if (remaining < AHEAD_MARGIN_M) continue;
 
-      const straightMeters = distanceMeters(from.lat, from.lng, stop.lat, stop.lng);
+      const straightMeters =
+        distanceMeters(from.lat, from.lng, stop.lat, stop.lng) + huntingMeters;
       if (nearestAhead === null || straightMeters < nearestAhead) {
         nearestAhead = straightMeters;
       }
@@ -194,7 +222,7 @@ export class CatchBusService {
       const optimisticWalk = straightMeters / this.walking.speedMPerMin;
       if (this.required(optimisticWalk) > busMinutes) continue;
 
-      candidates.push({ stop, straightMeters, busMinutes });
+      candidates.push({ stop, straightMeters, busMinutes, huntingMeters });
     }
 
     if (nearestAhead === null) {
@@ -221,13 +249,13 @@ export class CatchBusService {
     const walks = await this.routeAll(from, shortlist);
 
     for (let index = 0; index < shortlist.length; index += 1) {
-      const { stop, busMinutes } = shortlist[index];
+      const { stop, busMinutes, huntingMeters } = shortlist[index];
       const walk = walks[index];
 
       // Con los minutos finos y no con `walk.minutes`, que viene redondeado y
       // nunca baja de 1: contra un ómnibus que llega en 50 segundos, redondear
       // la caminata a un minuto entero es justo el error que se quiere evitar.
-      const walkMinutes = walk.distanceM / this.walking.speedMPerMin;
+      const walkMinutes = (walk.distanceM + huntingMeters) / this.walking.speedMPerMin;
       if (this.required(walkMinutes) > busMinutes) continue;
       const slack = busMinutes - walkMinutes;
 

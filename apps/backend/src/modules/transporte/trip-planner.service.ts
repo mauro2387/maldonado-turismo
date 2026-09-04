@@ -7,7 +7,7 @@ import { VehiclePositionsService } from './vehicle-positions.service';
 import { OfficialRoutesService } from './official-routes.service';
 import { WalkingService } from './walking.service';
 import { LineSpeedService } from './line-speed.service';
-import { SchedulesService } from './schedules.service';
+import { SchedulesService, StopServiceToday } from './schedules.service';
 import { isInService } from './fleet.util';
 import { cumulativeDistances, distanceAlongPolyline, distanceMeters, LngLat } from './geo.util';
 import { slicePolyline } from './route-match.util';
@@ -149,6 +149,18 @@ const TRANSFER_PENALTY_MIN = 15;
  */
 const MIN_TRANSFER_TRIP_M = 11_000;
 
+/**
+ * ¿Este viaje es de los que admiten un transbordo?
+ *
+ * Se saca afuera de la clase para que la regla se pueda probar sin levantar el
+ * planificador entero: es una decisión de producto -acá no se combina- y tiene
+ * que poder defenderse sola, no quedar enterrada en un método privado que
+ * necesita base de datos y GPS para ejecutarse.
+ */
+export function admiteTransbordo(tripMeters: number): boolean {
+  return tripMeters >= MIN_TRANSFER_TRIP_M;
+}
+
 /** Y cuánto pesa cada minuto de caminata de más, con el mismo criterio. */
 const WALK_PENALTY_PER_MIN = 0.4;
 
@@ -241,6 +253,23 @@ export interface TripLeg {
   straight?: boolean;
   /** Las paradas por las que pasa el tramo en ómnibus, para el mapa. */
   stops?: Array<{ id: number; name: string; lat: number; lng: number }>;
+}
+
+/**
+ * La última vuelta desde el destino, para saberlo **antes** de ir.
+ *
+ * `finished` en true es la señal fuerte: hoy ya no se puede volver en ómnibus
+ * desde ahí. Es el dato que evita que alguien quede a pie en la Ruta 10.
+ */
+export interface LastReturn {
+  available: boolean;
+  /** Hora del último servicio de vuelta, "22:24". */
+  last_at: string | null;
+  line_label: string | null;
+  /** Dónde se toma la vuelta. */
+  stop_name: string | null;
+  /** Ya salió: hoy no hay con qué volver. */
+  finished: boolean;
 }
 
 export interface TripOption {
@@ -360,7 +389,7 @@ export class TripPlannerService {
     const direct = this.directOptions(originStops, destinationStops, etasByStop, runningByItinerary);
 
     const tripMeters = distanceMeters(origin.lat, origin.lng, destination.lat, destination.lng);
-    const longEnough = tripMeters >= MIN_TRANSFER_TRIP_M;
+    const longEnough = admiteTransbordo(tripMeters);
 
     const planned = direct.length
       ? direct
@@ -381,6 +410,93 @@ export class TripPlannerService {
     if (onFoot) options.push(onFoot);
 
     return this.label(options);
+  }
+
+  /**
+   * ¿Y cómo vuelvo?
+   *
+   * La pregunta que nadie se hace hasta que ya es tarde. Alguien que planifica
+   * ir a José Ignacio a las cuatro de la tarde tiene que ver, en el mismo
+   * resultado, que la última vuelta sale a tal hora. Si no, se entera parado en
+   * la Ruta 10 a las nueve de la noche.
+   *
+   * Es una función de seguridad disfrazada de comodidad, y sólo se puede
+   * contestar con el horario publicado: el GPS dice lo que hay ahora, no si
+   * dentro de cinco horas va a pasar el último.
+   *
+   * Se busca al revés que el viaje: se sube en una parada cerca del **destino**
+   * y se baja en una cerca del **origen**, sobre el mismo recorrido y en ese
+   * orden. Sólo directos: si para volver hace falta combinar, la respuesta
+   * "hay vuelta" sería optimista de más para algo que se usa para decidir si ir.
+   */
+  async lastReturn(
+    origin: PlannerPoint,
+    destination: PlannerPoint,
+    now = new Date(),
+  ): Promise<LastReturn> {
+    const vacio: LastReturn = {
+      available: false,
+      last_at: null,
+      line_label: null,
+      stop_name: null,
+      finished: false,
+    };
+
+    if (!this.stopSequences.isReady() || !this.schedules.hasSchedules()) return vacio;
+
+    const stops = await this.stopsReader.findAll();
+    // Al revés: se sube cerca del destino y se baja cerca del origen.
+    const boardingStops = this.nearbyStops(stops, destination, MAX_WALK_M);
+    const backHome = new Set(
+      this.nearbyStops(stops, origin, MAX_WALK_M).map((candidate) => candidate.stop.id),
+    );
+    if (boardingStops.length === 0 || backHome.size === 0) return vacio;
+
+    let mejor: { orden: number; servicio: StopServiceToday; stopName: string } | null = null;
+
+    for (const candidate of boardingStops) {
+      for (const sequence of this.stopSequences.getForStop(candidate.stop.id)) {
+        const boarding = sequence.stops.find((stop) => stop.stopId === candidate.stop.id);
+        if (!boarding) continue;
+
+        // Que ese recorrido efectivamente vuelva: tiene que pasar por una
+        // parada cerca del origen **después** de donde uno se sube.
+        const vuelve = sequence.stops.some(
+          (stop) => backHome.has(stop.stopId) && stop.sequence > boarding.sequence,
+        );
+        if (!vuelve) continue;
+
+        const servicio = this.schedules.serviceAtStop(sequence, boarding, now);
+        if (!servicio) continue;
+
+        const orden = this.ordenDelDia(servicio.last_at);
+        if (!mejor || orden > mejor.orden) {
+          mejor = { orden, servicio, stopName: boarding.name };
+        }
+      }
+    }
+
+    if (!mejor) return vacio;
+
+    return {
+      available: true,
+      last_at: mejor.servicio.last_at,
+      line_label: mejor.servicio.line_label,
+      stop_name: mejor.stopName,
+      // Si la última de todas ya pasó, hoy no hay con qué volver.
+      finished: mejor.servicio.finished,
+    };
+  }
+
+  /**
+   * Ordena horas del día dejando la madrugada al final.
+   *
+   * "00:30" es más tarde que "23:10", no más temprano: es el último servicio
+   * cruzando la medianoche. Comparado como texto daría al revés.
+   */
+  private ordenDelDia(hhmm: string): number {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m + (h < 4 ? 24 * 60 : 0);
   }
 
   // ---------------------------------------------------------------- opciones

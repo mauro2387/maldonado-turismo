@@ -61,6 +61,29 @@ export interface TimetableDirection {
 }
 
 /** El horario publicado de una línea, listo para su ficha. */
+/**
+ * Lo que le queda hoy a una línea en una parada, según el papel.
+ *
+ * `finished` es el dato que hoy falta y que cambia lo que hace la persona: con
+ * `false` conviene esperar, con `true` hay que buscar otra cosa.
+ */
+export interface StopServiceToday {
+  line_label: string;
+  operator: string;
+  headsign: string | null;
+  next_in_minutes: number | null;
+  next_at: string | null;
+  previous_ago_minutes: number | null;
+  previous_at: string | null;
+  /** La hora del último servicio del día en esta parada. */
+  last_at: string;
+  /** Ya no pasa más hoy. */
+  finished: boolean;
+  /** El que viene es el último del día. */
+  is_last: boolean;
+  services_today: number;
+}
+
 export interface LineTimetable {
   line_label: string;
   season: string;
@@ -328,6 +351,74 @@ export class SchedulesService implements OnModuleInit {
     return best === null ? null : { atMinute: best, live: false, scheduled: true };
   }
 
+  /**
+   * Qué le queda hoy a esta línea en esta parada.
+   *
+   * Contesta las dos preguntas que se hace alguien parado en la parada de
+   * noche, y que la app no sabía contestar:
+   *
+   * - **"¿A qué hora pasa el último?"** En San Carlos perderlo cuesta un taxi
+   *   de treinta kilómetros. Es la diferencia entre esperar tranquilo y
+   *   quedarse a pie.
+   * - **"¿Ya pasó o está atrasado?"** Hasta ahora la app decía "no viene
+   *   ninguno", que no distingue *viene en veinte minutos* de *se terminó el
+   *   servicio*. La respuesta honesta es "el último pasó hace 8 min · el
+   *   próximo, por horario, 21:40".
+   *
+   * Es el horario publicado, no el GPS: dice lo que **debería** pasar. Que un
+   * coche esté atrasado lo sabe el feed en vivo; que ya no haya más, sólo el
+   * papel.
+   */
+  serviceAtStop(
+    sequence: RouteStopSequence,
+    boarding: StopOnRoute,
+    now = new Date(),
+  ): StopServiceToday | null {
+    const label = this.officialRoutes.lineLabel(sequence.operator, sequence.lineCode);
+    const services = this.byLine.get(`${sequence.operator}|${label}`);
+    if (!services || services.length === 0) return null;
+
+    const alongByPoint = this.pointAlongs(sequence);
+    if (!alongByPoint || alongByPoint.size < 2) return null;
+
+    const todayBit = weekdayBit(now);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Todas las pasadas de hoy por esta parada, en orden.
+    const pasadas: number[] = [];
+    for (const service of services) {
+      if ((service.days & todayBit) === 0) continue;
+      const atStop = this.interpolate(service, alongByPoint, boarding.alongMeters);
+      if (atStop !== null) pasadas.push(atStop);
+    }
+
+    if (pasadas.length === 0) return null;
+    pasadas.sort((a, b) => a - b);
+
+    const siguiente = pasadas.find((minuto) => minuto >= nowMinutes) ?? null;
+    const anteriores = pasadas.filter((minuto) => minuto < nowMinutes);
+    const anterior = anteriores.length ? anteriores[anteriores.length - 1] : null;
+    const ultima = pasadas[pasadas.length - 1];
+
+    return {
+      line_label: label,
+      operator: sequence.operator,
+      headsign: sequence.itineraryName,
+      // Redondeados: la interpolación entre dos puntos de control da fracciones
+      // de minuto, y "en 15,89 minutos" no es una respuesta que nadie lea.
+      next_in_minutes: siguiente === null ? null : Math.round(siguiente - nowMinutes),
+      next_at: siguiente === null ? null : minutesToHHMM(siguiente),
+      previous_ago_minutes: anterior === null ? null : Math.round(nowMinutes - anterior),
+      previous_at: anterior === null ? null : minutesToHHMM(anterior),
+      last_at: minutesToHHMM(ultima),
+      // Se terminó por hoy: la última del día ya pasó.
+      finished: siguiente === null,
+      /** True cuando la que viene es la última del día. */
+      is_last: siguiente !== null && siguiente === ultima,
+      services_today: pasadas.length,
+    };
+  }
+
   // ---------------------------------------------------------------- internos
 
   /**
@@ -450,6 +541,20 @@ function firstTime(service: TimetableService): number {
 }
 
 /** "06:40" -> 400 minutos. null si no es una hora. */
+/**
+ * Minutos desde medianoche a "HH:MM".
+ *
+ * Los servicios de madrugada vienen como minutos pasados de 1440 -la 16 sale
+ * 23:10 y llega 01:10 del día siguiente-, así que se dobla el reloj en vez de
+ * mostrar "25:10", que no es una hora que nadie lea.
+ */
+function minutesToHHMM(minutos: number): string {
+  const total = ((Math.round(minutos) % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 function hhmmToMinutes(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm ?? '');
   if (!m) return null;

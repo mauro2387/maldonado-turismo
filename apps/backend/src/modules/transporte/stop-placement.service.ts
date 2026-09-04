@@ -48,7 +48,7 @@ interface Crossing {
  * extremos y no su punto medio porque los intervalos se pueden cruzar entre
  * sí, y ahí está la precisión: ver `estimate`.
  */
-interface Placement {
+export interface Placement {
   operator: string;
   lineCode: string;
   itineraryKey: string;
@@ -64,7 +64,7 @@ interface Placement {
  * parada: 1 es la muestra del cambio, 2 y 3 todavía pueden caer dentro de la
  * detención.
  */
-interface Halt {
+export interface Halt {
   alongMeters: number;
   speedKmh: number;
   sinceChange: number;
@@ -83,7 +83,7 @@ interface OsmStop {
 }
 
 /** De dónde salió la coordenada de una parada, de más a menos firme. */
-type FixSource = 'manual' | 'osm' | 'detenciones' | 'intervalo';
+export type FixSource = 'manual' | 'osm' | 'detenciones' | 'intervalo';
 
 /** Un nodo de OSM que podría ser esta parada, y a cuánto quedó de lo medido. */
 interface OsmClaim {
@@ -617,30 +617,9 @@ export class StopPlacementService {
    * lo que distingue la parada del semáforo de la otra cuadra.
    */
   private fix(placement: Placement, index: PolylineIndex, osmStops: OsmStop[]): Candidate | null {
-    const interval = estimate(placement.intervals);
-    const halt = haltEstimate(placement, interval);
-
-    const chosen = halt ?? {
-      alongMeters: interval.alongMeters,
-      spreadMeters: interval.spreadMeters,
-      samples: placement.intervals.length,
-    };
-    const source: FixSource = halt ? 'detenciones' : 'intervalo';
-
-    const point = pointAt(index, chosen.alongMeters);
+    const sobreElTrazo = estimateAlong(placement);
+    const point = pointAt(index, sobreElTrazo.alongMeters);
     if (!point) return null;
-
-    // Los dos estimadores son independientes: uno mira dónde **puede** estar
-    // la parada y el otro dónde **frenan** los ómnibus. Cuando dan lo mismo, la
-    // respuesta es firme; cuando se contradicen por doscientos metros, alguno
-    // de los dos está mal y todavía no sabemos cuál, así que el error no puede
-    // declararse menor que la propia contradicción. Medido: con más de 150 m de
-    // desacuerdo, dos de cada tres paradas quedan a más de 100 m de la real.
-    const disagreement = halt ? Math.abs(halt.alongMeters - interval.alongMeters) : 0;
-    const accuracy = Math.min(
-      300,
-      Math.max(declaredAccuracy(source, chosen.spreadMeters), Math.round(0.8 * disagreement)),
-    );
 
     // El nodo de OSM, si hay uno solo sobre este recorrido cerca de lo medido.
     // Se pide que esté sobre el trazo -si no, es la parada de la vereda de
@@ -655,10 +634,10 @@ export class StopPlacementService {
     const medido: Fix = {
       lng: point[0],
       lat: point[1],
-      source,
-      accuracyMeters: accuracy,
-      spreadMeters: Math.round(chosen.spreadMeters),
-      samples: chosen.samples,
+      source: sobreElTrazo.source,
+      accuracyMeters: sobreElTrazo.accuracyMeters,
+      spreadMeters: Math.round(sobreElTrazo.spreadMeters),
+      samples: sobreElTrazo.samples,
       osmNodeId: null,
     };
 
@@ -850,6 +829,56 @@ function estimate(intervals: Array<[number, number]>): {
 }
 
 /**
+ * **El estimador, entero, sin geometría y sin base.**
+ *
+ * Decide en qué metro del recorrido está la parada y con qué error se lo puede
+ * afirmar. Todo lo demás -convertir ese metro en un punto, buscar el nodo de
+ * OpenStreetMap, escribir la fila- es plomería alrededor.
+ *
+ * Está separado a propósito: es la única parte que se puede equivocar de un
+ * modo que no se vea, porque un error acá no rompe nada, sólo mueve paradas
+ * unas cuadras. Por eso se prueba contra una foto congelada en
+ * `stop-placement.service.spec.ts`, con el error medido contra los nodos
+ * relevados de OSM. Si alguien toca un umbral y el error sube, el test falla.
+ */
+export function estimateAlong(placement: Placement): {
+  alongMeters: number;
+  spreadMeters: number;
+  samples: number;
+  source: FixSource;
+  accuracyMeters: number;
+} {
+  const interval = estimate(placement.intervals);
+  const halt = haltEstimate(placement, interval);
+
+  const chosen = halt ?? {
+    alongMeters: interval.alongMeters,
+    spreadMeters: interval.spreadMeters,
+    samples: placement.intervals.length,
+  };
+  const source: FixSource = halt ? 'detenciones' : 'intervalo';
+
+  // Los dos estimadores son independientes: uno mira dónde **puede** estar la
+  // parada y el otro dónde **frenan** los ómnibus. Cuando dan lo mismo, la
+  // respuesta es firme; cuando se contradicen por doscientos metros, alguno de
+  // los dos está mal y todavía no sabemos cuál, así que el error no puede
+  // declararse menor que la propia contradicción. Medido: con más de 150 m de
+  // desacuerdo, dos de cada tres paradas quedan a más de 100 m de la real.
+  const disagreement = halt ? Math.abs(halt.alongMeters - interval.alongMeters) : 0;
+
+  return {
+    alongMeters: chosen.alongMeters,
+    spreadMeters: chosen.spreadMeters,
+    samples: chosen.samples,
+    source,
+    accuracyMeters: Math.min(
+      300,
+      Math.max(declaredAccuracy(source, chosen.spreadMeters), Math.round(0.8 * disagreement)),
+    ),
+  };
+}
+
+/**
  * Dónde frenan los ómnibus dentro de la ventana en la que está la parada.
  *
  * Se prueban los tres cortes de velocidad en orden y se corta en el primero
@@ -895,6 +924,49 @@ function haltEstimate(
 
   return null;
 }
+
+/**
+ * PROBADO Y DESCARTADO: ubicar la parada en el cruce de calles de su nombre.
+ *
+ * La idea era buena y hay que dejarla escrita para que nadie la vuelva a
+ * intentar a ciegas. Las paradas de Maldonado se llaman como la calle que
+ * cruzan -"SARANDI", "ITUZAINGO", "CALLE 30"-, así que la parada tendría que
+ * estar donde el recorrido cruza la calle de ese nombre. Eso no es una
+ * estimación: es la intersección de dos líneas, y da metros.
+ *
+ * Se implementó completo el 2026-09-04: 6.121 calles con nombre de OSM,
+ * emparejadas por tokens alineados desde el final (así "R P DEL PUERTO" cae en
+ * "Rafael Pérez del Puerto" y "P SIERRA" en "Avenida Pedro Sierra"), cruzadas
+ * contra el trazo dentro de la ventana del intervalo. Resolvió 208 de 996
+ * paradas. Y medido contra los mismos nodos de OSM, **es peor que lo que hay**:
+ *
+ *     grupo             lo que hay    la esquina
+ *     todas (n=58)      p50  30 m     p50  37 m
+ *     intervalo (n=11)  p50  93 m     p50 137 m   <- justo el que se quería arreglar
+ *
+ * Tres razones, y las tres son del problema y no de la implementación:
+ *
+ * 1. **Una parada no está en la esquina.** Medido contra OSM, el cartel cae
+ *    entre 19 m antes y 40 m después del cruce, con mediana +12 m. Y no se
+ *    puede corregir con un desplazamiento fijo: sacarle la mediana no mejora
+ *    nada (29 m contra 27 m), porque a veces está antes y a veces después.
+ *    O sea que una esquina perfecta ya trae 30 m de error irreducible.
+ * 2. **La ventana de búsqueda depende del error que se quiere corregir.** Para
+ *    una parada que está a 150 m hay que buscar en ±150 m, y en una trama de
+ *    manzanas de 80-100 m eso abarca varias calles transversales: se engancha
+ *    la equivocada. Se probaron ventanas fijas de 80, 120 y 200 m y en las tres
+ *    el grupo `intervalo` empeora.
+ * 3. **La cobertura es baja igual.** 670 de 996 nombres no son calles: son
+ *    kilómetros de ruta ("KM 174"), paradas numeradas de la rambla ("P37") y
+ *    referencias ("REST BARLOVENTO", "CONTROL HORARIOS").
+ *
+ * Lo que sí quedó medido y sirve: **la esquina sola tiene ~20 m de exactitud**
+ * (p50 20 m, p75 31 m sobre las paradas cuya posición es un nodo relevado). Es
+ * decir que es un buen dato, pero como **segunda opinión**, no como corrector.
+ * Si alguien lo retoma, el camino es usarla para desempatar adentro del
+ * estimador de detenciones cuando la nube de frenadas es ambigua -no para
+ * reemplazarlo-, y medirlo con `stop-placement.service.spec.ts`.
+ */
 
 /**
  * Con qué error se puede afirmar la coordenada, en metros.

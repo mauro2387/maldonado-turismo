@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
-import { TripPlannerService, TripOption } from './trip-planner.service';
+import { LastReturn, TripPlannerService, TripOption } from './trip-planner.service';
 import { StopSequenceService } from './stop-sequence.service';
 
 /**
@@ -37,26 +37,35 @@ export class TripPlannerController {
   async plan(@Body() body: PlanRequest): Promise<{
     options: TripOption[];
     ready: boolean;
+    /** La última vuelta desde el destino, para saberlo antes de ir. */
+    return_trip: LastReturn;
   }> {
     if (!isValidPoint(body?.origin) || !isValidPoint(body?.destination)) {
       throw new BadRequestException('Faltan las coordenadas de origen o destino');
     }
 
-    const options = await this.planner.plan(
-      {
-        lat: Number(body.origin.lat),
-        lng: Number(body.origin.lng),
-        label: body.origin.label,
-      },
-      {
-        lat: Number(body.destination.lat),
-        lng: Number(body.destination.lng),
-        label: body.destination.label,
-      },
-    );
+    const origin = {
+      lat: Number(body.origin.lat),
+      lng: Number(body.origin.lng),
+      label: body.origin.label,
+    };
+    const destination = {
+      lat: Number(body.destination.lat),
+      lng: Number(body.destination.lng),
+      label: body.destination.label,
+    };
+
+    // La vuelta se calcula junto con la ida y no en otro pedido: la pregunta
+    // "¿y cómo vuelvo?" hay que contestarla **antes** de que la persona salga,
+    // no cuando se le ocurra buscarla.
+    const [options, returnTrip] = await Promise.all([
+      this.planner.plan(origin, destination),
+      this.planner.lastReturn(origin, destination),
+    ]);
 
     return {
       options,
+      return_trip: returnTrip,
       // Sin recorridos reconstruidos no hay orden de paradas y no se puede
       // planificar nada. La interfaz necesita distinguirlo de "no encontramos
       // ninguna combinación".

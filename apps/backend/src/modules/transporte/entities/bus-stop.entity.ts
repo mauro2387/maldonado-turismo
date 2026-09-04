@@ -77,6 +77,37 @@ export class BusStop {
   @Column({ type: 'integer', nullable: true })
   spread_m: number;
 
+  /**
+   * Radio en metros dentro del cual está la parada de verdad.
+   *
+   * **No es `spread_m`.** La dispersión dice cuán juntas están las muestras
+   * (precisión); esto dice cuán lejos puede estar la respuesta de la parada
+   * real (exactitud), calibrado contra los nodos relevados de OpenStreetMap.
+   * Una parada puede tener las muestras muy juntas y estar igual en la cuadra
+   * equivocada, y sólo este número lo detecta.
+   *
+   * Es lo que decide si la pantalla puede decir "esperá acá" o tiene que decir
+   * "la parada está por acá": con más de 60 m no se puede nombrar la esquina.
+   */
+  @Column({ type: 'integer', nullable: true })
+  accuracy_m: number;
+
+  /**
+   * De dónde salió la coordenada, de más a menos firme: 'manual' (corregida a
+   * mano), 'osm' (nodo relevado que coincide con lo medido), 'detenciones'
+   * (mediana de ómnibus vistos frenando ahí), 'intervalo' (interpolada).
+   */
+  @Column({ type: 'varchar', length: 24, nullable: true })
+  fix_source: string;
+
+  /** El nodo de OpenStreetMap del que salió, para poder volver a la fuente. */
+  @Column({ type: 'bigint', nullable: true })
+  osm_node_id: string;
+
+  /** Cuándo se recalculó la posición por última vez. */
+  @Column({ type: 'timestamptz', nullable: true })
+  fixed_at: Date;
+
   @Column({ type: 'timestamptz', nullable: true })
   avl_updated_at: Date;
 

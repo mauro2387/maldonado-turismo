@@ -63,8 +63,24 @@ export interface TripOption {
   legs: TripLeg[];
 }
 
+/**
+ * La última vuelta desde el destino.
+ *
+ * `finished` en true es la señal fuerte: hoy ya no se puede volver en ómnibus
+ * desde ahí. Es lo que evita que alguien quede a pie en la Ruta 10.
+ */
+export interface LastReturn {
+  available: boolean;
+  last_at: string | null;
+  line_label: string | null;
+  stop_name: string | null;
+  finished: boolean;
+}
+
 export interface PlanResult {
   options: TripOption[];
+  /** La vuelta, para saberlo antes de ir. */
+  return_trip?: LastReturn;
   /** False mientras el backend no tenga recorridos con los que calcular. */
   ready: boolean;
 }
