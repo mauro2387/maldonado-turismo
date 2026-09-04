@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Calendar, 
   Clock, 
   MapPin, 
+  Bus,
   Users, 
   Share2, 
   Heart,
@@ -23,6 +24,18 @@ export default function EventoDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+
+  // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
+  // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
+  // sistema operativo.
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
 
   // Fetch event from API
   const { event, loading, error } = useEvent(id);
@@ -45,7 +58,7 @@ export default function EventoDetailPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el evento</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => navigate('/agenda')}
+            onClick={() => navigate('/que-hacer')}
             className="btn btn-primary"
           >
             Volver a eventos
@@ -64,7 +77,7 @@ export default function EventoDetailPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Evento no encontrado</h2>
           <p className="text-gray-600 mb-4">El evento que buscas no existe o ha sido eliminado.</p>
           <button
-            onClick={() => navigate('/agenda')}
+            onClick={() => navigate('/que-hacer')}
             className="btn btn-primary"
           >
             Volver a eventos
@@ -93,12 +106,12 @@ export default function EventoDetailPage() {
           url: window.location.href,
         });
       } catch (err) {
-        console.log('Error sharing:', err);
+        // El usuario canceló el diálogo de compartir: no hay nada que avisar.
       }
     } else {
       // Fallback: copiar al portapapeles
       navigator.clipboard.writeText(window.location.href);
-      alert('Link copiado al portapapeles');
+      setCopied(true);
     }
   };
 
@@ -275,6 +288,16 @@ export default function EventoDetailPage() {
           </div>
         )}
 
+        {/* Cómo llegar: el dato que ninguna app genérica de eventos puede dar,
+            porque hace falta conocer las paradas y las líneas de la ciudad. */}
+        <Link
+          to={`/transporte/planificador?destino=${encodeURIComponent(event.location || event.title)}`}
+          className="btn btn-primary mb-6 w-full"
+        >
+          <Bus size={18} />
+          Cómo llegar en ómnibus
+        </Link>
+
         {/* Ubicación */}
         {event.address && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -349,6 +372,15 @@ export default function EventoDetailPage() {
           </div>
         )}
       </div>
+
+      {copied && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-float md:bottom-8"
+        >
+          Enlace copiado
+        </div>
+      )}
     </div>
   );
 }

@@ -53,6 +53,33 @@ export class BusStop {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  // ---------------------------------------------------------------------------
+  // Procedencia
+  //
+  // Una parada cargada a mano por la Intendencia y una deducida del feed AVL de
+  // las empresas no valen lo mismo, y la reconstrucción diaria solo pisa las
+  // segundas. Ver stop-catalog.service.ts.
+  // ---------------------------------------------------------------------------
+
+  /** 'manual' | 'avl' | 'placeholder'. */
+  @Column({ type: 'varchar', length: 16, default: 'manual' })
+  source: string;
+
+  /** Empresas cuyo feed reporta esta parada. */
+  @Column({ type: 'text', array: true, nullable: true })
+  operators: string[];
+
+  /** Cruces registrados que sostienen la coordenada. */
+  @Column({ type: 'integer', nullable: true })
+  samples: number;
+
+  /** Dispersión p90-p10 de esos cruces, en metros. A más chico, mejor. */
+  @Column({ type: 'integer', nullable: true })
+  spread_m: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  avl_updated_at: Date;
+
   @CreateDateColumn()
   created_at: Date;
 

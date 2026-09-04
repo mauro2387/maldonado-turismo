@@ -25,15 +25,31 @@ import { AdminUsersModule } from './modules/admin/users/admin-users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: configService.get<number>('DATABASE_PORT'),
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('NODE_ENV') === 'development',
-        ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        url: configService.get('DATABASE_URL'),
+        // Las entidades se registran desde cada módulo con
+        // `TypeOrmModule.forFeature`, no barriendo el disco.
+        //
+        // El glob `__dirname + '/**/*.entity.js'` no encontraba nada: la API se
+        // empaqueta con webpack en un único dist/main.js, así que no existe un
+        // archivo .entity.js que barrer. El DataSource arrancaba sin ninguna
+        // entidad y cualquier endpoint que usara un repositorio moría con
+        // "No metadata for BusStop was found" — un 500 sin más explicación, que
+        // es lo que tiraban GET /transport/stops/:id y /transport/stops/nearby.
+        autoLoadEntities: true,
+        synchronize: false,
+        // La ingesta GPS escribe decenas de filas cada pocos segundos, así que
+        // el log de todas las queries tapa cualquier otra cosa. Se activa a
+        // demanda con DATABASE_LOGGING=true.
+        logging:
+          configService.get('DATABASE_LOGGING', 'false') === 'true'
+            ? true
+            : ['error', 'warn'],
+        // Supabase y cualquier base gestionada exigen TLS; una Postgres local
+        // no lo tiene habilitado y rechaza la conexión si se lo pedimos.
+        ssl:
+          configService.get('DATABASE_SSL', 'true') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
     }),
 

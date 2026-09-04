@@ -13,8 +13,17 @@ export class TransportService {
     return this.dataSource.query('SELECT * FROM bus_routes ORDER BY name ASC');
   }
 
+  /**
+   * Las paradas activas.
+   *
+   * El filtro por `is_active` no es decorativo: las ocho paradas de relleno
+   * que tenía la tabla siguen ahí, desactivadas, para que un QR viejo no
+   * termine en un 404. Sin el filtro volverían al mapa y al buscador.
+   */
   async getStops() {
-    return this.dataSource.query('SELECT * FROM bus_stops ORDER BY name ASC');
+    return this.dataSource.query(
+      'SELECT * FROM bus_stops WHERE is_active ORDER BY name ASC',
+    );
   }
 
   async getAlerts() {

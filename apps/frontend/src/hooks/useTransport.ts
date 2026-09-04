@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { 
-  transportService, 
-  BusStop, 
-  BusRoute, 
-  TransportAlert, 
-  NextBus 
+import {
+  transportService,
+  BusStop,
+  BusRoute,
+  TransportAlert,
+  TransportLine,
 } from '@services/transportService';
 
 interface UseStopsResult {
@@ -117,34 +117,38 @@ export function useAlerts(): UseAlertsResult {
   return { alerts, loading, error, refetch: fetchAlerts };
 }
 
-interface UseStopArrivalsResult {
-  arrivals: NextBus[];
-  loading: boolean;
-  error: string | null;
-  refetch: (stopId: string) => Promise<void>;
-}
-
 /**
- * Hook to fetch real-time arrivals for a stop
+ * Las líneas que están circulando, con sus recorridos de ida y de vuelta.
+ *
+ * El catálogo `bus_routes` de la base son dos filas de ejemplo que no se
+ * corresponden con ninguna línea real, así que esto no sale de ahí: sale de
+ * los recorridos que las empresas publican y que el GPS confirma que están en
+ * la calle hoy (ver el controlador `transport/lines`).
  */
-export function useStopArrivals(): UseStopArrivalsResult {
-  const [arrivals, setArrivals] = useState<NextBus[]>([]);
-  const [loading, setLoading] = useState(false);
+export function useLines() {
+  const [lines, setLines] = useState<TransportLine[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArrivals = async (stopId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await transportService.getStopArrivals(stopId);
-      setArrivals(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar llegadas');
-      console.error('Error fetching arrivals:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  return { arrivals, loading, error, refetch: fetchArrivals };
+    transportService
+      .getLines()
+      .then((data) => {
+        if (!cancelled) setLines(data);
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err?.message ?? 'No pudimos traer las líneas');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { lines, loading, error };
 }

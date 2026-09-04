@@ -13,6 +13,10 @@ export interface Event {
   address?: string;
   latitude?: number;
   longitude?: number;
+  // La API devuelve las columnas lat/lng de la base; se declaran los dos pares
+  // igual que en Place, porque hay código que lee uno u otro.
+  lat?: number;
+  lng?: number;
   image?: string;
   gallery?: string[];
   price?: string;

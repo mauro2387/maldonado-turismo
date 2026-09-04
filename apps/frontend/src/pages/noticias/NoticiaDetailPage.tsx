@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Share2, Bookmark, Facebook, Twitter, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { useArticle } from '@hooks/useNews';
@@ -7,6 +7,18 @@ export default function NoticiaDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(false);
+
+  // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
+  // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
+  // sistema operativo.
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
 
   // Fetch article from API (auto-increments views)
   const { article, loading, error } = useArticle(id!);
@@ -32,7 +44,7 @@ export default function NoticiaDetailPage() {
       window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
     } else if (platform === 'copy') {
       await navigator.clipboard.writeText(url);
-      alert('Link copiado al portapapeles');
+      setCopied(true);
     } else if (navigator.share) {
       try {
         await navigator.share({
@@ -41,7 +53,7 @@ export default function NoticiaDetailPage() {
           url: window.location.href,
         });
       } catch (err) {
-        console.log('Error sharing:', err);
+        // El usuario canceló el diálogo de compartir: no hay nada que avisar.
       }
     }
   };
@@ -279,6 +291,15 @@ export default function NoticiaDetailPage() {
         )}
       </div>
         </>
+      )}
+
+      {copied && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-float md:bottom-8"
+        >
+          Enlace copiado
+        </div>
       )}
     </div>
   );

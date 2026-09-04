@@ -6,8 +6,8 @@ export default function NotFoundPage() {
 
   const suggestedLinks = [
     { to: '/', icon: Home, label: 'Inicio', description: 'Explora Maldonado' },
-    { to: '/places', icon: MapPin, label: 'Lugares', description: 'Descubre atractivos' },
-    { to: '/agenda', icon: Compass, label: 'Eventos', description: 'Agenda cultural' },
+    { to: '/que-hacer?ver=lugares', icon: MapPin, label: 'Lugares', description: 'Playas, museos y paseos' },
+    { to: '/que-hacer', icon: Compass, label: 'Eventos', description: 'Qué hacer hoy' },
   ];
 
   return (

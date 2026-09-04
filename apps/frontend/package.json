@@ -15,6 +15,7 @@
   "dependencies": {
     "@headlessui/react": "^1.7.18",
     "@hookform/resolvers": "^3.3.4",
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@nestjs/jwt": "^11.0.1",
     "@nestjs/passport": "^11.0.5",
     "axios": "^1.6.7",
@@ -25,6 +26,7 @@
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.323.0",
+    "maplibre-gl": "^4.7.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "react": "^18.2.0",

@@ -12,8 +12,9 @@ export class EventsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('search') search?: string,
+    @Query('locality') locality?: string,
   ) {
-    return this.eventsService.findAll({ category, startDate, endDate, search });
+    return this.eventsService.findAll({ category, startDate, endDate, search, locality });
   }
 
   @Get(':id')

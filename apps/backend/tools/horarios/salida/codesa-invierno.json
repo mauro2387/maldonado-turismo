@@ -1,0 +1,7406 @@
+{
+ "empresa": "codesa",
+ "temporada": "invierno",
+ "fuente_url": "https://www.codesa.com.uy/p/horarios.html",
+ "documento": "Horarios_CODESA_24_06_26",
+ "vigencia_texto": "Vigencia: Agosto 2026",
+ "vigencia_desde": null,
+ "vigencia_hasta": null,
+ "extraido_el": "2026-09-03",
+ "revisar": [
+  "la temporada no está escrita en el documento: dice \"Agosto 2026\" y de ese mes se deduce invierno (CODESA publica invierno de marzo a diciembre)",
+  "la referencia \"#\" quiere decir 3 cosas distintas según la página; el esquema tiene una sola tabla de referencias por archivo, así que quedan todas juntas y hay que separarlas por línea a mano",
+  "la referencia \"&\" quiere decir 3 cosas distintas según la página; el esquema tiene una sola tabla de referencias por archivo, así que quedan todas juntas y hay que separarlas por línea a mano",
+  "la referencia \"P\" quiere decir 2 cosas distintas según la página; el esquema tiene una sola tabla de referencias por archivo, así que quedan todas juntas y hay que separarlas por línea a mano",
+  "página 1 ida: \"SemiDto\" está donde va el número de línea y no parece uno; se deja crudo",
+  "página 1 vuelta: \"SemiDto\" está donde va el número de línea y no parece uno; se deja crudo",
+  "página 3 ida: la fila de la línea 12 trae \"Directo\" junto al número de línea y no está en el pie de referencias; queda como referencia cruda",
+  "página 3 vuelta: la fila de la línea 12 trae \"Directo\" junto al número de línea y no está en el pie de referencias; queda como referencia cruda",
+  "página 6 vuelta: el punto de control \"Manantial es\" quedó con pinta de palabra cortada entre dos renglones; se deja como salió del PDF",
+  "la página 4 (línea 11) está publicada como \"PROXIMAMENTE\": el horario está impreso pero la línea todavía no corre"
+ ],
+ "referencias": {
+  "#": "páginas 1: Entran ó Salen a San Carlos por calles Av. Ceberio y Carlos Seijo (ruta vieja). | páginas 3: Los días Sábados y Domingos pasa a ser línea 9/12. | páginas 5: Entra a Balnearios El Chorro y Buenos Aires por Ruta 10, Lobos, Brotolas, Pejereyes, El Gaucho, El Domador, Calle 49, Calle 38, Ruta 10.",
+  "%": "Salen de Agencia por calles Av. Rocha y 25 de Agosto.",
+  "&": "páginas 5: Entra al Balneario Buenos Aires por Ruta 10, Calle 33, Calle 49, Calle 34, Calle 57, Calle 58, Calle 28, Ruta 10. | páginas 6: Entra a Balnearios El Chorro y Buenos Aires por calles Lobos, Brótolas, Pejerreyes, El Gaucho, El Domador, Calle 49, Calle 28, Calle 58, Calle 57, Calle 34, Calle 49, Calle 38, Ruta 10. | páginas 8: Entra a La Capuera.",
+  "+": "Entra a Balnearios El Chorro y Buenos Aires por calles Lobos, Brótolas, Pejerreyes, El Gaucho, El Domador, Calle 49, Calle 38, Ruta 10.",
+  "D": "No corre los días Domingos.",
+  "LV": "No corre desde Lunes a Viernes.",
+  "P": "páginas 6: Al llegar al puente de La Barra sigue por Rbla Brava hasta Av. Rubens (Pda 31) y sube hasta Av. Aparicio Saravia  regresando al puente. | páginas 7: Modifica su recorrido por la playa desde pda 16 a pda 19.",
+  "S": "No corre los días Sábados y Domingos.",
+  "T": "Entra al Balneario El Tesoro.",
+  "Directo": "sin explicación en el documento"
+ },
+ "lineas": [
+  {
+   "linea": "7/24",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Lavagna",
+    "Ag. Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "00:05",
+      null,
+      "00:28",
+      "00:35",
+      "00:40",
+      "01:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "01:05",
+      null,
+      "01:28",
+      "01:35",
+      "01:40",
+      "02:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "04:05",
+      null,
+      "04:28",
+      "04:35",
+      "04:40",
+      "05:00"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      null,
+      "05:35",
+      null,
+      "05:58",
+      "06:05",
+      "06:10",
+      "06:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "06:25",
+      "06:35",
+      "06:58",
+      "07:05",
+      "07:10",
+      "07:30"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "24",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Lavagna",
+    "Ag. Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "05:00",
+      "05:10",
+      null,
+      "05:28",
+      "05:35",
+      "05:40",
+      "06:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "05:55",
+      "06:05",
+      "06:10",
+      "06:28",
+      "06:35",
+      "06:40",
+      "07:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:00",
+      null,
+      null,
+      "07:28",
+      "07:35",
+      "07:40",
+      "08:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "07:25",
+      "07:35",
+      "07:58",
+      "08:05",
+      "08:10",
+      "08:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:00",
+      null,
+      null,
+      "08:28",
+      "08:35",
+      "08:40",
+      "09:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "08:25",
+      "08:35",
+      "08:58",
+      "09:05",
+      "09:10",
+      "09:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:00",
+      null,
+      null,
+      "09:28",
+      "09:35",
+      "09:40",
+      "10:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "09:25",
+      "09:35",
+      "09:58",
+      "10:05",
+      "10:10",
+      "10:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:00",
+      null,
+      null,
+      "10:28",
+      "10:35",
+      "10:40",
+      "11:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "10:25",
+      "10:35",
+      "10:58",
+      "11:05",
+      "11:10",
+      "11:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      null,
+      null,
+      "11:28",
+      "11:35",
+      "11:40",
+      "12:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "11:25",
+      "11:35",
+      "11:58",
+      "12:05",
+      "12:10",
+      "12:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:00",
+      null,
+      null,
+      "12:28",
+      "12:35",
+      "12:40",
+      "13:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "12:25",
+      "12:35",
+      "12:58",
+      "13:05",
+      "13:10",
+      "13:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:00",
+      null,
+      null,
+      "13:28",
+      "13:35",
+      "13:40",
+      "14:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "13:25",
+      "13:35",
+      "13:58",
+      "14:05",
+      "14:10",
+      "14:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      null,
+      null,
+      "14:28",
+      "14:35",
+      "14:40",
+      "15:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "14:25",
+      "14:35",
+      "14:58",
+      "15:05",
+      "15:10",
+      "15:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:00",
+      null,
+      null,
+      "15:28",
+      "15:35",
+      "15:40",
+      "16:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "15:25",
+      "15:35",
+      "15:58",
+      "16:05",
+      "16:10",
+      "16:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:00",
+      null,
+      null,
+      "16:28",
+      "16:35",
+      "16:40",
+      "17:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "16:25",
+      "16:35",
+      "16:58",
+      "17:05",
+      "17:10",
+      "17:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      null,
+      null,
+      "17:28",
+      "17:35",
+      "17:40",
+      "18:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "17:25",
+      "17:35",
+      "17:58",
+      "18:05",
+      "18:10",
+      "18:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:00",
+      null,
+      null,
+      "18:28",
+      "18:35",
+      "18:40",
+      "19:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "18:25",
+      "18:35",
+      "18:58",
+      "19:05",
+      "19:10",
+      "19:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:00",
+      null,
+      null,
+      "19:28",
+      "19:35",
+      "19:40",
+      "20:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "19:25",
+      "19:35",
+      "19:58",
+      "20:05",
+      "20:10",
+      "20:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:00",
+      null,
+      null,
+      "20:28",
+      "20:35",
+      "20:40",
+      "21:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "20:25",
+      "20:35",
+      "20:58",
+      "21:05",
+      "21:10",
+      "21:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:00",
+      null,
+      null,
+      "21:28",
+      "21:35",
+      "21:40",
+      "22:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "21:35",
+      null,
+      "21:58",
+      "22:05",
+      "22:10",
+      "22:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:00",
+      "22:10",
+      null,
+      "22:28",
+      "22:35",
+      "22:40",
+      "23:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "23:00",
+      "23:10",
+      null,
+      "23:28",
+      "23:35",
+      "23:40",
+      "00:00"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "1",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Lavagna",
+    "Ag. Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "#",
+      "D"
+     ],
+     "horas": [
+      "06:35",
+      "06:45",
+      null,
+      "07:15",
+      "07:20",
+      "07:25",
+      "07:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "07:35",
+      "07:45",
+      null,
+      "08:15",
+      "08:20",
+      "08:25",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [
+      "%",
+      "#",
+      "D"
+     ],
+     "horas": [
+      null,
+      "08:00",
+      "08:05",
+      "08:30",
+      "08:35",
+      "08:40",
+      "09:00"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "08:35",
+      "08:45",
+      null,
+      "09:15",
+      "09:20",
+      "09:25",
+      "09:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "09:35",
+      "09:45",
+      null,
+      "10:15",
+      "10:20",
+      "10:25",
+      "10:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "10:35",
+      "10:45",
+      null,
+      "11:15",
+      "11:20",
+      "11:25",
+      "11:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "11:35",
+      "11:45",
+      null,
+      "12:15",
+      "12:20",
+      "12:25",
+      "12:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "12:35",
+      "12:45",
+      null,
+      "13:15",
+      "13:20",
+      "13:25",
+      "13:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "13:35",
+      "13:45",
+      null,
+      "14:15",
+      "14:20",
+      "14:25",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "14:35",
+      "14:45",
+      null,
+      "15:15",
+      "15:20",
+      "15:25",
+      "15:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "15:35",
+      "15:45",
+      null,
+      "16:15",
+      "16:20",
+      "16:25",
+      "16:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "16:35",
+      "16:45",
+      null,
+      "17:15",
+      "17:20",
+      "17:25",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "17:35",
+      "17:45",
+      null,
+      "18:15",
+      "18:20",
+      "18:25",
+      "18:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "18:35",
+      "18:45",
+      null,
+      "19:15",
+      "19:20",
+      "19:25",
+      "19:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "19:35",
+      "19:45",
+      null,
+      "20:15",
+      "20:20",
+      "20:25",
+      "20:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "20:35",
+      "20:45",
+      null,
+      "21:15",
+      "21:20",
+      "21:25",
+      "21:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "7",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Lavagna",
+    "Ag. Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:05",
+      "07:15",
+      null,
+      "07:40",
+      "07:47",
+      "07:53",
+      "08:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:05",
+      "08:15",
+      null,
+      "08:40",
+      "08:47",
+      "08:53",
+      "09:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:05",
+      "09:15",
+      null,
+      "09:40",
+      "09:47",
+      "09:53",
+      "10:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:05",
+      "10:15",
+      null,
+      "10:40",
+      "10:47",
+      "10:53",
+      "11:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:05",
+      "11:15",
+      null,
+      "11:40",
+      "11:47",
+      "11:53",
+      "12:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:05",
+      "12:15",
+      null,
+      "12:40",
+      "12:47",
+      "12:53",
+      "13:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:05",
+      "13:15",
+      null,
+      "13:40",
+      "13:47",
+      "13:53",
+      "14:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:05",
+      "14:15",
+      null,
+      "14:40",
+      "14:47",
+      "14:53",
+      "15:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:05",
+      "15:15",
+      null,
+      "15:40",
+      "15:47",
+      "15:53",
+      "16:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "16:05",
+      "16:15",
+      null,
+      "16:40",
+      "16:47",
+      "16:53",
+      "17:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:05",
+      "17:15",
+      null,
+      "17:40",
+      "17:47",
+      "17:53",
+      "18:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:05",
+      "18:15",
+      null,
+      "18:40",
+      "18:47",
+      "18:53",
+      "19:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "19:05",
+      "19:15",
+      null,
+      "19:40",
+      "19:47",
+      "19:53",
+      "20:15"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "SemiDto",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Lavagna",
+    "Ag. Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "07:45",
+      "07:55",
+      "08:00",
+      null,
+      null,
+      null,
+      "08:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "7/24",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Centro Mldo.",
+    "Ag. Mldo.",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "01:00",
+      "01:13",
+      "01:23",
+      "01:30",
+      null,
+      "01:50",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "02:00",
+      "02:13",
+      "02:23",
+      "02:30",
+      null,
+      "02:50",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "05:00",
+      "05:13",
+      "05:23",
+      "05:30",
+      null,
+      "05:50",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "06:30",
+      "06:43",
+      "06:53",
+      "07:00",
+      "07:20",
+      "07:25",
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "24",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Centro Mldo.",
+    "Ag. Mldo.",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "06:00",
+      "06:13",
+      "06:23",
+      "06:30",
+      null,
+      "06:50",
+      "07:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:00",
+      "07:13",
+      "07:23",
+      "07:30",
+      null,
+      "07:50",
+      "08:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:30",
+      "07:43",
+      "07:53",
+      "08:00",
+      "08:20",
+      "08:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:00",
+      "08:13",
+      "08:23",
+      "08:30",
+      null,
+      null,
+      "09:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:30",
+      "08:43",
+      "08:53",
+      "09:00",
+      "09:20",
+      "09:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:00",
+      "09:13",
+      "09:23",
+      "09:30",
+      null,
+      null,
+      "10:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:30",
+      "09:43",
+      "09:53",
+      "10:00",
+      "10:20",
+      "10:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:00",
+      "10:13",
+      "10:23",
+      "10:30",
+      null,
+      null,
+      "11:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:30",
+      "10:43",
+      "10:53",
+      "11:00",
+      "11:20",
+      "11:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:13",
+      "11:23",
+      "11:30",
+      null,
+      null,
+      "12:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:30",
+      "11:43",
+      "11:53",
+      "12:00",
+      "12:20",
+      "12:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:00",
+      "12:13",
+      "12:23",
+      "12:30",
+      null,
+      null,
+      "13:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:30",
+      "12:43",
+      "12:53",
+      "13:00",
+      "13:20",
+      "13:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:00",
+      "13:13",
+      "13:23",
+      "13:30",
+      null,
+      null,
+      "14:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:30",
+      "13:43",
+      "13:53",
+      "14:00",
+      "14:20",
+      "14:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      "14:13",
+      "14:23",
+      "14:30",
+      null,
+      null,
+      "15:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:30",
+      "14:43",
+      "14:53",
+      "15:00",
+      "15:20",
+      "15:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:00",
+      "15:13",
+      "15:23",
+      "15:30",
+      null,
+      null,
+      "16:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:30",
+      "15:43",
+      "15:53",
+      "16:00",
+      "16:20",
+      "16:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:00",
+      "16:13",
+      "16:23",
+      "16:30",
+      null,
+      null,
+      "17:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:30",
+      "16:43",
+      "16:53",
+      "17:00",
+      "17:20",
+      "17:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      "17:13",
+      "17:23",
+      "17:30",
+      null,
+      null,
+      "18:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:30",
+      "17:43",
+      "17:53",
+      "18:00",
+      "18:20",
+      "18:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:00",
+      "18:13",
+      "18:23",
+      "18:30",
+      null,
+      null,
+      "19:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:30",
+      "18:43",
+      "18:53",
+      "19:00",
+      "19:20",
+      "19:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:00",
+      "19:13",
+      "19:23",
+      "19:30",
+      null,
+      null,
+      "20:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:30",
+      "19:43",
+      "19:53",
+      "20:00",
+      "20:20",
+      "20:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:00",
+      "20:13",
+      "20:23",
+      "20:30",
+      null,
+      null,
+      "21:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:30",
+      "20:43",
+      "20:53",
+      "21:00",
+      "21:20",
+      "21:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:00",
+      "21:13",
+      "21:23",
+      "21:30",
+      null,
+      "21:50",
+      "22:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:30",
+      "21:43",
+      "21:53",
+      "22:00",
+      "22:20",
+      "22:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:00",
+      "22:13",
+      "22:23",
+      "22:30",
+      null,
+      "22:50",
+      "23:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:30",
+      "22:43",
+      "22:53",
+      "23:00",
+      null,
+      "23:20",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "23:00",
+      "23:13",
+      "23:23",
+      "23:30",
+      null,
+      "23:50",
+      "00:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "00:00",
+      "00:13",
+      "00:23",
+      "00:30",
+      null,
+      "00:50",
+      "01:00"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "1",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Centro Mldo.",
+    "Ag. Mldo.",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "#",
+      "D"
+     ],
+     "horas": [
+      "07:45",
+      null,
+      "08:08",
+      "08:15",
+      null,
+      "08:35",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "08:45",
+      null,
+      "09:08",
+      "09:15",
+      null,
+      "09:35",
+      "09:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "09:45",
+      null,
+      "10:08",
+      "10:15",
+      null,
+      "10:35",
+      "10:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "10:45",
+      null,
+      "11:08",
+      "11:15",
+      null,
+      "11:35",
+      "11:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "11:45",
+      null,
+      "12:08",
+      "12:15",
+      null,
+      "12:35",
+      "12:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "12:45",
+      null,
+      "13:08",
+      "13:15",
+      null,
+      "13:35",
+      "13:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "13:45",
+      null,
+      "14:08",
+      "14:15",
+      null,
+      "14:35",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "14:45",
+      null,
+      "15:08",
+      "15:15",
+      null,
+      "15:35",
+      "15:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "15:45",
+      null,
+      "16:08",
+      "16:15",
+      null,
+      "16:35",
+      "16:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "16:45",
+      null,
+      "17:08",
+      "17:15",
+      null,
+      "17:35",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      null,
+      "17:23",
+      "17:30",
+      "17:50",
+      "17:55",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "17:45",
+      null,
+      "18:08",
+      "18:15",
+      null,
+      "18:35",
+      "18:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "18:45",
+      null,
+      "19:08",
+      "19:15",
+      null,
+      "19:35",
+      "19:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "19:45",
+      null,
+      "20:08",
+      "20:15",
+      null,
+      "20:35",
+      "20:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "20:45",
+      null,
+      "21:08",
+      "21:15",
+      null,
+      "21:35",
+      "21:45"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "21:45",
+      null,
+      "22:08",
+      "22:15",
+      null,
+      "22:35",
+      "22:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "7",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Centro Mldo.",
+    "Ag. Mldo.",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:15",
+      "08:25",
+      "08:38",
+      "08:45",
+      null,
+      "09:05",
+      "09:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:15",
+      "09:25",
+      "09:38",
+      "09:45",
+      null,
+      "10:05",
+      "10:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:15",
+      "10:25",
+      "10:38",
+      "10:45",
+      null,
+      "11:05",
+      "11:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:15",
+      "11:25",
+      "11:38",
+      "11:45",
+      null,
+      "12:05",
+      "12:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:15",
+      "12:25",
+      "12:38",
+      "12:45",
+      null,
+      "13:05",
+      "13:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:15",
+      "13:25",
+      "13:38",
+      "13:45",
+      null,
+      "14:05",
+      "14:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:15",
+      "14:25",
+      "14:38",
+      "14:45",
+      null,
+      "15:05",
+      "15:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:15",
+      "15:25",
+      "15:38",
+      "15:45",
+      null,
+      "16:05",
+      "16:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "16:15",
+      "16:25",
+      "16:38",
+      "16:45",
+      null,
+      "17:05",
+      "17:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:15",
+      "17:25",
+      "17:38",
+      "17:45",
+      null,
+      "18:05",
+      "18:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:15",
+      "18:25",
+      "18:38",
+      "18:45",
+      null,
+      "19:05",
+      "19:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "19:15",
+      "19:25",
+      "19:38",
+      "19:45",
+      null,
+      "20:05",
+      "20:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "20:15",
+      "20:25",
+      "20:38",
+      "20:45",
+      null,
+      "21:05",
+      "21:15"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "SemiDto",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Centro Mldo.",
+    "Ag. Mldo.",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "17:00",
+      null,
+      null,
+      null,
+      "17:30",
+      "17:35",
+      "17:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "D",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "Hipódromo",
+    "Centro Convenciones",
+    "Punta del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "05:55",
+      "06:05",
+      "06:20",
+      "06:25",
+      "06:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "06:55",
+      "07:05",
+      "07:20",
+      "07:25",
+      "07:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:55",
+      "08:05",
+      "08:20",
+      "08:25",
+      "08:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "08:55",
+      "09:05",
+      "09:20",
+      "09:25",
+      "09:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:55",
+      "13:05",
+      "13:20",
+      "13:25",
+      "13:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "14:55",
+      "15:05",
+      "15:20",
+      "15:25",
+      "15:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "D",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Punta del Este",
+    "Centro Convenciones",
+    "Hipódromo",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:00",
+      "14:15",
+      "14:20",
+      "14:35",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:00",
+      "16:15",
+      "16:20",
+      "16:35",
+      "16:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      "17:15",
+      "17:20",
+      "17:35",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "18:00",
+      "18:15",
+      "18:20",
+      "18:35",
+      "18:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "3",
+   "sentido": "ida",
+   "puntos_control": [
+    "San Carlos Vialidad",
+    "Hipódromo",
+    "Ag. Maldonado",
+    "Terminal Maldonado",
+    "Shopping",
+    "San Rafael (Cipriani)"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "06:55",
+      "07:20",
+      "07:25",
+      "07:35",
+      "07:45",
+      "07:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:55",
+      "08:20",
+      "08:25",
+      "08:35",
+      "08:45",
+      "08:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:55",
+      "09:20",
+      "09:25",
+      "09:35",
+      "09:45",
+      "09:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "09:55",
+      "10:20",
+      "10:25",
+      "10:35",
+      "10:45",
+      "10:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:55",
+      "11:20",
+      "11:25",
+      "11:35",
+      "11:45",
+      "11:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "11:55",
+      "12:20",
+      "12:25",
+      "12:35",
+      "12:45",
+      "12:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:55",
+      "13:20",
+      "13:25",
+      "13:35",
+      "13:45",
+      "13:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:55",
+      "14:20",
+      "14:25",
+      "14:35",
+      "14:45",
+      "14:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:55",
+      "15:20",
+      "15:25",
+      "15:35",
+      "15:45",
+      "15:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:55",
+      "16:20",
+      "16:25",
+      "16:35",
+      "16:45",
+      "16:50"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:55",
+      "17:20",
+      "17:25",
+      "17:35",
+      "17:45",
+      "17:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:55",
+      "18:20",
+      "18:25",
+      "18:35",
+      "18:45",
+      "18:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:55",
+      "19:20",
+      "19:25",
+      "19:35",
+      "19:45",
+      "19:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "19:55",
+      "20:20",
+      "20:25",
+      "20:35",
+      "20:45",
+      "20:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "20:55",
+      "21:20",
+      "21:25",
+      "21:35",
+      "21:45",
+      "21:50"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "3",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "San Rafael (Cipriani)",
+    "Shopping",
+    "Terminal Maldonado",
+    "Agencia Maldonado",
+    "Hipódromo",
+    "San Carlos Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:05",
+      "08:10",
+      "08:20",
+      "08:30",
+      "08:35",
+      "08:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:05",
+      "09:10",
+      "09:20",
+      "09:30",
+      "09:35",
+      "09:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:05",
+      "10:10",
+      "10:20",
+      "10:30",
+      "10:35",
+      "10:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:05",
+      "11:10",
+      "11:20",
+      "11:30",
+      "11:35",
+      "11:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:05",
+      "12:10",
+      "12:20",
+      "12:30",
+      "12:35",
+      "12:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "13:05",
+      "13:10",
+      "13:20",
+      "13:30",
+      "13:35",
+      "13:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:05",
+      "14:10",
+      "14:20",
+      "14:30",
+      "14:35",
+      "14:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:05",
+      "15:10",
+      "15:20",
+      "15:30",
+      "15:35",
+      "15:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:05",
+      "16:10",
+      "16:20",
+      "16:30",
+      "16:35",
+      "16:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:05",
+      "17:10",
+      "17:20",
+      "17:30",
+      "17:35",
+      "17:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "18:05",
+      "18:10",
+      "18:20",
+      "18:30",
+      "18:35",
+      "18:55"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "19:05",
+      "19:10",
+      "19:20",
+      "19:30",
+      "19:35",
+      "19:55"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "20:05",
+      "20:10",
+      "20:20",
+      "20:30",
+      "20:35",
+      "20:55"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "21:05",
+      "21:10",
+      "21:20",
+      "21:30",
+      "21:35",
+      "21:55"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "22:05",
+      "22:10",
+      "22:20",
+      "22:30",
+      "22:35",
+      "22:55"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "9/12",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Term. Mldo.",
+    "Shopping",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "05:00",
+      "05:25",
+      null,
+      "05:35",
+      "05:45",
+      "05:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:45",
+      "22:10",
+      null,
+      "22:20",
+      "22:30",
+      "22:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:15",
+      "22:40",
+      null,
+      "22:50",
+      "23:00",
+      "23:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "23:30",
+      "23:55",
+      null,
+      "00:05",
+      "00:15",
+      "00:25"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "12",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Term. Mldo.",
+    "Shopping",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "05:45",
+      null,
+      null,
+      "06:20",
+      "06:30",
+      "06:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "06:15",
+      null,
+      null,
+      "06:50",
+      "07:00",
+      "07:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "06:45",
+      null,
+      null,
+      "07:20",
+      "07:30",
+      "07:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "07:15",
+      null,
+      null,
+      "07:50",
+      "08:00",
+      "08:10"
+     ]
+    },
+    {
+     "referencias": [
+      "Directo",
+      "D"
+     ],
+     "horas": [
+      "07:43",
+      null,
+      null,
+      null,
+      "08:07",
+      "08:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:45",
+      null,
+      null,
+      "08:20",
+      "08:30",
+      "08:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "08:15",
+      null,
+      null,
+      "08:50",
+      "09:00",
+      "09:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:45",
+      null,
+      null,
+      "09:20",
+      "09:30",
+      "09:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "09:15",
+      null,
+      null,
+      "09:50",
+      "10:00",
+      "10:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:45",
+      null,
+      null,
+      "10:20",
+      "10:30",
+      "10:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:15",
+      null,
+      null,
+      "10:50",
+      "11:00",
+      "11:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:45",
+      null,
+      null,
+      "11:20",
+      "11:30",
+      "11:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "11:15",
+      null,
+      null,
+      "11:50",
+      "12:00",
+      "12:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:45",
+      null,
+      null,
+      "12:20",
+      "12:30",
+      "12:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:15",
+      null,
+      null,
+      "12:50",
+      "13:00",
+      "13:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:45",
+      null,
+      null,
+      "13:20",
+      "13:30",
+      "13:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:15",
+      null,
+      null,
+      "13:50",
+      "14:00",
+      "14:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:45",
+      null,
+      null,
+      "14:20",
+      "14:30",
+      "14:40"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:15",
+      null,
+      null,
+      "14:50",
+      "15:00",
+      "15:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:45",
+      null,
+      null,
+      "15:20",
+      "15:30",
+      "15:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:15",
+      null,
+      null,
+      "15:50",
+      "16:00",
+      "16:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:45",
+      null,
+      null,
+      "16:20",
+      "16:30",
+      "16:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:15",
+      null,
+      null,
+      "16:50",
+      "17:00",
+      "17:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:45",
+      null,
+      null,
+      "17:20",
+      "17:30",
+      "17:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:15",
+      null,
+      null,
+      "17:50",
+      "18:00",
+      "18:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:45",
+      null,
+      null,
+      "18:20",
+      "18:30",
+      "18:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:15",
+      null,
+      null,
+      "18:50",
+      "19:00",
+      "19:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:45",
+      null,
+      null,
+      "19:20",
+      "19:30",
+      "19:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:15",
+      null,
+      null,
+      "19:50",
+      "20:00",
+      "20:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:45",
+      null,
+      null,
+      "20:20",
+      "20:30",
+      "20:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:15",
+      null,
+      null,
+      "20:50",
+      "21:00",
+      "21:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:45",
+      null,
+      null,
+      "21:20",
+      "21:30",
+      "21:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:15",
+      null,
+      null,
+      "21:50",
+      "22:00",
+      "22:10"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "9",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Term. Mldo.",
+    "Shopping",
+    "P. del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "06:00",
+      "06:25",
+      null,
+      "06:33",
+      "06:43",
+      "06:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "06:30",
+      "06:55",
+      null,
+      "07:03",
+      "07:13",
+      "07:23"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "07:00",
+      "07:25",
+      null,
+      "07:33",
+      "07:43",
+      "07:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:30",
+      "07:55",
+      null,
+      "08:03",
+      "08:13",
+      "08:23"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:00",
+      "08:25",
+      null,
+      "08:33",
+      "08:43",
+      "08:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:30",
+      "08:55",
+      null,
+      "09:03",
+      "09:13",
+      "09:23"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:00",
+      "09:25",
+      null,
+      "09:33",
+      "09:43",
+      "09:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:30",
+      "09:55",
+      null,
+      "10:03",
+      "10:13",
+      "10:23"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:00",
+      "10:25",
+      null,
+      "10:33",
+      "10:43",
+      "10:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:30",
+      "10:55",
+      null,
+      "11:03",
+      "11:13",
+      "11:23"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:25",
+      null,
+      "11:33",
+      "11:43",
+      "11:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:30",
+      "11:55",
+      null,
+      "12:03",
+      "12:13",
+      "12:23"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:00",
+      "12:25",
+      null,
+      "12:33",
+      "12:43",
+      "12:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:30",
+      "12:55",
+      null,
+      "13:03",
+      "13:13",
+      "13:23"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:00",
+      "13:25",
+      null,
+      "13:33",
+      "13:43",
+      "13:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:30",
+      "13:55",
+      null,
+      "14:03",
+      "14:13",
+      "14:23"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:00",
+      "14:25",
+      null,
+      "14:33",
+      "14:43",
+      "14:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:30",
+      "14:55",
+      null,
+      "15:03",
+      "15:13",
+      "15:23"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:00",
+      "15:25",
+      null,
+      "15:33",
+      "15:43",
+      "15:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:30",
+      "15:55",
+      null,
+      "16:03",
+      "16:13",
+      "16:23"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:00",
+      "16:25",
+      null,
+      "16:33",
+      "16:43",
+      "16:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:30",
+      "16:55",
+      null,
+      "17:03",
+      "17:13",
+      "17:23"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:00",
+      "17:25",
+      null,
+      "17:33",
+      "17:43",
+      "17:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:30",
+      "17:55",
+      null,
+      "18:03",
+      "18:13",
+      "18:23"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:00",
+      "18:25",
+      null,
+      "18:33",
+      "18:43",
+      "18:53"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:30",
+      "18:55",
+      null,
+      "19:03",
+      "19:13",
+      "19:23"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "19:00",
+      "19:25",
+      null,
+      "19:33",
+      "19:43",
+      "19:53"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "21:00",
+      "21:25",
+      null,
+      "21:33",
+      "21:43",
+      "21:53"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "9/12",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Term. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "05:55",
+      "06:05",
+      "06:15",
+      "06:20",
+      "06:30",
+      "06:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:40",
+      "22:50",
+      "23:00",
+      "23:05",
+      "23:15",
+      "23:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "23:10",
+      "23:20",
+      "23:30",
+      "23:35",
+      "23:45",
+      "00:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "00:25",
+      "00:35",
+      "00:45",
+      "00:50",
+      "01:00",
+      "01:15"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "12",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Term. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "06:40",
+      "06:50",
+      "07:00",
+      null,
+      null,
+      "07:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "07:10",
+      "07:20",
+      "07:30",
+      null,
+      null,
+      "07:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:40",
+      "07:50",
+      "08:00",
+      null,
+      null,
+      "08:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "08:10",
+      "08:20",
+      "08:30",
+      null,
+      null,
+      "08:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:40",
+      "08:50",
+      "09:00",
+      null,
+      null,
+      "09:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "09:10",
+      "09:20",
+      "09:30",
+      null,
+      null,
+      "09:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:40",
+      "09:50",
+      "10:00",
+      null,
+      null,
+      "10:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:10",
+      "10:20",
+      "10:30",
+      null,
+      null,
+      "10:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:40",
+      "10:50",
+      "11:00",
+      null,
+      null,
+      "11:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "11:10",
+      "11:20",
+      "11:30",
+      null,
+      null,
+      "11:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:40",
+      "11:50",
+      "12:00",
+      null,
+      null,
+      "12:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:10",
+      "12:20",
+      "12:30",
+      null,
+      null,
+      "12:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:40",
+      "12:50",
+      "13:00",
+      null,
+      null,
+      "13:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:10",
+      "13:20",
+      "13:30",
+      null,
+      null,
+      "13:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:40",
+      "13:50",
+      "14:00",
+      null,
+      null,
+      "14:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:10",
+      "14:20",
+      "14:30",
+      null,
+      null,
+      "14:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:40",
+      "14:50",
+      "15:00",
+      null,
+      null,
+      "15:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:10",
+      "15:20",
+      "15:30",
+      null,
+      null,
+      "15:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:40",
+      "15:50",
+      "16:00",
+      null,
+      null,
+      "16:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:10",
+      "16:20",
+      "16:30",
+      null,
+      null,
+      "16:55"
+     ]
+    },
+    {
+     "referencias": [
+      "Directo",
+      "D"
+     ],
+     "horas": [
+      "17:05",
+      "17:15",
+      null,
+      null,
+      null,
+      "17:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:40",
+      "16:50",
+      "17:00",
+      null,
+      null,
+      "17:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:10",
+      "17:20",
+      "17:30",
+      null,
+      null,
+      "17:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:40",
+      "17:50",
+      "18:00",
+      null,
+      null,
+      "18:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:10",
+      "18:20",
+      "18:30",
+      null,
+      null,
+      "18:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:40",
+      "18:50",
+      "19:00",
+      null,
+      null,
+      "19:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:10",
+      "19:20",
+      "19:30",
+      null,
+      null,
+      "19:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:40",
+      "19:50",
+      "20:00",
+      null,
+      null,
+      "20:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:10",
+      "20:20",
+      "20:30",
+      null,
+      null,
+      "20:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:40",
+      "20:50",
+      "21:00",
+      null,
+      null,
+      "21:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:10",
+      "21:20",
+      "21:30",
+      null,
+      null,
+      "21:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:40",
+      "21:50",
+      "22:00",
+      null,
+      null,
+      "22:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:10",
+      "22:20",
+      "22:30",
+      null,
+      null,
+      "22:55"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "9",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "P. del Este",
+    "Shopping",
+    "Term. Mldo.",
+    "Hospital Mldo.",
+    "Centro Mldo.",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "06:55",
+      "07:05",
+      "07:15",
+      "07:20",
+      "07:30",
+      "07:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:25",
+      "07:35",
+      "07:45",
+      "07:50",
+      "08:00",
+      "08:15"
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "07:55",
+      "08:05",
+      "08:15",
+      "08:20",
+      "08:30",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:25",
+      "08:35",
+      "08:45",
+      "08:50",
+      "09:00",
+      "09:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:55",
+      "09:05",
+      "09:15",
+      "09:20",
+      "09:30",
+      "09:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:25",
+      "09:35",
+      "09:45",
+      "09:50",
+      "10:00",
+      "10:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:55",
+      "10:05",
+      "10:15",
+      "10:20",
+      "10:30",
+      "10:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:25",
+      "10:35",
+      "10:45",
+      "10:50",
+      "11:00",
+      "11:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:55",
+      "11:05",
+      "11:15",
+      "11:20",
+      "11:30",
+      "11:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:25",
+      "11:35",
+      "11:45",
+      "11:50",
+      "12:00",
+      "12:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:55",
+      "12:05",
+      "12:15",
+      "12:20",
+      "12:30",
+      "12:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:25",
+      "12:35",
+      "12:45",
+      "12:50",
+      "13:00",
+      "13:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:55",
+      "13:05",
+      "13:15",
+      "13:20",
+      "13:30",
+      "13:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:25",
+      "13:35",
+      "13:45",
+      "13:50",
+      "14:00",
+      "14:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:55",
+      "14:05",
+      "14:15",
+      "14:20",
+      "14:30",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:25",
+      "14:35",
+      "14:45",
+      "14:50",
+      "15:00",
+      "15:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:55",
+      "15:05",
+      "15:15",
+      "15:20",
+      "15:30",
+      "15:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:25",
+      "15:35",
+      "15:45",
+      "15:50",
+      "16:00",
+      "16:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:55",
+      "16:05",
+      "16:15",
+      "16:20",
+      "16:30",
+      "16:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:25",
+      "16:35",
+      "16:45",
+      "16:50",
+      "17:00",
+      "17:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:55",
+      "17:05",
+      "17:15",
+      "17:20",
+      "17:30",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:25",
+      "17:35",
+      "17:45",
+      "17:50",
+      "18:00",
+      "18:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:55",
+      "18:05",
+      "18:15",
+      "18:20",
+      "18:30",
+      "18:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:25",
+      "18:35",
+      "18:45",
+      "18:50",
+      "19:00",
+      "19:15"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:55",
+      "19:05",
+      "19:15",
+      "19:20",
+      "19:30",
+      "19:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:25",
+      "19:35",
+      "19:45",
+      "19:50",
+      "20:00",
+      "20:15"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "19:55",
+      "20:05",
+      "20:15",
+      "20:20",
+      "20:30",
+      "20:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "20:55",
+      "21:05",
+      "21:15",
+      "21:20",
+      "21:30",
+      "21:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "21:55",
+      "22:05",
+      "22:15",
+      "22:20",
+      "22:30",
+      "22:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "11",
+   "sentido": "ida",
+   "puntos_control": [
+    "Bº Hipódromo",
+    "W.F. Aldunate",
+    "San Francisco",
+    "Hospital",
+    "Ter. Mldo",
+    "Distrito 52",
+    "Bº Los Caracoles"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "06:50",
+      "07:05",
+      "07:07",
+      "07:17",
+      "07:25",
+      "07:33",
+      "07:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:50",
+      "08:05",
+      "08:07",
+      "08:17",
+      "08:25",
+      "08:33",
+      "08:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:50",
+      "09:05",
+      "09:07",
+      "09:17",
+      "09:25",
+      "09:33",
+      "09:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:50",
+      "10:05",
+      "10:07",
+      "10:17",
+      "10:25",
+      "10:33",
+      "10:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:50",
+      "11:05",
+      "11:07",
+      "11:17",
+      "11:25",
+      "11:33",
+      "11:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:50",
+      "12:05",
+      "12:07",
+      "12:17",
+      "12:25",
+      "12:33",
+      "12:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:50",
+      "13:05",
+      "13:07",
+      "13:17",
+      "13:25",
+      "13:33",
+      "13:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:50",
+      "14:05",
+      "14:07",
+      "14:17",
+      "14:25",
+      "14:33",
+      "14:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "14:50",
+      "15:05",
+      "15:07",
+      "15:17",
+      "15:25",
+      "15:33",
+      "15:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:50",
+      "16:05",
+      "16:07",
+      "16:17",
+      "16:25",
+      "16:33",
+      "16:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:50",
+      "17:05",
+      "17:07",
+      "17:17",
+      "17:25",
+      "17:33",
+      "17:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:50",
+      "18:05",
+      "18:07",
+      "18:17",
+      "18:25",
+      "18:33",
+      "18:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "18:50",
+      "19:05",
+      "19:07",
+      "19:17",
+      "19:25",
+      "19:33",
+      "19:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:50",
+      "20:05",
+      "20:07",
+      "20:17",
+      "20:25",
+      "20:33",
+      "20:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "20:50",
+      "21:05",
+      "21:07",
+      "21:17",
+      "21:25",
+      "21:33",
+      "21:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "11",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Bº Los Caracoles",
+    "Distrito 52",
+    "Ter. Mldo",
+    "Hospital",
+    "San Francisco",
+    "W.F. Aldunate",
+    "Bº Hipódromo"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:00",
+      "08:05",
+      "08:15",
+      "08:23",
+      "08:33",
+      "08:38",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:00",
+      "09:05",
+      "09:15",
+      "09:23",
+      "09:33",
+      "09:38",
+      "09:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "10:00",
+      "10:05",
+      "10:15",
+      "10:23",
+      "10:33",
+      "10:38",
+      "10:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:05",
+      "11:15",
+      "11:23",
+      "11:33",
+      "11:38",
+      "11:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:00",
+      "12:05",
+      "12:15",
+      "12:23",
+      "12:33",
+      "12:38",
+      "12:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:00",
+      "13:05",
+      "13:15",
+      "13:23",
+      "13:33",
+      "13:38",
+      "13:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "14:00",
+      "14:05",
+      "14:15",
+      "14:23",
+      "14:33",
+      "14:38",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:00",
+      "15:05",
+      "15:15",
+      "15:23",
+      "15:33",
+      "15:38",
+      "15:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:00",
+      "16:05",
+      "16:15",
+      "16:23",
+      "16:33",
+      "16:38",
+      "16:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      "17:05",
+      "17:15",
+      "17:23",
+      "17:33",
+      "17:38",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "18:00",
+      "18:05",
+      "18:15",
+      "18:23",
+      "18:33",
+      "18:38",
+      "18:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:00",
+      "19:05",
+      "19:15",
+      "19:23",
+      "19:33",
+      "19:38",
+      "19:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "20:00",
+      "20:05",
+      "20:15",
+      "20:23",
+      "20:33",
+      "20:38",
+      "20:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:00",
+      "21:05",
+      "21:15",
+      "21:23",
+      "21:33",
+      "21:38",
+      "21:45"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "22:00",
+      "22:05",
+      "22:15",
+      "22:23",
+      "22:33",
+      "22:38",
+      "22:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "14",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Mldo. Nuevo",
+    "Centro Mldo.",
+    "Tnal. Mldo.",
+    "Tnal. P. del Este",
+    "La Barra",
+    "Manantiales",
+    "Bal. Bs. As. (Calle 34)",
+    "José Ignacio",
+    "Laguna Garzon"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "04:50",
+      "04:55",
+      "05:05",
+      "05:10",
+      "05:23",
+      "05:35",
+      "05:45",
+      "05:50",
+      "06:10",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "05:45",
+      "05:50",
+      "06:00",
+      "06:05",
+      "06:18",
+      "06:30",
+      "06:40",
+      "06:45",
+      "07:00",
+      "07:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:45",
+      "07:50",
+      "08:00",
+      "08:05",
+      "08:18",
+      "08:30",
+      "08:40",
+      "08:45",
+      "09:05",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:45",
+      "08:50",
+      "09:00",
+      "09:05",
+      "09:18",
+      "09:30",
+      "09:40",
+      "09:45",
+      "10:05",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:45",
+      "09:50",
+      "10:00",
+      "10:05",
+      "10:18",
+      "10:30",
+      "10:40",
+      "10:45",
+      "11:05",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:45",
+      "10:50",
+      "11:00",
+      "11:05",
+      "11:18",
+      "11:30",
+      "11:40",
+      "11:45",
+      "12:05",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:45",
+      "11:50",
+      "12:00",
+      "12:05",
+      "12:18",
+      "12:30",
+      "12:40",
+      "12:45",
+      "13:05",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:45",
+      "12:50",
+      "13:00",
+      "13:05",
+      "13:18",
+      "13:30",
+      "13:40",
+      "13:45",
+      "14:05",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "13:45",
+      "13:50",
+      "14:00",
+      "14:05",
+      "14:18",
+      "14:30",
+      "14:40",
+      "14:45",
+      "15:05",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:45",
+      "14:50",
+      "15:00",
+      "15:05",
+      "15:18",
+      "15:30",
+      "15:40",
+      "15:45",
+      "16:05",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:45",
+      "15:50",
+      "16:00",
+      "16:05",
+      "16:18",
+      "16:30",
+      "16:40",
+      "16:45",
+      "17:05",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "17:05",
+      "17:10",
+      "17:20",
+      "17:25",
+      "17:38",
+      "17:50",
+      "18:00",
+      "18:05",
+      "18:25",
+      null
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:05",
+      "19:10",
+      "19:20",
+      "19:25",
+      "19:38",
+      "19:50",
+      "20:00",
+      "20:05",
+      "20:25",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "#"
+     ],
+     "horas": [
+      "21:05",
+      "21:10",
+      "21:20",
+      "21:25",
+      "21:38",
+      "21:50",
+      "22:00",
+      "22:05",
+      "22:25",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "#",
+      "S"
+     ],
+     "horas": [
+      "23:05",
+      "23:10",
+      "23:20",
+      "23:25",
+      "23:38",
+      "23:50",
+      "00:00",
+      "00:05",
+      "00:25",
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "14",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Laguna Garzon",
+    "José Ignacio",
+    "Bal. Bs. As. (Calle 34)",
+    "Manantiales",
+    "La Barra",
+    "Tnal. P. del Este",
+    "Tnal. Mldo.",
+    "Centro Mldo.",
+    "Mldo. Nuevo",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      null,
+      "06:10",
+      "06:30",
+      "06:40",
+      "06:50",
+      "07:02",
+      "07:13",
+      "07:15",
+      "07:22",
+      "07:25"
+     ]
+    },
+    {
+     "referencias": [
+      "T",
+      "D"
+     ],
+     "horas": [
+      "07:10",
+      "07:20",
+      "07:40",
+      "07:50",
+      "08:00",
+      "08:12",
+      "08:23",
+      "08:25",
+      "08:32",
+      "08:35"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "09:05",
+      "09:25",
+      "09:35",
+      "09:45",
+      "09:57",
+      "10:08",
+      "10:10",
+      "10:17",
+      "10:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "10:05",
+      "10:25",
+      "10:35",
+      "10:45",
+      "10:57",
+      "11:08",
+      "11:10",
+      "11:17",
+      "11:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      null,
+      "11:05",
+      "11:25",
+      "11:35",
+      "11:45",
+      "11:57",
+      "12:08",
+      "12:10",
+      "12:17",
+      "12:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "12:05",
+      "12:25",
+      "12:35",
+      "12:45",
+      "12:57",
+      "13:08",
+      "13:10",
+      "13:17",
+      "13:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      null,
+      "13:05",
+      "13:25",
+      "13:35",
+      "13:45",
+      "13:57",
+      "14:08",
+      "14:10",
+      "14:17",
+      "14:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "14:05",
+      "14:25",
+      "14:35",
+      "14:45",
+      "14:57",
+      "15:08",
+      "15:10",
+      "15:17",
+      "15:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      null,
+      "15:05",
+      "15:25",
+      "15:35",
+      "15:45",
+      "15:57",
+      "16:08",
+      "16:10",
+      "16:17",
+      "16:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "16:05",
+      "16:25",
+      "16:35",
+      "16:45",
+      "16:57",
+      "17:08",
+      "17:10",
+      "17:17",
+      "17:20"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "17:05",
+      "17:25",
+      "17:35",
+      "17:45",
+      "17:57",
+      "18:08",
+      "18:10",
+      "18:17",
+      "18:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      null,
+      "18:25",
+      "18:45",
+      "18:55",
+      "19:05",
+      "19:17",
+      "19:28",
+      "19:30",
+      "19:37",
+      "19:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "20:25",
+      "20:45",
+      "20:55",
+      "21:05",
+      "21:17",
+      "21:28",
+      "21:30",
+      "21:37",
+      "21:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      null,
+      "22:25",
+      "22:45",
+      "22:55",
+      "23:05",
+      "23:17",
+      "23:28",
+      "23:30",
+      "23:37",
+      "23:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      null,
+      "00:25",
+      "00:45",
+      "00:55",
+      "01:05",
+      "01:17",
+      "01:28",
+      "01:30",
+      "01:37",
+      "01:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "35",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Lavagna",
+    "Ag. San Carlos",
+    "Empalme R104 y Medellín",
+    "José Ignacio"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:15",
+      "08:20",
+      "08:25",
+      "08:40",
+      "09:00"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:35",
+      "16:40",
+      "16:45",
+      "17:00",
+      "17:20"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "35",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "José Ignacio",
+    "Empalme R104 y Medellín",
+    "Agencia San Carlos",
+    "Lavagna",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:05",
+      "09:25",
+      "09:40",
+      "09:45",
+      "09:50"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "17:30",
+      "17:50",
+      "18:05",
+      "18:10",
+      "18:15"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "5",
+   "sentido": "ida",
+   "puntos_control": [
+    "Vialidad",
+    "Ag. San Carlos",
+    "El Chorro",
+    "Balneario Bs. As.",
+    "Manantiales",
+    "Puente La Barra"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      "05:45",
+      "06:00",
+      "06:20",
+      "06:25",
+      "06:40",
+      "06:50"
+     ]
+    },
+    {
+     "referencias": [
+      "P",
+      "&"
+     ],
+     "horas": [
+      "07:40",
+      "07:55",
+      "08:15",
+      "08:20",
+      "08:35",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [
+      "P",
+      "S"
+     ],
+     "horas": [
+      "13:15",
+      "13:30",
+      "13:50",
+      "13:55",
+      "14:05",
+      "14:15"
+     ]
+    },
+    {
+     "referencias": [
+      "P",
+      "S"
+     ],
+     "horas": [
+      "14:45",
+      "15:00",
+      "15:20",
+      "15:25",
+      "15:35",
+      "15:45"
+     ]
+    },
+    {
+     "referencias": [
+      "P"
+     ],
+     "horas": [
+      "15:45",
+      "16:00",
+      "16:20",
+      "16:25",
+      "16:35",
+      "16:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "5",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Puente La Barra",
+    "Manantial es",
+    "El Chorro",
+    "Balneario Bs. As.",
+    "Ag. San Carlos",
+    "Vialidad"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      "06:20",
+      "06:30",
+      "06:35",
+      "06:40",
+      "07:10",
+      "07:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:10",
+      "08:20",
+      "08:25",
+      "08:30",
+      "09:00",
+      null
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "14:25",
+      "14:35",
+      "14:40",
+      "14:45",
+      "15:15",
+      "15:30"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      "16:05",
+      "16:15",
+      "16:20",
+      "16:25",
+      "16:55",
+      "17:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:05",
+      "17:15",
+      "17:20",
+      "17:25",
+      "17:55",
+      "18:10"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "55",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Mldo. Nuevo",
+    "Centro Mldo.",
+    "Tnal. Mldo.",
+    "Tnal. P. del Este",
+    "El Jagüel",
+    "La Barra",
+    "Manantiales",
+    "El Chorro",
+    "Bal. Bs. As. (Calle 26)"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "06:20",
+      "06:25"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "06:55",
+      null,
+      "07:00",
+      "07:05",
+      null,
+      "07:15",
+      "07:20",
+      "07:30",
+      "07:35",
+      "07:40"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "08:15",
+      "08:20"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "S"
+     ],
+     "horas": [
+      "07:45",
+      null,
+      "07:50",
+      "07:55",
+      null,
+      "08:05",
+      "08:10",
+      "08:20",
+      "08:25",
+      "08:30"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "08:55",
+      null,
+      "09:00",
+      "09:05",
+      null,
+      "09:15",
+      "09:20",
+      "09:30",
+      "09:35",
+      "09:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "09:55",
+      null,
+      "10:00",
+      "10:05",
+      null,
+      "10:15",
+      "10:20",
+      "10:30",
+      "10:35",
+      "10:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "10:55",
+      null,
+      "11:00",
+      "11:05",
+      null,
+      "11:15",
+      "11:20",
+      "11:30",
+      "11:35",
+      "11:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "11:55",
+      null,
+      "12:00",
+      "12:05",
+      null,
+      "12:15",
+      "12:20",
+      "12:30",
+      "12:35",
+      "12:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "12:55",
+      null,
+      "13:00",
+      "13:05",
+      null,
+      "13:15",
+      "13:20",
+      "13:30",
+      "13:35",
+      "13:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "13:55",
+      null,
+      "14:00",
+      "14:05",
+      null,
+      "14:15",
+      "14:20",
+      "14:30",
+      "14:35",
+      "14:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "14:55",
+      null,
+      "15:00",
+      "15:05",
+      null,
+      "15:15",
+      "15:20",
+      "15:30",
+      "15:35",
+      "15:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "15:55",
+      null,
+      "16:00",
+      "16:05",
+      null,
+      "16:15",
+      "16:20",
+      "16:30",
+      "16:35",
+      "16:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "16:55",
+      null,
+      "17:00",
+      "17:05",
+      null,
+      "17:15",
+      "17:20",
+      "17:30",
+      "17:35",
+      "17:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "17:55",
+      null,
+      "18:00",
+      "18:05",
+      null,
+      "18:15",
+      "18:20",
+      "18:30",
+      "18:35",
+      "18:40"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "18:55",
+      null,
+      "19:00",
+      "19:05",
+      null,
+      "19:15",
+      "19:20",
+      "19:30",
+      "19:35",
+      "19:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "15",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Mldo. Nuevo",
+    "Centro Mldo.",
+    "Tnal. Mldo.",
+    "Tnal. P. del Este",
+    "El Jagüel",
+    "La Barra",
+    "Manantiales",
+    "El Chorro",
+    "Bal. Bs. As. (Calle 26)"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "06:20",
+      "06:25"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "06:45",
+      "06:50",
+      "06:55",
+      "07:00",
+      "07:13",
+      null,
+      "07:28",
+      "07:38",
+      "07:43",
+      "07:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "07:45",
+      "07:50",
+      "07:55",
+      "08:00",
+      "08:13",
+      null,
+      "08:28",
+      "08:38",
+      "08:43",
+      "08:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "08:45",
+      "08:50",
+      "08:55",
+      "09:00",
+      "09:13",
+      null,
+      "09:28",
+      "09:38",
+      "09:43",
+      "09:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "09:45",
+      "09:50",
+      "09:55",
+      "10:00",
+      "10:13",
+      null,
+      "10:28",
+      "10:38",
+      "10:43",
+      "10:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "10:45",
+      "10:50",
+      "10:55",
+      "11:00",
+      "11:13",
+      null,
+      "11:28",
+      "11:38",
+      "11:43",
+      "11:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "11:45",
+      "11:50",
+      "11:55",
+      "12:00",
+      "12:13",
+      null,
+      "12:28",
+      "12:38",
+      "12:43",
+      "12:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "12:45",
+      "12:50",
+      "12:55",
+      "13:00",
+      "13:13",
+      null,
+      "13:28",
+      "13:38",
+      "13:43",
+      "13:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "13:45",
+      "13:50",
+      "13:55",
+      "14:00",
+      "14:13",
+      null,
+      "14:28",
+      "14:38",
+      "14:43",
+      "14:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "14:45",
+      "14:50",
+      "14:55",
+      "15:00",
+      "15:13",
+      null,
+      "15:28",
+      "15:38",
+      "15:43",
+      "15:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+",
+      "D"
+     ],
+     "horas": [
+      "15:45",
+      "15:50",
+      "15:55",
+      "16:00",
+      "16:13",
+      null,
+      "16:28",
+      "16:38",
+      "16:43",
+      "16:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "16:45",
+      "16:50",
+      "16:55",
+      "17:00",
+      "17:13",
+      null,
+      "17:28",
+      "17:38",
+      "17:43",
+      "17:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "17:45",
+      "17:50",
+      "17:55",
+      "18:00",
+      "18:13",
+      null,
+      "18:28",
+      "18:38",
+      "18:43",
+      "18:48"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "18:45",
+      "18:50",
+      "18:55",
+      "19:00",
+      "19:13",
+      null,
+      "19:28",
+      "19:38",
+      "19:43",
+      "19:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "19:45",
+      "19:50",
+      "19:55",
+      "20:00",
+      "20:13",
+      null,
+      "20:28",
+      "20:38",
+      "20:43",
+      "20:48"
+     ]
+    },
+    {
+     "referencias": [
+      "+"
+     ],
+     "horas": [
+      "21:45",
+      "21:50",
+      "21:55",
+      "22:00",
+      "22:13",
+      null,
+      "22:28",
+      "22:38",
+      "22:43",
+      "22:48"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "55",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Bal. Bs. As. (Calle 26)",
+    "Calle 38 y Ruta 10",
+    "Manantiales",
+    "La Barra",
+    "El Jagüel",
+    "Tnal. Punta del Este",
+    "Tnal. Mldo.",
+    "Centro Mldo.",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&",
+      "S"
+     ],
+     "horas": [
+      "06:25",
+      "06:30",
+      "06:35",
+      "06:45",
+      "06:50",
+      null,
+      "07:00",
+      "07:03",
+      "07:10"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "07:40",
+      "07:45",
+      "07:50",
+      "08:00",
+      "08:05",
+      null,
+      "08:15",
+      "08:18",
+      "08:25"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "08:20",
+      "08:30",
+      "08:35",
+      "08:45",
+      "08:50",
+      null,
+      "09:00",
+      "09:03",
+      "09:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:40",
+      "09:45",
+      "09:50",
+      "10:00",
+      "10:05",
+      null,
+      "10:15",
+      "10:18",
+      "10:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:40",
+      "10:45",
+      "10:50",
+      "11:00",
+      "11:05",
+      null,
+      "11:15",
+      "11:18",
+      "11:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:40",
+      "11:45",
+      "11:50",
+      "12:00",
+      "12:05",
+      null,
+      "12:15",
+      "12:18",
+      "12:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:40",
+      "12:45",
+      "12:50",
+      "13:00",
+      "13:05",
+      null,
+      "13:15",
+      "13:18",
+      "13:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:40",
+      "13:45",
+      "13:50",
+      "14:00",
+      "14:05",
+      null,
+      "14:15",
+      "14:18",
+      "14:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:40",
+      "14:45",
+      "14:50",
+      "15:00",
+      "15:05",
+      null,
+      "15:15",
+      "15:18",
+      "15:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:40",
+      "15:45",
+      "15:50",
+      "16:00",
+      "16:05",
+      null,
+      "16:15",
+      "16:18",
+      "16:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "16:40",
+      "16:45",
+      "16:50",
+      "17:00",
+      "17:05",
+      null,
+      "17:15",
+      "17:18",
+      "17:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:40",
+      "17:45",
+      "17:50",
+      "18:00",
+      "18:05",
+      null,
+      "18:15",
+      "18:18",
+      "18:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:40",
+      "18:45",
+      "18:50",
+      "19:00",
+      "19:05",
+      null,
+      "19:15",
+      "19:18",
+      "19:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:40",
+      "19:45",
+      "19:50",
+      "20:00",
+      "20:05",
+      null,
+      "20:15",
+      "20:18",
+      "20:25"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "15",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Bal. Bs. As. (Calle 26)",
+    "Calle 38 y Ruta 10",
+    "Manantiales",
+    "La Barra",
+    "El Jagüel",
+    "Tnal. Punta del Este",
+    "Tnal. Mldo.",
+    "Centro Mldo.",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "06:25",
+      "06:33",
+      "06:38",
+      "06:48",
+      null,
+      "07:03",
+      "07:15",
+      "07:18",
+      "07:30"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "07:48",
+      "07:53",
+      "08:00",
+      "08:13",
+      null,
+      "08:28",
+      "08:40",
+      "08:43",
+      "08:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:48",
+      "08:53",
+      "09:00",
+      "09:13",
+      null,
+      "09:28",
+      "09:40",
+      "09:43",
+      "09:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "09:48",
+      "09:53",
+      "10:00",
+      "10:13",
+      null,
+      "10:28",
+      "10:40",
+      "10:43",
+      "10:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:48",
+      "10:53",
+      "11:00",
+      "11:13",
+      null,
+      "11:28",
+      "11:40",
+      "11:43",
+      "11:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "11:48",
+      "11:53",
+      "12:00",
+      "12:13",
+      null,
+      "12:28",
+      "12:40",
+      "12:43",
+      "12:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:48",
+      "12:53",
+      "13:00",
+      "13:13",
+      null,
+      "13:28",
+      "13:40",
+      "13:43",
+      "13:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "13:48",
+      "13:53",
+      "14:00",
+      "14:13",
+      null,
+      "14:28",
+      "14:40",
+      "14:43",
+      "14:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:48",
+      "14:53",
+      "15:00",
+      "15:13",
+      null,
+      "15:28",
+      "15:40",
+      "15:43",
+      "15:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "15:48",
+      "15:53",
+      "16:00",
+      "16:13",
+      null,
+      "16:28",
+      "16:40",
+      "16:43",
+      "16:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:48",
+      "16:53",
+      "17:00",
+      "17:13",
+      null,
+      "17:28",
+      "17:40",
+      "17:43",
+      "17:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "17:48",
+      "17:53",
+      "18:00",
+      "18:13",
+      null,
+      "18:28",
+      "18:40",
+      "18:43",
+      "18:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:48",
+      "18:53",
+      "19:00",
+      "19:13",
+      null,
+      "19:28",
+      "19:40",
+      "19:43",
+      "19:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&",
+      "D"
+     ],
+     "horas": [
+      "19:48",
+      "19:53",
+      "20:00",
+      "20:13",
+      null,
+      "20:28",
+      "20:40",
+      "20:43",
+      "20:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:48",
+      "20:53",
+      "21:00",
+      "21:13",
+      null,
+      "21:28",
+      "21:40",
+      "21:43",
+      "21:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "22:48",
+      "22:53",
+      "23:00",
+      "23:13",
+      null,
+      "23:28",
+      "23:40",
+      "23:43",
+      "23:55"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "L48",
+   "sentido": "circular",
+   "puntos_control": [
+    "Hipódromo",
+    "Agencia Mldo.",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "Liceo 5",
+    "Hospital Mldo.",
+    "Terminal Mldo.",
+    "Centro Mldo.",
+    "Agencia Maldo.",
+    "Hipódromo"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:00",
+      "07:10",
+      "07:17",
+      "07:22",
+      "07:28",
+      "07:30",
+      "07:35",
+      "07:38",
+      "07:45",
+      "07:50"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:30",
+      "12:40",
+      "12:47",
+      "12:52",
+      "12:58",
+      "13:00",
+      "13:05",
+      "13:08",
+      "13:15",
+      "13:20"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "L49",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Bº 14 de Febrero",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "Pda. 16",
+    "Hospital Mldo.",
+    "Lausana"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "06:30",
+      "06:50",
+      "07:00",
+      "07:05",
+      null,
+      "07:13",
+      "07:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:30",
+      "07:50",
+      "08:00",
+      "08:05",
+      null,
+      "08:13",
+      "08:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "09:30",
+      "09:50",
+      "10:00",
+      "10:05",
+      null,
+      "10:13",
+      "10:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "11:30",
+      "11:50",
+      "12:00",
+      "12:05",
+      null,
+      "12:13",
+      "12:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:30",
+      "13:50",
+      "14:00",
+      "14:05",
+      null,
+      "14:13",
+      "14:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "15:30",
+      "15:50",
+      "16:00",
+      "16:05",
+      null,
+      "16:13",
+      "16:25"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:30",
+      "17:50",
+      "18:00",
+      "18:05",
+      null,
+      "18:13",
+      "18:25"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "L50",
+   "sentido": "ida",
+   "puntos_control": [
+    "Ag. Mldo.",
+    "Bº 14 de Febrero",
+    "Centro Mldo.",
+    "Terminal Mldo.",
+    "Pda. 16",
+    "Hospital Mldo.",
+    "Lausana"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "07:00",
+      null,
+      "07:25",
+      "07:30",
+      null,
+      "07:38",
+      "07:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:00",
+      null,
+      "08:25",
+      "08:30",
+      null,
+      "08:38",
+      "08:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "09:00",
+      null,
+      "09:25",
+      "09:30",
+      null,
+      "09:38",
+      "09:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:00",
+      null,
+      "10:25",
+      "10:30",
+      null,
+      "10:38",
+      "10:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "11:00",
+      null,
+      "11:25",
+      "11:30",
+      null,
+      "11:38",
+      "11:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:00",
+      null,
+      "12:25",
+      "12:30",
+      null,
+      "12:38",
+      "12:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:00",
+      null,
+      "13:25",
+      "13:30",
+      null,
+      "13:38",
+      "13:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      null,
+      "14:25",
+      "14:30",
+      null,
+      "14:38",
+      "14:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "15:00",
+      null,
+      "15:25",
+      "15:30",
+      null,
+      "15:38",
+      "15:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:00",
+      null,
+      "16:25",
+      "16:30",
+      null,
+      "16:38",
+      "16:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "17:00",
+      null,
+      "17:25",
+      "17:30",
+      null,
+      "17:38",
+      "17:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:00",
+      null,
+      "18:25",
+      "18:30",
+      null,
+      "18:38",
+      "18:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "19:00",
+      null,
+      "19:25",
+      "19:30",
+      null,
+      "19:38",
+      "19:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:00",
+      null,
+      "20:25",
+      "20:30",
+      null,
+      "20:38",
+      "20:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "21:00",
+      null,
+      "21:25",
+      "21:30",
+      null,
+      "21:38",
+      "21:50"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "L50",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Lausana",
+    "Hospital Mldo.",
+    "Pda. 16",
+    "Term. Mldo.",
+    "Centro Mldo.",
+    "Bº 14 de Febrero",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "07:00",
+      "07:12",
+      null,
+      "07:20",
+      "07:25",
+      null,
+      "07:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "08:00",
+      "08:12",
+      null,
+      "08:20",
+      "08:25",
+      null,
+      "08:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:00",
+      "09:12",
+      null,
+      "09:20",
+      "09:25",
+      null,
+      "09:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:00",
+      "10:12",
+      null,
+      "10:20",
+      "10:25",
+      null,
+      "10:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:12",
+      null,
+      "11:20",
+      "11:25",
+      null,
+      "11:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "12:00",
+      "12:12",
+      null,
+      "12:20",
+      "12:25",
+      null,
+      "12:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:00",
+      "13:12",
+      null,
+      "13:20",
+      "13:25",
+      null,
+      "13:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:00",
+      "14:12",
+      null,
+      "14:20",
+      "14:25",
+      null,
+      "14:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:00",
+      "15:12",
+      null,
+      "15:20",
+      "15:25",
+      null,
+      "15:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "16:00",
+      "16:12",
+      null,
+      "16:20",
+      "16:25",
+      null,
+      "16:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      "17:12",
+      null,
+      "17:20",
+      "17:25",
+      null,
+      "17:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:00",
+      "18:12",
+      null,
+      "18:20",
+      "18:25",
+      null,
+      "18:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:00",
+      "19:12",
+      null,
+      "19:20",
+      "19:25",
+      null,
+      "19:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "20:00",
+      "20:12",
+      null,
+      "20:20",
+      "20:25",
+      null,
+      "20:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:00",
+      "21:12",
+      null,
+      "21:20",
+      "21:25",
+      null,
+      "21:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "22:00",
+      "22:12",
+      null,
+      "22:20",
+      "22:25",
+      null,
+      "22:50"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "L49",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Lausana",
+    "Hospital Mldo.",
+    "Pda. 16",
+    "Term. Mldo.",
+    "Centro Mldo.",
+    "Bº 14 de Febrero",
+    "Ag. Mldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "07:30",
+      "07:42",
+      null,
+      "07:50",
+      "07:55",
+      "08:05",
+      "08:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "08:30",
+      "08:42",
+      null,
+      "08:50",
+      "08:55",
+      "09:05",
+      "09:20"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "10:30",
+      "10:42",
+      null,
+      "10:50",
+      "10:55",
+      "11:05",
+      "11:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "12:30",
+      "12:42",
+      null,
+      "12:50",
+      "12:55",
+      "13:05",
+      "13:20"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "14:30",
+      "14:42",
+      null,
+      "14:50",
+      "14:55",
+      "15:05",
+      "15:20"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "16:30",
+      "16:42",
+      null,
+      "16:50",
+      "16:55",
+      "17:05",
+      "17:20"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "18:30",
+      "18:42",
+      null,
+      "18:50",
+      "18:55",
+      "19:05",
+      "19:20"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "8",
+   "sentido": "ida",
+   "puntos_control": [
+    "Terminal Punta del Este",
+    "Terminal Maldonado",
+    "Portezuelo",
+    "Aeropuerto",
+    "Capuera",
+    "Punta Negra",
+    "Terminal Piriápolis"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "06:15",
+      "06:25",
+      "06:40",
+      "06:45",
+      "06:50",
+      "07:05",
+      "07:30"
+     ]
+    },
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "08:25",
+      "08:35",
+      "08:50",
+      "08:55",
+      "09:00",
+      "09:25",
+      "09:50"
+     ]
+    },
+    {
+     "referencias": [
+      "D",
+      "&"
+     ],
+     "horas": [
+      "12:00",
+      "12:10",
+      "12:25",
+      "12:30",
+      "12:35",
+      "13:00",
+      "13:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "13:30",
+      "13:40",
+      "13:55",
+      "14:00",
+      "14:05",
+      "14:30",
+      "14:55"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "15:00",
+      "15:10",
+      "15:25",
+      "15:30",
+      "15:35",
+      "16:00",
+      "16:25"
+     ]
+    },
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "18:00",
+      "18:10",
+      "18:25",
+      "18:30",
+      "18:35",
+      "19:00",
+      "19:25"
+     ]
+    },
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "20:20",
+      "20:30",
+      "20:45",
+      "20:50",
+      "20:55",
+      "21:20",
+      "21:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "8",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Terminal Piriápolis",
+    "Punta Negra",
+    "Capuera",
+    "Aeropuerto",
+    "Portezuelo",
+    "Terminal Maldonado",
+    "Terminal Punta del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "&"
+     ],
+     "horas": [
+      "07:30",
+      "07:55",
+      "08:10",
+      "08:25",
+      "08:30",
+      "08:45",
+      "08:55"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "09:50",
+      "10:15",
+      "10:30",
+      "10:35",
+      "10:40",
+      "10:55",
+      "11:05"
+     ]
+    },
+    {
+     "referencias": [
+      "D"
+     ],
+     "horas": [
+      "13:25",
+      "13:50",
+      "14:05",
+      "14:10",
+      "14:15",
+      "14:30",
+      "14:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "15:00",
+      "15:25",
+      "15:40",
+      "15:45",
+      "15:50",
+      "16:05",
+      "16:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:25",
+      "16:50",
+      "17:05",
+      "17:10",
+      "17:15",
+      "17:30",
+      "17:40"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:25",
+      "19:50",
+      "20:05",
+      "20:10",
+      "20:15",
+      "20:30",
+      "20:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S"
+     ],
+     "horas": [
+      "21:45",
+      "22:10",
+      "22:25",
+      "22:30",
+      "22:35",
+      "22:50",
+      "23:00"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "61",
+   "sentido": "ida",
+   "puntos_control": [
+    "Terminal Maldonado",
+    "Centro",
+    "Hospital",
+    "Portezuelo",
+    "Aeropuerto",
+    "Capuera"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "12:30",
+      "12:33",
+      "12:38",
+      "12:50",
+      "12:55",
+      "13:00"
+     ]
+    },
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "14:30",
+      "14:33",
+      "14:38",
+      "14:50",
+      "14:55",
+      "15:00"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "61",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Capuera",
+    "Aeropuerto",
+    "Portezuelo",
+    "Hospital",
+    "Centro",
+    "Terminal Maldonado"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "13:00",
+      "13:15",
+      "13:20",
+      "13:32",
+      "13:37",
+      "13:40"
+     ]
+    },
+    {
+     "referencias": [
+      "S",
+      "&"
+     ],
+     "horas": [
+      "17:30",
+      "17:45",
+      "17:50",
+      "18:02",
+      "18:07",
+      "18:10"
+     ]
+    }
+   ]
+  }
+ ]
+}

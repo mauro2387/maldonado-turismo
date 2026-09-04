@@ -6,6 +6,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import PlacesPage from './pages/PlacesPage';
 import EventsPage from './pages/EventsPage';
+import EventScraperPage from './pages/EventScraperPage';
 import NewsPage from './pages/NewsPage';
 import TransportPage from './pages/TransportPage';
 import AuditLogPage from './pages/AuditLogPage';
@@ -32,6 +33,7 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="places" element={<PlacesPage />} />
             <Route path="events" element={<EventsPage />} />
+            <Route path="events/scraper" element={<EventScraperPage />} />
             <Route path="news" element={<NewsPage />} />
             <Route path="transport" element={<TransportPage />} />
             <Route path="users" element={<AdminUsersPage />} />

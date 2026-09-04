@@ -4,12 +4,25 @@ import { QrCode, Download, Share2, ArrowLeft, Loader2 } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { BusStop } from '@services/transportService';
 import Breadcrumbs from '@components/Breadcrumbs';
+import { formatStopName } from '@lib/stopNames';
 
 export default function ParadaQRPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [stop, setStop] = useState<BusStop | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
+  // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
+  // sistema operativo.
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
 
   useEffect(() => {
     const fetchStop = async () => {
@@ -69,7 +82,7 @@ export default function ParadaQRPage() {
     } else {
       // Fallback: copiar al portapapeles
       navigator.clipboard.writeText(url);
-      alert('Enlace copiado al portapapeles');
+      setCopied(true);
     }
   };
 
@@ -87,7 +100,7 @@ export default function ParadaQRPage() {
         <div className="text-center">
           <QrCode className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-600 mb-4">No se encontró la parada</p>
-          <button onClick={() => navigate('/transporte')} className="btn btn-primary">
+          <button onClick={() => navigate('/moverse')} className="btn btn-primary">
             Volver al transporte
           </button>
         </div>
@@ -104,9 +117,9 @@ export default function ParadaQRPage() {
         <div className="container mx-auto px-4 py-4">
           <Breadcrumbs
             items={[
-              { label: 'Transporte', path: '/transporte' },
-              { label: 'Paradas', path: '/transporte' },
-              { label: stop.name, path: `/transporte/paradas/${id}` },
+              { label: 'Moverse', path: '/moverse' },
+              { label: 'Paradas', path: '/moverse' },
+              { label: formatStopName(stop.name), path: `/transporte/paradas/${id}` },
               { label: 'Código QR' },
             ]}
           />
@@ -131,7 +144,7 @@ export default function ParadaQRPage() {
               <div className="inline-block bg-primary-100 text-primary-800 px-4 py-2 rounded-lg font-bold text-lg mb-3">
                 {stop.code}
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{stop.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{formatStopName(stop.name)}</h2>
               <p className="text-gray-600">{stop.zone}</p>
             </div>
 
@@ -231,6 +244,15 @@ export default function ParadaQRPage() {
           }
         }
       `}</style>
+
+      {copied && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-float md:bottom-8"
+        >
+          Enlace copiado
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  MapPin, ArrowLeft, Star, Clock, Phone, Globe, 
+  MapPin, ArrowLeft, Star, Clock, Phone, Globe, Bus, 
   Share2, Heart, Navigation, Calendar, Camera, Loader2
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePlace } from '@hooks/usePlaces';
 
 export default function PlaceDetailPage() {
@@ -11,6 +11,18 @@ export default function PlaceDetailPage() {
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
+  // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
+  // sistema operativo.
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
 
   // Fetch place from API
   const { place, loading, error } = usePlace(id);
@@ -33,7 +45,7 @@ export default function PlaceDetailPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el lugar</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => navigate('/places')}
+            onClick={() => navigate('/que-hacer?ver=lugares')}
             className="btn btn-primary"
           >
             Volver a lugares
@@ -51,13 +63,17 @@ export default function PlaceDetailPage() {
           <MapPin className="mx-auto h-16 w-16 text-gray-300 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Lugar no encontrado</h2>
           <p className="text-gray-600 mb-6">El lugar que buscas no existe</p>
-          <button onClick={() => navigate('/places')} className="btn btn-primary">
+          <button onClick={() => navigate('/que-hacer?ver=lugares')} className="btn btn-primary">
             Ver todos los lugares
           </button>
         </div>
       </div>
     );
   }
+
+  // La foto que se está viendo y su crédito. `image_credits` va en el mismo
+  // orden que `images`, así que alcanza con el índice seleccionado.
+  const credit = place.image_credits?.[selectedImageIndex] ?? null;
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -68,12 +84,12 @@ export default function PlaceDetailPage() {
           url: window.location.href,
         });
       } catch (err) {
-        console.log('Error sharing:', err);
+        // El usuario canceló el diálogo de compartir: no hay nada que avisar.
       }
     } else {
       // Fallback: copiar al portapapeles
       navigator.clipboard.writeText(window.location.href);
-      alert('¡Enlace copiado al portapapeles!');
+      setCopied(true);
     }
   };
 
@@ -142,6 +158,41 @@ export default function PlaceDetailPage() {
             </div>
           </>
         )}
+
+        {/*
+          Crédito de la foto que se está viendo. Las imágenes vienen de
+          Wikimedia Commons bajo licencias CC BY y CC BY-SA, que obligan a
+          nombrar al autor y enlazar la licencia: esto no es decorativo.
+        */}
+        {credit && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-4 pt-8 pb-2">
+            <p className="text-[11px] leading-tight text-white/80">
+              Foto: {credit.author}
+              {' · '}
+              {credit.license_url ? (
+                <a
+                  href={credit.license_url}
+                  target="_blank"
+                  rel="noreferrer noopener license"
+                  className="underline hover:text-white"
+                >
+                  {credit.license}
+                </a>
+              ) : (
+                credit.license
+              )}
+              {' · '}
+              <a
+                href={credit.source}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline hover:text-white"
+              >
+                Wikimedia Commons
+              </a>
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -179,16 +230,17 @@ export default function PlaceDetailPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2 mb-6">
+          {/* El puente entre el contenido turístico y el transporte: la app ya
+              tiene las paradas, las líneas y las unidades en vivo, así que
+              "cómo llegar" no tiene por qué mandarte afuera. */}
           {((place.latitude && place.longitude) || (place.lat && place.lng)) && (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${place.latitude || place.lat},${place.longitude || place.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={`/transporte/planificador?destino=${encodeURIComponent(place.name)}`}
               className="btn btn-primary flex flex-col items-center justify-center gap-1 py-3 text-xs sm:text-sm"
             >
-              <Navigation size={20} />
-              <span className="whitespace-nowrap">Cómo llegar</span>
-            </a>
+              <Bus size={20} />
+              <span className="whitespace-nowrap">Ir en ómnibus</span>
+            </Link>
           )}
           {place.phone && (
             <a
@@ -200,7 +252,7 @@ export default function PlaceDetailPage() {
             </a>
           )}
           <Link
-            to="/agenda"
+            to="/que-hacer"
             className="btn btn-secondary flex flex-col items-center justify-center gap-1 py-3 text-xs sm:text-sm"
           >
             <Calendar size={20} />
@@ -323,6 +375,15 @@ export default function PlaceDetailPage() {
           </div>
         )}
       </div>
+
+      {copied && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-float md:bottom-8"
+        >
+          Enlace copiado
+        </div>
+      )}
     </div>
   );
 }

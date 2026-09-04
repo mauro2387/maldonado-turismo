@@ -1,5 +1,14 @@
 import { api } from '@lib/apiClient';
 
+export interface ImageCredit {
+  url: string;
+  author: string;
+  license: string;
+  license_url: string | null;
+  /** Página del archivo en Wikimedia Commons. */
+  source: string;
+}
+
 export interface Place {
   id: string;
   name: string;
@@ -11,6 +20,14 @@ export interface Place {
   lat?: number;
   lng?: number;
   images?: string[];
+  /**
+   * Autoría de cada foto. Las imágenes son de Wikimedia Commons y casi todas
+   * son CC BY o CC BY-SA: atribuir al autor y enlazar la licencia no es
+   * opcional, es lo que exige la licencia.
+   */
+  image_credits?: ImageCredit[];
+  locality?: string;
+  highlights?: string[];
   rating?: number;
   reviewCount?: number;
   distance?: string;

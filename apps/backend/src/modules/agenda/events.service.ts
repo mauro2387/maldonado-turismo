@@ -9,17 +9,32 @@ export class EventsService {
     private dataSource: DataSource,
   ) {}
 
-  async findAll(filters?: { category?: string; startDate?: string; endDate?: string; search?: string }) {
+  async findAll(filters?: {
+    category?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+    locality?: string;
+  }) {
+    // status = 'published' es la condición que separa lo que ve el turista de
+    // lo que todavía está en la cola de revisión del scraper. No es un filtro
+    // opcional: sin él la app muestra eventos con la fecha sin confirmar.
     let query = `SELECT 
       id, title, description, long_description, 
       start_date, start_date as date, 
       end_date, time, location, address,
-      lat, lng, category, price, capacity, organizer, 
-      image, gallery, tags, contact,
+      lat, lng, locality, category, price, capacity, organizer, 
+      image, gallery, tags, contact, source, source_url,
       created_at, updated_at
-    FROM events WHERE 1=1`;
+    FROM events WHERE status = 'published'`;
     const params: any[] = [];
     let paramIndex = 1;
+
+    if (filters?.locality) {
+      query += ` AND locality = $${paramIndex}`;
+      params.push(filters.locality);
+      paramIndex++;
+    }
 
     if (filters?.category) {
       query += ` AND category = $${paramIndex}`;
@@ -56,10 +71,10 @@ export class EventsService {
         id, title, description, long_description, 
         start_date, start_date as date, 
         end_date, time, location, address,
-        lat, lng, category, price, capacity, organizer, 
-        image, gallery, tags, contact,
+        lat, lng, locality, category, price, capacity, organizer, 
+        image, gallery, tags, contact, source, source_url,
         created_at, updated_at
-      FROM events WHERE id = $1
+      FROM events WHERE id = $1 AND status = 'published'
     `, [id]);
     return result[0] || null;
   }
@@ -133,6 +148,9 @@ export class EventsService {
         gallery = COALESCE($16, gallery),
         tags = COALESCE($17, tags),
         contact = COALESCE($18, contact),
+        -- Marca la fila como tocada a mano: a partir de acá la ingesta
+        -- automática deja de sobrescribirla.
+        edited_by_admin = true,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $19
       RETURNING *`,

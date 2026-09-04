@@ -1,0 +1,750 @@
+{
+  "note": "Filas de relleno que traía la base antes de cargar el contenido verificado.",
+  "places": [
+    {
+      "id": 1,
+      "name": "Playa Brava",
+      "description": "Icónica playa conocida por sus olas perfectas para surf y la escultura \"La Mano\"",
+      "lat": "-34.92860000",
+      "lng": "-54.93280000",
+      "address": "Playa Brava, Punta del Este",
+      "phone": "+598 42 440 512",
+      "email": "info@puntadeleste.gub.uy",
+      "website": null,
+      "category": "Playas",
+      "images": [
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200"
+      ],
+      "schedule": {
+        "friday": "00:00-23:59",
+        "monday": "00:00-23:59",
+        "sunday": "00:00-23:59",
+        "tuesday": "00:00-23:59",
+        "saturday": "00:00-23:59",
+        "thursday": "00:00-23:59",
+        "wednesday": "00:00-23:59"
+      },
+      "price_range": "Gratis",
+      "facilities": [
+        "Estacionamiento",
+        "Baños públicos",
+        "Salvavidas",
+        "Duchas"
+      ],
+      "activities": [
+        "Surf",
+        "Fotografía",
+        "Caminatas"
+      ],
+      "tips": [
+        "Ideal para surf",
+        "Mejor hora para fotos: atardecer",
+        "Llegar temprano en verano"
+      ],
+      "contact": {
+        "email": "info@puntadeleste.gub.uy",
+        "phone": "+598 42 440 512"
+      },
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 2,
+      "name": "Casapueblo",
+      "description": "Museo, galería de arte y hotel diseñado por Carlos Páez Vilaró",
+      "lat": "-34.91670000",
+      "lng": "-54.88330000",
+      "address": "Punta Ballena, Maldonado",
+      "phone": "+598 4257 8041",
+      "email": "info@casapueblo.com.uy",
+      "website": "https://www.casapueblo.com.uy",
+      "category": "Museos",
+      "images": [
+        "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=1200"
+      ],
+      "schedule": {
+        "friday": "10:00-17:00",
+        "monday": "10:00-17:00",
+        "sunday": "10:00-18:00",
+        "tuesday": "10:00-17:00",
+        "saturday": "10:00-18:00",
+        "thursday": "10:00-17:00",
+        "wednesday": "10:00-17:00"
+      },
+      "price_range": "$$$",
+      "facilities": [
+        "Museo",
+        "Galería",
+        "Hotel",
+        "Restaurante",
+        "Estacionamiento"
+      ],
+      "activities": [
+        "Tour guiado",
+        "Ceremonia del atardecer",
+        "Exposiciones"
+      ],
+      "tips": [
+        "No te pierdas la ceremonia del atardecer",
+        "Reserva con anticipación en temporada"
+      ],
+      "contact": {
+        "email": "info@casapueblo.com.uy",
+        "phone": "+598 4257 8041",
+        "website": "https://www.casapueblo.com.uy"
+      },
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 3,
+      "name": "Puerto de Punta del Este",
+      "description": "Pintoresco puerto pesquero con lobos marinos y restaurantes",
+      "lat": "-34.96310000",
+      "lng": "-54.95220000",
+      "address": "Rambla Artigas, Puerto",
+      "phone": "+598 42 440 512",
+      "email": null,
+      "website": null,
+      "category": "Puertos",
+      "images": [
+        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200"
+      ],
+      "schedule": {
+        "friday": "06:00-23:00",
+        "monday": "06:00-22:00",
+        "sunday": "06:00-22:00",
+        "tuesday": "06:00-22:00",
+        "saturday": "06:00-23:00",
+        "thursday": "06:00-22:00",
+        "wednesday": "06:00-22:00"
+      },
+      "price_range": "Gratis",
+      "facilities": [
+        "Restaurantes",
+        "Mercado",
+        "Estacionamiento"
+      ],
+      "activities": [
+        "Observación de lobos marinos",
+        "Paseos en barco",
+        "Gastronomía"
+      ],
+      "tips": [
+        "Mejor momento para lobos: mañana temprano",
+        "Prueba pescados frescos"
+      ],
+      "contact": {
+        "phone": "+598 42 440 512"
+      },
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 4,
+      "name": "Playa Mansa",
+      "description": "Playa familiar con aguas calmas, ideal para niños",
+      "lat": "-34.94280000",
+      "lng": "-54.94470000",
+      "address": "Playa Mansa, Punta del Este",
+      "phone": "+598 42 440 512",
+      "email": null,
+      "website": null,
+      "category": "Playas",
+      "images": [
+        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200"
+      ],
+      "schedule": {
+        "friday": "00:00-23:59",
+        "monday": "00:00-23:59",
+        "sunday": "00:00-23:59",
+        "tuesday": "00:00-23:59",
+        "saturday": "00:00-23:59",
+        "thursday": "00:00-23:59",
+        "wednesday": "00:00-23:59"
+      },
+      "price_range": "Gratis",
+      "facilities": [
+        "Salvavidas",
+        "Baños",
+        "Estacionamiento",
+        "Alquiler de equipos"
+      ],
+      "activities": [
+        "Natación",
+        "Paddle",
+        "Kayak",
+        "Caminatas"
+      ],
+      "tips": [
+        "Ideal para familias",
+        "Paseo costero perfecto para ciclismo",
+        "Atardeceres espectaculares"
+      ],
+      "contact": {
+        "phone": "+598 42 440 512"
+      },
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 5,
+      "name": "Isla Gorriti",
+      "description": "Isla histórica con playas vírgenes y ruinas coloniales",
+      "lat": "-34.96720000",
+      "lng": "-54.91140000",
+      "address": "Bahía de Maldonado",
+      "phone": "+598 42 440 512",
+      "email": null,
+      "website": null,
+      "category": "Islas",
+      "images": [
+        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200"
+      ],
+      "schedule": {
+        "friday": "10:00-18:00",
+        "monday": "10:00-18:00",
+        "sunday": "10:00-18:00",
+        "tuesday": "10:00-18:00",
+        "saturday": "10:00-18:00",
+        "thursday": "10:00-18:00",
+        "wednesday": "10:00-18:00"
+      },
+      "price_range": "$$",
+      "facilities": [
+        "Playas",
+        "Senderos",
+        "Área picnic"
+      ],
+      "activities": [
+        "Snorkel",
+        "Kayak",
+        "Senderismo",
+        "Observación de aves"
+      ],
+      "tips": [
+        "Llevar agua y protector",
+        "Reservar transporte anticipado",
+        "Excursión día completo"
+      ],
+      "contact": {
+        "phone": "+598 42 440 512"
+      },
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 6,
+      "name": "Faro de José Ignacio",
+      "description": "Histórico faro de 1877 con vistas panorámicas de 360°",
+      "lat": "-34.83330000",
+      "lng": "-54.61670000",
+      "address": "José Ignacio, Maldonado",
+      "phone": null,
+      "email": null,
+      "website": null,
+      "category": "Monumentos",
+      "images": [
+        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200"
+      ],
+      "schedule": {
+        "friday": "10:00-13:00",
+        "monday": "Cerrado",
+        "sunday": "10:00-17:00",
+        "tuesday": "10:00-13:00",
+        "saturday": "10:00-17:00",
+        "thursday": "10:00-13:00",
+        "wednesday": "10:00-13:00"
+      },
+      "price_range": "$",
+      "facilities": [
+        "Miradores",
+        "Estacionamiento"
+      ],
+      "activities": [
+        "Fotografía",
+        "Vistas panorámicas",
+        "Caminatas"
+      ],
+      "tips": [
+        "Subir al atardecer",
+        "Combinar con visita al pueblo",
+        "Llevar ropa abrigada"
+      ],
+      "contact": {},
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 7,
+      "name": "Plaza Artigas Maldonado",
+      "description": "Plaza principal con arquitectura histórica y Catedral",
+      "lat": "-34.90560000",
+      "lng": "-54.95830000",
+      "address": "Plaza Artigas, Maldonado Centro",
+      "phone": null,
+      "email": null,
+      "website": null,
+      "category": "Plazas",
+      "images": [
+        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200"
+      ],
+      "schedule": {
+        "friday": "00:00-23:59",
+        "monday": "00:00-23:59",
+        "sunday": "00:00-23:59",
+        "tuesday": "00:00-23:59",
+        "saturday": "00:00-23:59",
+        "thursday": "00:00-23:59",
+        "wednesday": "00:00-23:59"
+      },
+      "price_range": "Gratis",
+      "facilities": [
+        "Bancos",
+        "Iluminación",
+        "Juegos infantiles"
+      ],
+      "activities": [
+        "Caminatas",
+        "Eventos culturales",
+        "Ferias",
+        "Fotografía"
+      ],
+      "tips": [
+        "Visita la Catedral del siglo XVIII",
+        "Sábados hay feria artesanal"
+      ],
+      "contact": {},
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    },
+    {
+      "id": 8,
+      "name": "Laguna del Sauce",
+      "description": "Mayor laguna del departamento, ideal para deportes náuticos",
+      "lat": "-34.81670000",
+      "lng": "-55.01670000",
+      "address": "Ruta 10, Maldonado",
+      "phone": null,
+      "email": null,
+      "website": null,
+      "category": "Naturaleza",
+      "images": [
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200"
+      ],
+      "schedule": {
+        "friday": "00:00-23:59",
+        "monday": "00:00-23:59",
+        "sunday": "00:00-23:59",
+        "tuesday": "00:00-23:59",
+        "saturday": "00:00-23:59",
+        "thursday": "00:00-23:59",
+        "wednesday": "00:00-23:59"
+      },
+      "price_range": "Gratis",
+      "facilities": [
+        "Accesos públicos",
+        "Áreas picnic",
+        "Miradores"
+      ],
+      "activities": [
+        "Vela",
+        "Windsurf",
+        "Kayak",
+        "Pesca",
+        "Observación de aves"
+      ],
+      "tips": [
+        "Excelente para windsurf",
+        "Mejor época para aves: primavera"
+      ],
+      "contact": {},
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "locality": null,
+      "image_credits": [],
+      "highlights": null,
+      "is_featured": false
+    }
+  ],
+  "events": [
+    {
+      "id": 1,
+      "title": "Festival Internacional de Jazz",
+      "description": "Conciertos al aire libre con artistas de renombre internacional",
+      "long_description": null,
+      "start_date": "2026-01-15T23:00:00.000Z",
+      "end_date": "2026-01-23T02:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "20:00",
+      "location": "Conrad Hotel",
+      "address": "Parada 4, Playa Mansa",
+      "lat": "-34.94440000",
+      "lng": "-54.95030000",
+      "category": "Música",
+      "price": "Gratis - $150",
+      "capacity": 5000,
+      "attendees": 0,
+      "organizer": "Intendencia de Maldonado",
+      "image": "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=1200",
+      "image_url": null,
+      "gallery": [
+        "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800"
+      ],
+      "tags": [
+        "Música",
+        "Jazz",
+        "Internacional"
+      ],
+      "contact": {
+        "email": "cultura@maldonado.gub.uy",
+        "phone": "+598 42 440 512",
+        "website": "https://jazzpuntadeleste.com"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 2,
+      "title": "Maratón de Punta del Este",
+      "description": "42K, 21K y 10K por las costas más lindas del Uruguay",
+      "long_description": null,
+      "start_date": "2026-03-08T10:00:00.000Z",
+      "end_date": "2026-03-08T17:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "07:00",
+      "location": "Plaza Artigas",
+      "address": "Gorlero y Av. Del Mar",
+      "lat": "-34.95110000",
+      "lng": "-54.94750000",
+      "category": "Deportes",
+      "price": "$50 - $80",
+      "capacity": 8000,
+      "attendees": 0,
+      "organizer": "Club de Atletismo Maldonado",
+      "image": "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Deportes",
+        "Running",
+        "Maratón"
+      ],
+      "contact": {
+        "email": "info@maratonpuntadeleste.com",
+        "phone": "+598 42 486 000"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 3,
+      "title": "Feria de Artesanos",
+      "description": "Productos artesanales locales, gastronomía y música en vivo",
+      "long_description": null,
+      "start_date": "2025-12-01T21:00:00.000Z",
+      "end_date": "2026-04-01T02:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "18:00",
+      "location": "Plaza Artigas",
+      "address": "Gorlero y Av. Del Mar",
+      "lat": "-34.95110000",
+      "lng": "-54.94750000",
+      "category": "Ferias",
+      "price": "Gratis",
+      "capacity": null,
+      "attendees": 0,
+      "organizer": "Asociación de Artesanos",
+      "image": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Artesanías",
+        "Cultura",
+        "Familia"
+      ],
+      "contact": {
+        "email": "artesanosmaldonado@gmail.com"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 4,
+      "title": "Festival de Cine",
+      "description": "Proyecciones de cine internacional y encuentros con directores",
+      "long_description": null,
+      "start_date": "2026-02-10T22:00:00.000Z",
+      "end_date": "2026-02-18T02:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "19:00",
+      "location": "Cines del Conrad",
+      "address": "Varias locaciones",
+      "lat": "-34.95110000",
+      "lng": "-54.94750000",
+      "category": "Cultura",
+      "price": "$10 - $25",
+      "capacity": 3000,
+      "attendees": 0,
+      "organizer": "Cinemateca Uruguaya",
+      "image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Cine",
+        "Cultura",
+        "Arte"
+      ],
+      "contact": {
+        "email": "info@festivalcine.com",
+        "phone": "+598 2419 5795"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 5,
+      "title": "Año Nuevo en Punta del Este",
+      "description": "Espectáculo de fuegos artificiales y fiestas",
+      "long_description": null,
+      "start_date": "2026-01-01T00:00:00.000Z",
+      "end_date": "2026-01-01T09:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "21:00",
+      "location": "Playas",
+      "address": "Península",
+      "lat": "-34.95110000",
+      "lng": "-54.94750000",
+      "category": "Celebraciones",
+      "price": "Gratis",
+      "capacity": null,
+      "attendees": 0,
+      "organizer": "Intendencia de Maldonado",
+      "image": "https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Año Nuevo",
+        "Fiesta",
+        "Fuegos"
+      ],
+      "contact": {
+        "phone": "+598 42 440 512"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 6,
+      "title": "Torneo Internacional de Tenis",
+      "description": "Competencia ATP con los mejores tenistas",
+      "long_description": null,
+      "start_date": "2026-01-03T13:00:00.000Z",
+      "end_date": "2026-01-10T23:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "10:00",
+      "location": "Cantegril Country Club",
+      "address": "Cantegril",
+      "lat": "-34.92970000",
+      "lng": "-54.91720000",
+      "category": "Deportes",
+      "price": "$30 - $100",
+      "capacity": 2000,
+      "attendees": 0,
+      "organizer": "Asociación Uruguaya de Tenis",
+      "image": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Tenis",
+        "Deportes",
+        "ATP"
+      ],
+      "contact": {
+        "phone": "+598 42 484 242"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 7,
+      "title": "Carnaval de José Ignacio",
+      "description": "Desfile de comparsas y murgas con música",
+      "long_description": null,
+      "start_date": "2026-02-20T23:00:00.000Z",
+      "end_date": "2026-02-26T02:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "20:00",
+      "location": "José Ignacio",
+      "address": "Calles de José Ignacio",
+      "lat": "-34.83330000",
+      "lng": "-54.61670000",
+      "category": "Cultura",
+      "price": "Gratis",
+      "capacity": null,
+      "attendees": 0,
+      "organizer": "Comisión de Fiestas",
+      "image": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Carnaval",
+        "Murga",
+        "Tradición"
+      ],
+      "contact": {
+        "email": "carnavaljoseignacio@gmail.com"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    },
+    {
+      "id": 8,
+      "title": "Feria Gastronómica",
+      "description": "Showcooking, degustaciones y productos gourmet",
+      "long_description": null,
+      "start_date": "2026-04-10T14:00:00.000Z",
+      "end_date": "2026-04-12T23:00:00.000Z",
+      "start_time": null,
+      "end_time": null,
+      "time": "11:00",
+      "location": "Plaza Maldonado",
+      "address": "Plaza Artigas",
+      "lat": "-34.90560000",
+      "lng": "-54.95830000",
+      "category": "Gastronomía",
+      "price": "$5",
+      "capacity": null,
+      "attendees": 0,
+      "organizer": "Asociación de Chefs",
+      "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200",
+      "image_url": null,
+      "gallery": [],
+      "tags": [
+        "Gastronomía",
+        "Cocina",
+        "Food"
+      ],
+      "contact": {
+        "email": "feriagastronomica@maldonado.gub.uy"
+      },
+      "is_featured": false,
+      "is_active": true,
+      "created_at": "2026-09-02T03:10:05.102Z",
+      "updated_at": "2026-09-02T03:10:05.102Z",
+      "source": null,
+      "source_id": null,
+      "source_url": null,
+      "locality": null,
+      "source_confidence": null,
+      "status": "published",
+      "scraped_at": null,
+      "edited_by_admin": false
+    }
+  ]
+}

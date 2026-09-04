@@ -1,305 +1,459 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { RouteIcon, Clock, Loader2, AlertCircle } from 'lucide-react';
-import Breadcrumbs from '@components/Breadcrumbs';
-import LocationAutocomplete from '@components/transporte/LocationAutocomplete';
-import { useStops, useRoutes } from '@hooks/useTransport';
-import { BusStop } from '@services/transportService';
-import { routePlannerService, RouteOption } from '@services/routePlannerService';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  ArrowUpDown,
+  Footprints,
+  ChevronRight,
+  Bus,
+  MapPin,
+  RouteOff,
+} from 'lucide-react';
+import { useGeolocation } from '@hooks/useGeolocation';
+import { routePlannerService, TripOption, TripLeg } from '@services/routePlannerService';
+import { destinationsService, Destination } from '@services/destinationsService';
+import { TripMap, TripLegend, rideColor, legLine } from '@components/transporte/TripMap';
+import { LineTag } from '@components/ui/LineTag';
+import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { formatDistance } from '@lib/geo';
+import { formatStopName } from '@lib/stopNames';
+
+/**
+ * Elegí tu viaje.
+ *
+ * Dos cosas la hacen usable, y las dos faltaban.
+ *
+ * **El destino se encuentra.** Antes se buscaba en el teléfono contra lo que
+ * ya estuviera descargado —las fichas de atractivos y los nombres de parada—,
+ * así que "punta shopping", "el hospital" o "liceo 3" no daban ningún
+ * resultado. Ahora la búsqueda la resuelve el backend contra los lugares de
+ * OpenStreetMap además de las paradas y los atractivos.
+ *
+ * **El viaje se ve.** Antes la respuesta era una lista de pasos en texto con
+ * los nombres abreviados de la empresa ("hasta R P DEL PUERTO"). Ahora cada
+ * opción se dibuja: la caminata por la calle y el tramo en ómnibus siguiendo
+ * el recorrido publicado, con las paradas marcadas.
+ *
+ * Las opciones se comparan de un vistazo, como en Uber y en Moovit: la tira
+ * visual del recorrido, cuándo sale, cuánto dura. El nombre de la línea es una
+ * ficha de color, no un título — la gente decide con dos números, no leyendo.
+ */
+
+/** Lo que se espera después de la última tecla antes de salir a buscar. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 export default function PlanificadorPage() {
-  const navigate = useNavigate();
-  const { stops, loading: loadingStops } = useStops();
-  const { routes: busRoutes, loading: loadingRoutes } = useRoutes();
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [originStop, setOriginStop] = useState<BusStop | null>(null);
-  const [destStop, setDestStop] = useState<BusStop | null>(null);
-  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [searchParams] = useSearchParams();
+  const { coords, granted } = useGeolocation();
+
+  const [query, setQuery] = useState(searchParams.get('destino') ?? '');
+  const [suggestions, setSuggestions] = useState<Destination[]>([]);
+  const [destination, setDestination] = useState<Destination | null>(null);
+  const [options, setOptions] = useState<TripOption[]>([]);
+  const [selected, setSelected] = useState(0);
+  const [ready, setReady] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [routes, setRoutes] = useState<RouteOption[]>([]);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleOriginChange = (value: string, stop?: BusStop) => {
-    setOrigin(value);
-    setOriginStop(stop || null);
-    setUserLocation(null); // Clear user location if manually typing
-  };
+  // Un destino que llega por la URL se resuelve una sola vez.
+  const resolvedFromUrl = useRef(false);
 
-  const handleDestinationChange = (value: string, stop?: BusStop) => {
-    setDestination(value);
-    setDestStop(stop || null);
-  };
-
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Tu navegador no soporta geolocalización');
+  // --- Sugerencias, mientras se escribe ---
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2 || destination) {
+      setSuggestions([]);
       return;
     }
 
-    setUseCurrentLocation(true);
-    setError(null);
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        
-        // Buscar la parada más cercana
-        const nearest = routePlannerService.findNearestStop(latitude, longitude, stops);
-        
-        if (nearest) {
-          const distance = routePlannerService.calculateDistance(
-            latitude,
-            longitude,
-            nearest.lat,
-            nearest.lng
-          );
-          
-          setOrigin(`${nearest.name} (${Math.round(distance * 1000)}m)`);
-          setOriginStop(nearest);
-        } else {
-          setOrigin(`Mi ubicación (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
-        }
-        
-        setUseCurrentLocation(false);
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setError('No se pudo obtener tu ubicación. Verifica los permisos del navegador.');
-        setUseCurrentLocation(false);
-      }
-    );
-  };
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      destinationsService
+        .search(term, coords)
+        .then((results) => {
+          if (cancelled) return;
+          setSuggestions(results);
 
-  const handleSearch = async () => {
-    if (!origin || !destination) {
-      setError('Por favor completa origen y destino');
-      return;
-    }
+          // El destino que vino en la URL se elige solo: quien tocó "cómo
+          // llegar" en una ficha ya dijo a dónde va.
+          if (!resolvedFromUrl.current && searchParams.get('destino') && results.length > 0) {
+            resolvedFromUrl.current = true;
+            setDestination(results[0]);
+            setQuery(results[0].name);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setSuggestions([]);
+        });
+    }, SEARCH_DEBOUNCE_MS);
 
-    if (loadingStops || loadingRoutes) {
-      setError('Cargando datos de paradas y rutas...');
-      return;
-    }
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, destination, coords.lat, coords.lng, searchParams]);
 
+  // --- El viaje ---
+  useEffect(() => {
+    if (!destination) return;
+
+    let cancelled = false;
     setSearching(true);
     setError(null);
+    setSelected(0);
 
-    try {
-      let finalOriginStop = originStop;
-      let finalDestStop = destStop;
-
-      // Si no tenemos stop seleccionado, buscar por nombre
-      if (!finalOriginStop) {
-        finalOriginStop = stops.find(s => s.name.toLowerCase() === origin.toLowerCase()) || null;
-      }
-
-      if (!finalDestStop) {
-        finalDestStop = stops.find(s => s.name.toLowerCase() === destination.toLowerCase()) || null;
-      }
-
-      if (!finalOriginStop) {
-        setError(`No se encontró la parada de origen: ${origin}`);
+    routePlannerService
+      .plan(
+        { ...coords, label: granted ? 'Tu ubicación' : 'Centro de Maldonado' },
+        { lat: destination.lat, lng: destination.lng, label: destination.name },
+      )
+      .then((result) => {
+        if (cancelled) return;
+        setOptions(result.options);
+        setReady(result.ready);
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err?.message || 'No pudimos calcular el viaje');
+      })
+      .finally(() => {
+        if (cancelled) return;
         setSearching(false);
-        return;
-      }
+        setSearched(true);
+      });
 
-      if (!finalDestStop) {
-        setError(`No se encontró la parada de destino: ${destination}`);
-        setSearching(false);
-        return;
-      }
+    return () => {
+      cancelled = true;
+    };
+  }, [destination, coords.lat, coords.lng, granted]);
 
-      // Calcular rutas con mejor algoritmo
-      const foundRoutes = routePlannerService.findRoutes(
-        finalOriginStop,
-        finalDestStop,
-        stops,
-        busRoutes,
-        userLocation || undefined
-      );
-
-      if (foundRoutes.length === 0) {
-        setError('No se encontraron rutas disponibles entre estas paradas');
-      } else {
-        setRoutes(foundRoutes);
-      }
-    } catch (err) {
-      console.error('Error searching routes:', err);
-      setError('Ocurrió un error al buscar rutas');
-    } finally {
-      setSearching(false);
-    }
-  };
+  const current = options[selected];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-14 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <Breadcrumbs
-            items={[
-              { label: 'Transporte', path: '/transporte' },
-              { label: 'Planificador de Viajes' },
-            ]}
-          />
-          <h1 className="text-2xl font-bold text-gray-900">Planificar tu viaje</h1>
-          <p className="text-gray-600 mt-1">Encuentra la mejor ruta para llegar a tu destino</p>
+    <div className="min-h-[calc(100dvh-4.25rem)] bg-sand-100">
+      {/* ---------- Origen y destino ---------- */}
+      <header className="bg-ink-900 px-4 pb-4 pt-4 text-white">
+        <Link
+          to="/moverse"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-200"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Moverse
+        </Link>
+
+        <div className="flex items-center gap-2.5">
+          <span className="h-2 w-2 flex-none rounded-full border-[2.5px] border-sea-200" />
+          <span className="flex-1 truncate text-sm font-semibold">
+            {granted ? 'Tu ubicación' : 'Centro de Maldonado'}
+          </span>
+          <ArrowUpDown className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Search Form */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="space-y-4">
-              {/* Origen con Autocomplete */}
-              <LocationAutocomplete
-                value={origin}
-                onChange={handleOriginChange}
-                stops={stops}
-                placeholder="Desde dónde viajas..."
-                label="Origen"
-                icon="origin"
-                showCurrentLocation={true}
-                onUseCurrentLocation={handleGetCurrentLocation}
-                usingCurrentLocation={useCurrentLocation}
-              />
+        <div className="ml-[0.3rem] h-px bg-white/15" />
 
-              {/* Destino con Autocomplete */}
-              <LocationAutocomplete
-                value={destination}
-                onChange={handleDestinationChange}
-                stops={stops}
-                placeholder="A dónde quieres ir..."
-                label="Destino"
-                icon="destination"
-              />
+        <div className="mt-2 flex items-center gap-2.5">
+          <span className="h-2 w-2 flex-none rounded-sm bg-coral-500" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setDestination(null);
+              setSearched(false);
+              setOptions([]);
+            }}
+            placeholder="¿A dónde vas?"
+            aria-label="Destino"
+            className="w-full bg-transparent text-sm font-bold text-white placeholder:font-semibold placeholder:text-ink-300 focus:outline-none"
+          />
+        </div>
+      </header>
 
-              {/* Error */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-800">
-                  <AlertCircle size={18} />
-                  <span className="text-sm">{error}</span>
-                </div>
-              )}
-
-              {/* Search Button */}
+      {/* ---------- Sugerencias ---------- */}
+      {!destination && suggestions.length > 0 && (
+        <ul className="divide-y divide-sand-200 bg-white">
+          {suggestions.map((suggestion) => (
+            <li key={suggestion.id}>
               <button
-                onClick={handleSearch}
-                disabled={searching || !origin || !destination || loadingStops || loadingRoutes}
-                className="w-full btn btn-primary flex items-center justify-center gap-2 py-3"
+                onClick={() => {
+                  setDestination(suggestion);
+                  setQuery(suggestion.name);
+                  setSuggestions([]);
+                }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left"
               >
-                {searching ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    <span>Buscando rutas...</span>
-                  </>
+                {suggestion.source === 'parada' ? (
+                  <Bus className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
                 ) : (
-                  <>
-                    <RouteIcon size={20} />
-                    <span>Buscar rutas</span>
-                  </>
+                  <MapPin className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
                 )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-data font-bold text-ink-900">
+                    {suggestion.source === 'parada'
+                      ? formatStopName(suggestion.name)
+                      : suggestion.name}
+                  </span>
+                  <span className="block truncate text-xs text-ink-400">
+                    <span className="capitalize">{suggestion.kind}</span>
+                    {suggestion.locality ? ` · ${suggestion.locality}` : ''}
+                    {suggestion.distanceM !== undefined
+                      ? ` · a ${formatDistance(suggestion.distanceM)}`
+                      : ''}
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
               </button>
-            </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* ---------- El viaje elegido, dibujado ---------- */}
+      {current && !searching && (
+        <div className="border-b border-sand-200">
+          <div className="h-64 w-full">
+            <TripMap option={current} />
           </div>
+          <TripLegend option={current} />
+        </div>
+      )}
 
-          {/* Results */}
-          {routes.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-gray-900">Rutas disponibles</h2>
-              {routes.map((route) => (
-                <div
-                  key={route.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                >
-                  {/* Route Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="bg-primary-600 text-white px-3 py-1 rounded-lg font-bold">
-                          {route.routeCode}
-                        </div>
-                        <h3 className="font-semibold text-gray-900">{route.routeName}</h3>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Clock size={14} />
-                          <span>{route.duration} min</span>
-                        </div>
-                        {route.transfers > 0 && (
-                          <div className="flex items-center gap-1">
-                            <RouteIcon size={14} />
-                            <span>{route.transfers} transbordo{route.transfers > 1 ? 's' : ''}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => navigate('/transporte/mapa')}
-                      className="btn btn-secondary text-sm"
-                    >
-                      Ver en mapa
-                    </button>
-                  </div>
+      {/* ---------- Opciones ---------- */}
+      <div className="px-4 pb-8 pt-4">
+        {!destination && suggestions.length === 0 && query.trim().length < 2 && (
+          <p className="px-1 text-sm text-ink-400">
+            Escribí a dónde querés ir: una parada, una playa, el shopping, el hospital o el
+            liceo.
+          </p>
+        )}
 
-                  {/* Route Steps */}
-                  <div className="space-y-3 pl-4 border-l-2 border-gray-200">
-                    {route.steps.map((step, idx) => (
-                      <div key={idx} className="relative pl-6">
-                        <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full bg-white border-2 border-gray-300" />
-                        {step.type === 'walk' ? (
-                          <div className="text-sm">
-                            <p className="font-medium text-gray-700">
-                              🚶 Caminar {step.distance}m ({step.duration} min)
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                              {step.from} → {step.to}
-                            </p>
-                          </div>
-                        ) : step.type === 'wait' ? (
-                          <div className="text-sm">
-                            <p className="font-medium text-gray-700">
-                              ⏱️ Esperar {step.waitTime} min
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                              En {step.from}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="text-sm">
-                            <p className="font-medium text-gray-700">
-                              🚌 Línea {step.routeCode} ({step.duration} min)
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                              {step.from} → {step.to}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {error && <ErrorState message={error} onRetry={() => setDestination({ ...destination! })} />}
+
+        {searching && <SkeletonList rows={3} />}
+
+        {!searching && !error && searched && options.length === 0 && (
+          <EmptyState
+            icon={RouteOff}
+            title={ready ? 'No encontramos un viaje en ómnibus' : 'Todavía no podemos planificar'}
+            description={
+              ready
+                ? 'No hay una línea que conecte estos dos puntos con una caminata razonable. Probá con una parada cercana.'
+                : 'Estamos cargando los recorridos de las empresas. Mientras tanto podés ver las paradas y sus llegadas.'
+            }
+          />
+        )}
+
+        {!searching && options.length > 0 && (
+          <>
+            <p className="mb-3 section-label">
+              {options.length} {options.length === 1 ? 'forma de llegar' : 'formas de llegar'}
+            </p>
+            <div className="flex flex-col gap-3">
+              {options.map((option, index) => (
+                <TripCard
+                  key={option.id}
+                  option={option}
+                  selected={index === selected}
+                  onSelect={() => setSelected(index)}
+                />
               ))}
             </div>
-          )}
-
-          {/* No results placeholder */}
-          {routes.length === 0 && !searching && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
-              <RouteIcon className="mx-auto text-blue-400 mb-3" size={48} />
-              <h3 className="font-semibold text-blue-900 mb-2">¿A dónde quieres ir?</h3>
-              <p className="text-sm text-blue-700">
-                Ingresa tu origen y destino para ver las mejores rutas, tiempos estimados y paradas más cercanas.
-              </p>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+/**
+ * La hora que va a ser dentro de tantos minutos.
+ *
+ * "Pasa en 31 minutos" obliga a hacer la cuenta y a rehacerla cada vez que uno
+ * mira el teléfono; "pasa 23:58" se compara con el reloj de la pantalla. Las
+ * dos cosas se muestran juntas: la cuenta para decidir y la hora para
+ * organizarse.
+ */
+function clockIn(minutes: number): string {
+  // En Uruguay el reloj es de 24 horas: 'es-UY' por defecto devuelve
+  // "12:41 a. m.", que además de largo se lee mal de un vistazo.
+  return new Date(Date.now() + minutes * 60_000).toLocaleTimeString('es-UY', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/**
+ * Qué número de tramo en ómnibus es este, para pintarlo del mismo color que
+ * en el mapa. El primero va en verde mar, el segundo en coral.
+ */
+function rideIndexOf(option: TripOption, leg: TripLeg): number {
+  return option.legs.filter((candidate) => candidate.type === 'bus').indexOf(leg);
+}
+
+/** "ahora" pega mucho mejor que "0 min" para alguien parado en la vereda. */
+function waitText(leg: TripLeg): string {
+  return leg.duration_minutes <= 0 ? 'ahora' : `${leg.duration_minutes} min`;
+}
+
+/** Una opción de viaje. La tira visual se lee sin leer. */
+function TripCard({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: TripOption;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const busLegs = option.legs.filter((leg) => leg.type === 'bus');
+  const firstWait = option.legs.find((leg) => leg.type === 'wait');
+  const boardingStop = busLegs[0]?.from;
+
+  return (
+    <article className={`card ${selected ? 'card-selected' : ''}`}>
+      <button onClick={onSelect} className="w-full text-left" aria-pressed={selected}>
+        <div className="mb-2.5 flex items-center justify-between">
+          {option.label ? (
+            <span
+              className={`rounded-chip px-2 py-1 text-[0.625rem] font-extrabold uppercase tracking-wider ${
+                selected ? 'bg-ink-900 text-white' : 'bg-sea-50 text-sea-600'
+              }`}
+            >
+              {option.label}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs font-semibold text-ink-400">
+            {option.transfers === 0
+              ? 'Directo'
+              : `${option.transfers} ${option.transfers === 1 ? 'transbordo' : 'transbordos'}`}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {option.legs
+              .filter((leg) => leg.type !== 'wait')
+              .map((leg, index, array) => (
+                <span key={index} className="flex items-center gap-1.5">
+                  {leg.type === 'walk' ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-ink-600">
+                      <Footprints className="h-3.5 w-3.5" strokeWidth={2} />
+                      {leg.duration_minutes}
+                    </span>
+                  ) : (
+                    // El color es el del tramo en el mapa, no el de la
+                    // empresa: es lo que permite mirar la tira, mirar el
+                    // dibujo y saber cuál es cuál sin leer nada.
+                    <LineTag
+                      code={legLine(leg) || '?'}
+                      color={rideColor(rideIndexOf(option, leg))}
+                      size="sm"
+                    />
+                  )}
+                  {index < array.length - 1 && <span className="text-[0.625rem] text-ink-200">›</span>}
+                </span>
+              ))}
+          </div>
+
+          <div className="flex-none text-right">
+            <p className="tabular text-xl font-extrabold leading-none text-ink-900">
+              {option.total_minutes}
+              <span className="text-xs font-semibold"> min</span>
+            </p>
+            <p className="tabular mt-0.5 text-[0.6875rem] font-semibold text-ink-400">
+              llegás {clockIn(option.total_minutes)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-2.5 flex items-center justify-between gap-2 text-xs">
+          {firstWait && boardingStop ? (
+            <span
+              className={`flex min-w-0 items-center gap-1.5 font-bold ${
+                firstWait.live ? 'text-live' : 'text-ink-400'
+              }`}
+            >
+              {firstWait.live && (
+                <span className="h-1.5 w-1.5 flex-none rounded-full bg-live-dot animate-pulse-dot" />
+              )}
+              {/* Lo que se dice es cuándo hay que salir, no cuánto falta para
+                  que pase el ómnibus: el ómnibus pasa por la parada, y a la
+                  parada hay que llegar caminando. */}
+              <span className="truncate">
+                {option.leave_in_minutes <= 0 ? 'Salí ahora' : `Salí en ${option.leave_in_minutes} min`}
+                {firstWait.departs_in_minutes != null
+                  ? ` · pasa ${clockIn(firstWait.departs_in_minutes)}`
+                  : ''}
+              </span>
+            </span>
+          ) : (
+            <span className="text-ink-400">A pie todo el camino</span>
+          )}
+
+          <span className="flex-none font-semibold text-ink-400">
+            {option.walk_minutes} min caminando
+          </span>
+        </div>
+      </button>
+
+      {/* Detalle paso a paso: se lee solo si a alguien le interesa el detalle. */}
+      <details className="mt-3 border-t border-sand-200 pt-3">
+        <summary className="cursor-pointer text-xs font-bold text-coral-500">
+          Ver paso a paso
+        </summary>
+        <ol className="mt-3 flex flex-col gap-2.5">
+          {option.legs.map((leg, index) => (
+            <li key={index} className="flex items-start gap-2.5">
+              <span className="mt-1 h-2 w-2 flex-none rounded-full bg-sand-400" />
+              <span className="min-w-0 flex-1 text-xs">
+                {leg.type === 'walk' && (
+                  <>
+                    <span className="font-bold text-ink-900">
+                      Caminá {leg.duration_minutes} min
+                    </span>
+                    <span className="text-ink-400">
+                      {leg.distance_m ? ` (${formatDistance(leg.distance_m)})` : ''} hasta{' '}
+                      {formatStopName(leg.to)}
+                    </span>
+                  </>
+                )}
+                {leg.type === 'wait' && (
+                  <>
+                    <span className="font-bold text-ink-900">
+                      Esperá {waitText(leg)}
+                      {leg.departs_in_minutes != null ? ` (pasa ${clockIn(leg.departs_in_minutes)})` : ''}
+                    </span>
+                    <span className="text-ink-400">
+                      {' '}
+                      la línea {legLine(leg)} en {formatStopName(leg.from)}
+                      {leg.live
+                        ? ` · viene el coche ${leg.vehicle_id?.split('-').pop() ?? ''}`
+                        : leg.scheduled
+                          ? ' · según el horario de la empresa'
+                          : ' · estimado por la frecuencia de la línea'}
+                    </span>
+                  </>
+                )}
+                {leg.type === 'bus' && (
+                  <>
+                    <span className="font-bold text-ink-900">
+                      Línea {legLine(leg)}, {leg.duration_minutes} min
+                    </span>
+                    <span className="text-ink-400">
+                      {' '}
+                      hasta {formatStopName(leg.to)}
+                      {leg.stops_count ? ` · ${leg.stops_count} paradas` : ''}
+                    </span>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </article>
   );
 }

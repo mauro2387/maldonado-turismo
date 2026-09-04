@@ -86,7 +86,7 @@ export default function EscanerQRPage() {
     });
 
     if (code) {
-      console.log('QR Code detected:', code.data);
+      
       handleQRCodeDetected(code.data);
     } else {
       // Continue scanning
@@ -95,7 +95,7 @@ export default function EscanerQRPage() {
   };
 
   const handleQRCodeDetected = (data: string) => {
-    console.log('QR Data:', data);
+    
     
     // Stop scanning
     handleStopScan();
@@ -180,7 +180,7 @@ export default function EscanerQRPage() {
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Escanear QR</h1>
             <button
-              onClick={() => navigate('/transporte')}
+              onClick={() => navigate('/moverse')}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
               <X size={24} />

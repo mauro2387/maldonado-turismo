@@ -185,6 +185,57 @@ export class BusStopsService {
   }
 
   /**
+   * Qué tan bien ubicado está el catálogo.
+   *
+   * `spread_m` mide precisión (cuán juntas están las muestras) y `accuracy_m`
+   * mide exactitud (cuán cerca está la respuesta de la parada de verdad,
+   * calibrada contra OpenStreetMap). Sólo la segunda dice si se puede mandar a
+   * alguien a esperar ahí, y es la que hay que mirar para saber si un cambio en
+   * el estimador mejoró o empeoró las cosas.
+   */
+  async quality(): Promise<{
+    total: number;
+    porFuente: Array<{ fuente: string; paradas: number; errorMediano: number | null }>;
+    esquinaNombrable: number;
+    aproximadas: number;
+    sinUbicar: number;
+    conRefugio: number;
+  }> {
+    const porFuente = await this.stopsRepository.query(
+      `SELECT coalesce(fix_source, 'sin ubicar')                    AS fuente,
+              count(*)::int                                          AS paradas,
+              percentile_disc(0.5) WITHIN GROUP (ORDER BY accuracy_m)::int AS error_mediano
+         FROM bus_stops
+        WHERE is_active
+        GROUP BY 1
+        ORDER BY paradas DESC`,
+    );
+
+    const [totales] = await this.stopsRepository.query(
+      `SELECT count(*)::int                                              AS total,
+              count(*) FILTER (WHERE accuracy_m <= 60)::int              AS nombrable,
+              count(*) FILTER (WHERE accuracy_m > 60)::int               AS aproximadas,
+              count(*) FILTER (WHERE accuracy_m IS NULL)::int            AS sin_ubicar,
+              count(*) FILTER (WHERE osm_node_id IS NOT NULL)::int       AS con_osm
+         FROM bus_stops
+        WHERE is_active`,
+    );
+
+    return {
+      total: totales.total,
+      porFuente: porFuente.map((row: any) => ({
+        fuente: row.fuente,
+        paradas: row.paradas,
+        errorMediano: row.error_mediano,
+      })),
+      esquinaNombrable: totales.nombrable,
+      aproximadas: totales.aproximadas,
+      sinUbicar: totales.sin_ubicar,
+      conRefugio: totales.con_osm,
+    };
+  }
+
+  /**
    * Obtener estadísticas
    */
   async getStats(): Promise<{

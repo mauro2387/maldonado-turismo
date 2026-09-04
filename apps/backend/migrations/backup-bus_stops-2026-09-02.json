@@ -1,0 +1,149 @@
+[
+  {
+    "id": 1,
+    "name": "Terminal Punta del Este",
+    "address": "Av. Italia y Bulevar Artigas",
+    "lat": "-34.95110000",
+    "lng": "-54.94750000",
+    "routes": [
+      "Línea 1",
+      "Línea 2",
+      "Línea 3",
+      "Línea 4",
+      "Línea 5"
+    ],
+    "facilities": [
+      "Baños",
+      "Cafetería",
+      "WiFi"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 2,
+    "name": "Plaza Artigas PDE",
+    "address": "Gorlero y Calle 24",
+    "lat": "-34.95200000",
+    "lng": "-54.94700000",
+    "routes": [
+      "Línea 1",
+      "Línea 2"
+    ],
+    "facilities": [
+      "Bancos",
+      "WiFi"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 3,
+    "name": "Conrad Hotel",
+    "address": "Parada 4",
+    "lat": "-34.94440000",
+    "lng": "-54.95030000",
+    "routes": [
+      "Línea 1"
+    ],
+    "facilities": [
+      "WiFi"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 4,
+    "name": "Plaza Maldonado",
+    "address": "Centro Maldonado",
+    "lat": "-34.90560000",
+    "lng": "-54.95830000",
+    "routes": [
+      "Línea 2"
+    ],
+    "facilities": [
+      "Bancos",
+      "Baños",
+      "WiFi"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 5,
+    "name": "Puente La Barra",
+    "address": "Ruta 10 km 161",
+    "lat": "-34.90530000",
+    "lng": "-54.83060000",
+    "routes": [
+      "Línea 3",
+      "Línea 4"
+    ],
+    "facilities": [
+      "Estacionamiento"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 6,
+    "name": "Manantiales",
+    "address": "Ruta 10 km 164",
+    "lat": "-34.86670000",
+    "lng": "-54.76670000",
+    "routes": [
+      "Línea 3",
+      "Línea 4"
+    ],
+    "facilities": [],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 7,
+    "name": "José Ignacio",
+    "address": "Plaza",
+    "lat": "-34.83330000",
+    "lng": "-54.61670000",
+    "routes": [
+      "Línea 4"
+    ],
+    "facilities": [
+      "Baños"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  },
+  {
+    "id": 8,
+    "name": "Casapueblo",
+    "address": "Punta Ballena",
+    "lat": "-34.91670000",
+    "lng": "-54.88330000",
+    "routes": [
+      "Línea 5"
+    ],
+    "facilities": [
+      "Estacionamiento",
+      "Cafetería"
+    ],
+    "distance": null,
+    "next_buses": [],
+    "created_at": "2026-09-02T03:10:05.102Z",
+    "updated_at": "2026-09-02T03:10:05.102Z"
+  }
+]

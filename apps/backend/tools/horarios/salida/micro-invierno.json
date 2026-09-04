@@ -1,0 +1,776 @@
+{
+ "empresa": "micro",
+ "temporada": "invierno",
+ "fuente_url": "https://microltda.com/horarios-maldonado",
+ "documento": "HORARIOS MICRO MAYO 2026.pdf",
+ "vigencia_texto": "HORARIOS MICRO MAYO 2026",
+ "vigencia_desde": null,
+ "vigencia_hasta": null,
+ "extraido_el": "2026-09-03",
+ "revisar": [
+  "el PDF no trae vigencia escrita: \"HORARIOS MICRO MAYO 2026\" sale del nombre del archivo que enlaza https://microltda.com/horarios-maldonado (la página en sí sólo dice \"HORARIOS MALDONADO\"), y de ese mes -mayo- sale la temporada invierno; el documento tampoco la dice",
+  "página 1 tabla 3 fila 1 columna \"PAN DE AZUCAR\": Micro escribe \"x Cap.\" al lado de la hora; queda como referencia cruda",
+  "página 1 tabla 3 fila 3 columna \"PAN DE AZUCAR\": Micro escribe \"sigue faro\" al lado de la hora; queda como referencia cruda",
+  "página 2 tabla 1 fila 10 columna \"Term. P. del Este\": Micro escribe \"Directo\" al lado de la hora; queda como referencia cruda",
+  "página 2 tabla 1 fila 13 columna \"Term. P. del Este\": Micro escribe \"x Cap.\" al lado de la hora; queda como referencia cruda",
+  "página 2 tabla 1 fila 14 columna \"Term. P. del Este\": Micro escribe \"PP\" al lado de la hora; queda como referencia cruda",
+  "página 2 tabla 2: \"Lunes a Viernes\" está en el título de la línea, no en el pie de referencias; se anota como \"LV\"",
+  "página 3 tabla 1: \"Lunes a Viernes\" está en el título de la línea, no en el pie de referencias; se anota como \"LV\"",
+  "referencia \"Directo\": se usa en las tablas pero no está en el pie de la página 1",
+  "referencia \"MSDF\": se usa en las tablas pero no está en el pie de la página 1",
+  "referencia \"PP\": se usa en las tablas pero no está en el pie de la página 1",
+  "referencia \"sigue faro\": se usa en las tablas pero no está en el pie de la página 1",
+  "referencia \"x Cap.\": se usa en las tablas pero no está en el pie de la página 1",
+  "Micro no escribe \"ida\" ni \"regreso\": el sentido sale del orden en que publica las tablas de cada línea (la primera es la ida) y el recorrido queda en puntos_control, que empieza en el origen del título",
+  "línea 62 ida: el título de la tabla dice \"Maldonado – Capuera\"",
+  "línea 20 ida: el título de la tabla dice \"Pan de Azúcar – Punta del Este\"",
+  "línea 20 vuelta: el título de la tabla dice \"Punta del Este – Pan de Azúcar\"",
+  "línea 100 ida: el título de la tabla dice \"Piriápolis – Maldonado\"",
+  "línea 100 vuelta: el título de la tabla dice \"Maldonado – Piriápolis\"",
+  "línea 42 ida: el título de la tabla dice \"Punta del Este – José Ignacio\"",
+  "línea 42 vuelta: el título de la tabla dice \"José Ignacio – Punta del Este\"",
+  "línea 22 ida: el título de la tabla dice \"Punta del Este – Manantiales\"",
+  "línea 18 ida: el título de la tabla dice \"Pan de Azúcar – Dos Puentes\"",
+  "línea 18 vuelta: el título de la tabla dice \"Dos Puentes – Pan de Azúcar\""
+ ],
+ "referencias": {
+  "SSYD": "Solo Sábados y Domingos",
+  "MSYD": "Menos Sábados y Domingos",
+  "EC": "Entra Capuera",
+  "*": "Entra estación",
+  "LV": "Lunes a Viernes",
+  "Directo": "sin explicación en el documento",
+  "MSDF": "sin explicación en el documento",
+  "PP": "sin explicación en el documento",
+  "sigue faro": "sin explicación en el documento",
+  "x Cap.": "sin explicación en el documento"
+ },
+ "lineas": [
+  {
+   "linea": "62",
+   "sentido": "ida",
+   "puntos_control": [
+    "TERMINAL MALDONADO",
+    "CAPUERA"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "06:30",
+      "07:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:00",
+      "08:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "09:30",
+      "10:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "12:45",
+      "13:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      "14:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:30",
+      "16:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "17:00",
+      "17:45"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:45",
+      "19:15"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "20:00",
+      "20:45"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "20",
+   "sentido": "ida",
+   "puntos_control": [
+    "PAN DE AZUCAR",
+    "LA CAPUERA",
+    "TERM.MLDO.",
+    "TERM. P.del ESTE"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "*",
+      "x Cap.",
+      "MSDF"
+     ],
+     "horas": [
+      "05:10",
+      "05:30",
+      "05:50",
+      "06:05"
+     ]
+    },
+    {
+     "referencias": [
+      "*"
+     ],
+     "horas": [
+      "06:20",
+      "06:40",
+      "07:00",
+      "07:15"
+     ]
+    },
+    {
+     "referencias": [
+      "*",
+      "sigue faro"
+     ],
+     "horas": [
+      "07:20",
+      "07:40",
+      "08:00",
+      "08:15"
+     ]
+    },
+    {
+     "referencias": [
+      "MSDF"
+     ],
+     "horas": [
+      "07:40",
+      "08:00",
+      "08:40",
+      "08:55"
+     ]
+    },
+    {
+     "referencias": [
+      "*"
+     ],
+     "horas": [
+      "08:40",
+      "09:00",
+      "09:40",
+      "09:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:00",
+      "10:20",
+      "10:40",
+      "10:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:30",
+      "11:50",
+      "12:10",
+      "12:25"
+     ]
+    },
+    {
+     "referencias": [
+      "MSDF"
+     ],
+     "horas": [
+      "13:40",
+      "14:00",
+      "14:20",
+      "14:35"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:30",
+      "15:50",
+      "16:10",
+      "16:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:30",
+      "16:50",
+      "17:10",
+      "17:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:30",
+      "18:50",
+      "19:10",
+      "19:25"
+     ]
+    },
+    {
+     "referencias": [
+      "*",
+      "MSDF"
+     ],
+     "horas": [
+      "19:30",
+      "19:50",
+      "20:10",
+      "20:25"
+     ]
+    },
+    {
+     "referencias": [
+      "SSYD"
+     ],
+     "horas": [
+      "21:00",
+      "21:20",
+      "21:40",
+      "21:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "21:20",
+      "21:40",
+      "22:00",
+      "22:15"
+     ]
+    },
+    {
+     "referencias": [
+      "MSDF"
+     ],
+     "horas": [
+      "22:20",
+      "22:40",
+      "23:00",
+      "23:15"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "20",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Term. P. del Este",
+    "Term. Maldo.",
+    "La Capuera",
+    "Pan de Azúcar"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "05:15",
+      "05:30",
+      "05:50",
+      "06:10"
+     ]
+    },
+    {
+     "referencias": [
+      "MSDF"
+     ],
+     "horas": [
+      "06:35",
+      "06:50",
+      "07:10",
+      "07:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "07:35",
+      "07:50",
+      "08:10",
+      "08:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "08:35",
+      "08:45",
+      "09:05",
+      "09:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "10:15",
+      "10:30",
+      "10:50",
+      "11:10"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "11:35",
+      "11:45",
+      "12:05",
+      "12:35"
+     ]
+    },
+    {
+     "referencias": [
+      "MSDF"
+     ],
+     "horas": [
+      "12:30",
+      "12:45",
+      "13:10",
+      "13:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:50",
+      "15:05",
+      "15:25",
+      "15:50"
+     ]
+    },
+    {
+     "referencias": [
+      "*",
+      "MSDF"
+     ],
+     "horas": [
+      "16:45",
+      "17:00",
+      "17:20",
+      "17:50"
+     ]
+    },
+    {
+     "referencias": [
+      "Directo"
+     ],
+     "horas": [
+      "16:55",
+      "17:20",
+      "17:35",
+      "18:00"
+     ]
+    },
+    {
+     "referencias": [
+      "*",
+      "EC"
+     ],
+     "horas": [
+      "17:40",
+      "17:55",
+      "18:20",
+      "18:50"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:50",
+      "20:00",
+      "20:20",
+      "20:50"
+     ]
+    },
+    {
+     "referencias": [
+      "x Cap.",
+      "MSDF"
+     ],
+     "horas": [
+      "21:30",
+      "21:40",
+      "22:00",
+      "22:30"
+     ]
+    },
+    {
+     "referencias": [
+      "PP"
+     ],
+     "horas": [
+      "22:30",
+      "22:45",
+      "23:05",
+      "23:50"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "100",
+   "sentido": "ida",
+   "puntos_control": [
+    "Piriápolis",
+    "Capuera",
+    "Solanas",
+    "Term. Maldo."
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "13:15",
+      "13:35",
+      "13:40",
+      "14:00"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "14:50",
+      "15:10",
+      "15:15",
+      "15:30"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "16:40",
+      "17:00",
+      "17:05",
+      "17:20"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "18:15",
+      "18:35",
+      "18:40",
+      "18:55"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "19:50",
+      "20:10",
+      "20:15",
+      "20:30"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "100",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Term. Maldo.",
+    "Solanas",
+    "Capuera",
+    "Piriápolis"
+   ],
+   "servicios": [
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "12:30",
+      "12:45",
+      "12:50",
+      "13:10"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "14:00",
+      "14:15",
+      "14:20",
+      "14:40"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "15:40",
+      "15:55",
+      "16:00",
+      "16:20"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "17:30",
+      "17:45",
+      "17:50",
+      "18:10"
+     ]
+    },
+    {
+     "referencias": [
+      "LV"
+     ],
+     "horas": [
+      "19:00",
+      "19:15",
+      "19:20",
+      "19:40"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "42",
+   "sentido": "ida",
+   "puntos_control": [
+    "P. del Este",
+    "La Barra",
+    "Balneario",
+    "José Ignacio"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "12:00",
+      "12:20",
+      "12:35",
+      "12:55"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:00",
+      "16:20",
+      "16:35",
+      "16:55"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "42",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "José Ignacio",
+    "Balneario",
+    "Manantiales",
+    "Punta del Este"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "12:55",
+      "13:05",
+      "13:15",
+      "13:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "16:55",
+      "17:05",
+      "17:15",
+      "17:30"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "22",
+   "sentido": "ida",
+   "puntos_control": [
+    "P. del Este",
+    "Manantiales"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "11:00",
+      "11:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      "14:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "15:00",
+      "15:25"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:00",
+      "18:25"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "18",
+   "sentido": "ida",
+   "puntos_control": [
+    "Pan de Azúcar",
+    "Las Flores",
+    "Dos Puentes"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "06:00",
+      "06:15",
+      "06:30"
+     ]
+    },
+    {
+     "referencias": [
+      "MSYD"
+     ],
+     "horas": [
+      "12:30",
+      "12:45",
+      "13:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "14:00",
+      "14:15",
+      "14:30"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "18:30",
+      "18:45",
+      "19:00"
+     ]
+    }
+   ]
+  },
+  {
+   "linea": "18",
+   "sentido": "vuelta",
+   "puntos_control": [
+    "Dos Puentes",
+    "Las Flores",
+    "Pan de Azúcar"
+   ],
+   "servicios": [
+    {
+     "referencias": [],
+     "horas": [
+      "06:30",
+      "06:45",
+      "07:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "13:00",
+      "13:15",
+      "13:30"
+     ]
+    },
+    {
+     "referencias": [
+      "MSYD"
+     ],
+     "horas": [
+      "14:30",
+      "14:45",
+      "15:00"
+     ]
+    },
+    {
+     "referencias": [],
+     "horas": [
+      "19:00",
+      "19:15",
+      "19:30"
+     ]
+    }
+   ]
+  }
+ ]
+}

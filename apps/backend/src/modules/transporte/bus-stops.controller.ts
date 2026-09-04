@@ -12,12 +12,20 @@ import {
   ParseFloatPipe,
 } from '@nestjs/common';
 import { BusStopsService } from './bus-stops.service';
+import { StopCatalogService } from './stop-catalog.service';
+import { StopPlacementService } from './stop-placement.service';
+import { StopObservationsService } from './stop-observations.service';
 import { CreateBusStopDto, UpdateBusStopDto, FindNearbyStopsDto } from './dto/bus-stop.dto';
 import { JwtAuthGuard } from '../admin/auth/jwt-auth.guard';
 
 @Controller('transport/stops')
 export class BusStopsController {
-  constructor(private readonly stopsService: BusStopsService) {}
+  constructor(
+    private readonly stopsService: BusStopsService,
+    private readonly stopCatalog: StopCatalogService,
+    private readonly stopPlacement: StopPlacementService,
+    private readonly stopObservations: StopObservationsService,
+  ) {}
 
   /**
    * GET /transport/stops
@@ -82,6 +90,52 @@ export class BusStopsController {
   @Get('stats')
   async getStats() {
     return await this.stopsService.getStats();
+  }
+
+  /**
+   * POST /transport/stops/rebuild-catalog
+   *
+   * Vuelve a deducir las paradas desde el feed AVL de las empresas. Corre sola
+   * de madrugada; esto es para no esperar hasta mañana después de un desvío o
+   * una parada nueva. Es idempotente y no toca las paradas cargadas a mano.
+   *
+   * Va antes de :id porque Nest resuelve por orden de declaración y una ruta
+   * con parámetro se traga cualquier literal que venga después.
+   */
+  @Post('rebuild-catalog')
+  @UseGuards(JwtAuthGuard)
+  async rebuildCatalog() {
+    return await this.stopCatalog.rebuild();
+  }
+
+  /**
+   * POST /transport/stops/place
+   *
+   * Recalcula **dónde** está cada parada con toda la evidencia disponible: los
+   * ómnibus vistos detenidos ahí, la ventana entre las dos posiciones que la
+   * cruzaron y el nodo relevado en OpenStreetMap. Devuelve de qué fuente salió
+   * cada una y cuántas quedaron con la esquina nombrable, que es lo que hay
+   * que mirar para saber si mejoró.
+   *
+   * Distinto de rebuild-catalog: aquel decide **qué paradas existen** (código y
+   * nombre, que los publica la empresa); éste, dónde están.
+   */
+  @Post('place')
+  @UseGuards(JwtAuthGuard)
+  async place() {
+    await this.stopObservations.collect(24);
+    return await this.stopPlacement.place();
+  }
+
+  /**
+   * GET /transport/stops/quality
+   *
+   * Qué tan bien ubicado está el catálogo, por fuente y por zona. Es el número
+   * que hay que mirar antes y después de tocar el estimador.
+   */
+  @Get('quality')
+  async quality() {
+    return await this.stopsService.quality();
   }
 
   /**

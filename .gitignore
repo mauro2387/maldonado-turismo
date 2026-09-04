@@ -54,3 +54,9 @@ temp/
 *.zip
 *.rar
 *.tar.gz
+
+# Copia entera del proyecto que quedó al descomprimir tsconfig.zip (143 MB).
+# No es configuración: adentro tiene apps/, docker/, docs/ y su propio
+# node_modules. Se ignora para que no entre duplicado al repo; si a nadie le
+# sirve, se puede borrar a mano.
+/tsconfig/
