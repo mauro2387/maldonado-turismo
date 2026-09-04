@@ -34,6 +34,28 @@ describe('FeedHealthService', () => {
     expect(informe.status).toBe('arrancando');
   });
 
+  it('fallar muchas veces seguidas es estar caído, no arrancando', () => {
+    // Caso real: al arrancar, el feed de CODESA acumuló 26 timeouts seguidos y
+    // el informe seguía diciendo "arrancando" porque el proceso tenía cinco
+    // minutos de vida. Un feed que ya contestó veintiséis veces que no, no está
+    // arrancando. Es la misma mentira que se está tratando de sacar de la app.
+    const salud = servicio({ GPS_FEED_STALE_MINUTES: '15' });
+    for (let i = 0; i < 26; i += 1) {
+      salud.registrarFallo('codesa', new Error('This operation was aborted'));
+    }
+
+    const informe = salud.snapshot();
+    expect(informe.feeds[0].state).toBe('caido');
+    expect(informe.feeds[0].consecutive_failures).toBe(26);
+  });
+
+  it('un tropiezo aislado durante el arranque no dispara la alarma', () => {
+    const salud = servicio({ GPS_FEED_STALE_MINUTES: '15' });
+    salud.registrarFallo('codesa', new Error('timeout'));
+
+    expect(salud.snapshot().feeds[0].state).toBe('arrancando');
+  });
+
   it('pasado el umbral sin un solo éxito, ese feed está caído', () => {
     const salud = servicio({ GPS_FEED_STALE_MINUTES: '15' });
     salud.declarar(['codesa']);

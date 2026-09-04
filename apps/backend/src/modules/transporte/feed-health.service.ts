@@ -27,6 +27,20 @@ import { ConfigService } from '@nestjs/config';
 /** Cuánto silencio se tolera antes de dar un feed por caído. */
 const STALE_MINUTES_DEFAULT = 15;
 
+/**
+ * Cuántos fallos seguidos alcanzan para dar un feed por caído sin esperar al
+ * reloj.
+ *
+ * El período de gracia del arranque existe para no gritar antes de la primera
+ * vuelta. Pero **fallar no es lo mismo que no haber contestado todavía**: si el
+ * feed ya contestó veintiséis veces que no, seguir diciendo "arrancando" es la
+ * misma clase de mentira que se está tratando de sacar de la app.
+ *
+ * Cinco a quince segundos por vuelta es poco más de un minuto de intentos: lo
+ * suficiente para descartar un tropiezo y no tanto como para tapar una caída.
+ */
+const FALLOS_PARA_CAIDO = 5;
+
 export type FeedState = 'ok' | 'caido' | 'arrancando' | 'apagado';
 
 export interface FeedHealth {
@@ -127,7 +141,10 @@ export class FeedHealthService {
       const state: FeedState = !this.ingestaActiva
         ? 'apagado'
         : desdeExito === null
-          ? uptimeMs < staleMs
+          ? // Nunca contestó bien. Es "arrancando" sólo mientras no haya dicho
+            // que no unas cuantas veces: con la racha de fallos ya no es que
+            // falte tiempo, es que está caído.
+            uptimeMs < staleMs && registro.consecutiveFailures < FALLOS_PARA_CAIDO
             ? 'arrancando'
             : 'caido'
           : desdeExito > staleMs
