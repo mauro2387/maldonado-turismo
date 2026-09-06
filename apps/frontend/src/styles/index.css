@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-sand-50 text-ink-900 font-sans antialiased;
+  }
+
+  /* Los números en columnas (minutos, horarios, distancias) tienen que
+     alinearse o la lista se lee torcida. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Safe area para el notch y la barra de gestos */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-coral-500 ring-offset-2 ring-offset-sand-50;
+  }
+}
+
+@layer components {
+  /* ---------- Botones ---------- */
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold transition-colors duration-200 ease-out
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-ink-900 text-white hover:bg-ink-800;
+  }
+
+  .btn-accent {
+    @apply bg-coral-500 text-white hover:bg-coral-600;
+  }
+
+  .btn-secondary {
+    @apply bg-sand-100 text-ink-900 hover:bg-sand-200;
+  }
+
+  .btn-ghost {
+    @apply text-ink-600 hover:bg-sand-100;
+  }
+
+  /* ---------- Superficies ---------- */
+  .card {
+    @apply rounded-card border border-sand-300 bg-white p-4 shadow-card;
+  }
+
+  /* Tarjeta seleccionada o destacada: borde tinta, no color de acento. */
+  .card-selected {
+    @apply border-ink-900 shadow-float;
+  }
+
+  .sheet {
+    @apply rounded-t-sheet bg-white shadow-sheet;
+  }
+
+  .sheet-grab {
+    @apply mx-auto mb-1 h-1 w-9 rounded-full bg-sand-300;
+  }
+
+  /* ---------- Chips ---------- */
+  .chip {
+    @apply inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full
+           border border-sand-300 bg-white px-3 py-1.5 text-xs font-semibold text-ink-600
+           transition-colors duration-200 ease-out hover:border-sand-400;
+  }
+
+  .chip-active {
+    @apply border-ink-900 bg-ink-900 text-white hover:border-ink-900;
+  }
+
+  /* ---------- Formularios ---------- */
+  .input {
+    @apply w-full rounded-xl border border-sand-300 bg-white px-4 py-3 text-sm text-ink-900
+           placeholder:text-ink-300 focus:border-ink-900 focus:outline-none focus:ring-0;
+  }
+
+  /* ---------- Ficha de línea ---------- */
+  .line-tag {
+    @apply inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded-chip px-1.5
+           text-xs font-extrabold leading-none tracking-tight text-white;
+  }
+
+  /* ---------- Etiquetas de sección ---------- */
+  .section-label {
+    @apply text-label uppercase text-ink-400;
+  }
+
+  /* ---------- Esqueletos de carga ---------- */
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-sand-200;
+  }
+}
+
+@layer utilities {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Fila de chips que se desliza sin barra visible y sin cortar el primero */
+  .chip-row {
+    @apply -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 scrollbar-hide;
+  }
+}
+
+/* ============================================================
+   Leaflet
+   ============================================================ */
+
+.leaflet-container {
+  @apply h-full w-full bg-sand-200;
+  font-family: inherit !important;
+}
+
+/* Los controles por defecto de Leaflet no combinan con nada: se les da la
+   misma forma y sombra que al resto de los flotantes de la app. */
+.leaflet-touch .leaflet-bar,
+.leaflet-touch .leaflet-control-layers {
+  @apply overflow-hidden rounded-xl border-0 shadow-float;
+}
+
+.leaflet-touch .leaflet-bar a {
+  @apply border-sand-200 bg-white text-ink-900;
+}
+
+/* El crédito a OpenStreetMap va detrás del botón ⓘ, no escrito sobre el mapa.
+   La licencia obliga a darlo; nada obliga a tenerlo encima todo el tiempo. */
+.mapa-credito {
+  @apply flex items-end gap-1;
+}
+
+.mapa-credito__boton {
+  @apply flex h-6 w-6 items-center justify-center rounded-full border-0
+         bg-white/80 text-[13px] leading-none text-ink-400 shadow-float;
+}
+
+.mapa-credito__panel {
+  @apply max-w-[15rem] rounded-lg bg-white/90 px-2 py-1 text-[10px] text-ink-400 shadow-float;
+}
+
+.mapa-credito__panel a {
+  @apply underline;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply rounded-card shadow-float;
+}
+
+.leaflet-popup-content {
+  @apply m-0 p-3 text-sm;
+}
+
+.leaflet-popup-tip {
+  @apply shadow-none;
+}
+
+/* Orden de capas: los ómnibus y las paradas van siempre por encima del
+   recorrido, y los popups por encima de todo. */
+.leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.leaflet-shadow-pane {
+  z-index: 500;
+}
+
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+
+.leaflet-popup-pane {
+  z-index: 700;
+}
+
+.leaflet-tile-container {
+  pointer-events: auto;
+}
+
+/*
+ * La caminata avanzando hacia el destino.
+ *
+ * El trazo es una serie de puntos (`dash-array: 1 11`, con las puntas
+ * redondeadas cada raya sale como un círculo) y lo que se anima es el
+ * corrimiento del patrón. Un ciclo completo corre exactamente un período —12
+ * unidades— así que el bucle cierra sin salto.
+ *
+ * El signo importa: `stroke-dashoffset` negativo mueve los puntos **en el
+ * sentido del trazo**, y la geometría de la caminata viene ordenada desde
+ * donde uno está hasta donde tiene que ir. O sea que los puntos van para el
+ * lado correcto; con el signo al revés la caminata parecería volver.
+ *
+ * Se anima `stroke-dashoffset`, que el navegador resuelve en el compositor sin
+ * rehacer el layout: son cuatro o cinco trazos en pantalla y no mueven la
+ * aguja del rendimiento aunque el mapa esté haciendo pan.
+ */
+@keyframes caminata-avanza {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.linea-caminata {
+  animation: caminata-avanza 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Quieta, pero con los puntos igual: la caminata se sigue distinguiendo del
+     ómnibus por la forma y por el color, no sólo por el movimiento. */
+  .linea-caminata {
+    animation: none !important;
+  }
+}

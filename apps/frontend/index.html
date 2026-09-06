@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B1F33" />
+    <meta name="description" content="Eventos, transporte en vivo y lugares de Maldonado. Intendencia de Maldonado." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Maldonado" />
+    <meta property="og:description" content="Eventos, transporte en vivo y lugares de Maldonado" />
+    <meta property="og:type" content="website" />
+
+    <!--
+      Archivo: la grotesca de señalética del sistema. Se precarga la conexión a
+      Google Fonts para que el primer render no espere el DNS.
+      Leaflet no se carga por CDN: viene del paquete npm y su CSS lo importan
+      las pantallas de mapa. Tenerlo dos veces provocaba versiones distintas de
+      L en la misma página.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap"
+    />
+
+    <title>Maldonado</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
