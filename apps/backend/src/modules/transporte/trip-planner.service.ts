@@ -61,6 +61,23 @@ import { slicePolyline } from './route-match.util';
  * defecto son 120 s además de la caminata, y el `boardSlack` es el colchón
  * para subirse.
  *
+ * ## Planificar para más tarde
+ *
+ * "Quiero ir al Hospital mañana a las 18:30" no se contesta pasando otra
+ * fecha: cambia **de qué fuentes se puede sacar la respuesta**. De las tres de
+ * la regla 1, dos hablan solamente del presente —las ETAs salen de posiciones
+ * de GPS de ahora y la frecuencia se cuenta con los coches que están dando la
+ * vuelta ahora—, y a las 18:30 de mañana ninguna de las dos existe. Usarlas
+ * igual sería contestar con el tránsito de este momento una pregunta sobre
+ * otro: prometer un coche que a esa hora ya hizo cuatro vueltas más.
+ *
+ * Así que con una hora futura queda **una sola fuente, el horario publicado**,
+ * y eso se dice en la respuesta (`source` de cada tramo): la app puede
+ * prometer menos con un horario que con un coche a la vista, y la pantalla
+ * tiene que poder cambiar lo que muestra. Si la línea no tiene horario
+ * cargado, no hay viaje que ofrecer — que es la respuesta honesta, no una
+ * frecuencia inventada a partir de coches de hoy.
+ *
  * Cada opción sale además **dibujada**: la caminata con el camino por la calle
  * y el tramo en ómnibus con el pedazo del recorrido publicado que le toca.
  */
@@ -161,6 +178,19 @@ export function admiteTransbordo(tripMeters: number): boolean {
   return tripMeters >= MIN_TRANSFER_TRIP_M;
 }
 
+/**
+ * De dónde salió la hora de una salida.
+ *
+ * Las dos banderas que ya viajaban en el tramo -`live` y `scheduled`- dicen lo
+ * mismo, pero hay que combinarlas bien para leer la tercera posibilidad: que
+ * no sea ninguna de las dos es la frecuencia estimada. Nombrarla evita que
+ * cada pantalla vuelva a deducirla, que es donde se equivoca.
+ */
+function fuenteDe(departure: Departure): FuenteDeHora {
+  if (departure.live) return 'vivo';
+  return departure.scheduled ? 'horario' : 'frecuencia';
+}
+
 /** Y cuánto pesa cada minuto de caminata de más, con el mismo criterio. */
 const WALK_PENALTY_PER_MIN = 0.4;
 
@@ -226,6 +256,9 @@ export interface PlannerPoint {
   label?: string;
 }
 
+/** De dónde salió la hora de un tramo. Ver `TripLeg.source`. */
+export type FuenteDeHora = 'vivo' | 'horario' | 'frecuencia';
+
 export interface TripLeg {
   type: 'walk' | 'wait' | 'bus';
   duration_minutes: number;
@@ -242,6 +275,21 @@ export interface TripLeg {
   live?: boolean;
   /** True si la hora sale del horario publicado por la empresa. */
   scheduled?: boolean;
+  /**
+   * De dónde salió la hora de este tramo.
+   *
+   * `live` y `scheduled` ya lo decían entre los dos, pero repartido en dos
+   * banderas que hay que combinar bien para leer la tercera posibilidad
+   * -ninguna de las dos es la frecuencia estimada-, y sólo en el tramo de
+   * espera. Acá está dicho una vez y también en el tramo en ómnibus, que es
+   * el que la pantalla mira para decidir si puede ofrecer "ya me subí".
+   *
+   * Importa porque cambia lo que la app puede prometer: con `vivo` hay un
+   * coche concreto en la calle al que se le puede seguir el rastro; con
+   * `horario` hay un papel de la empresa; con `frecuencia`, una estimación
+   * hecha con los coches que están dando la vuelta.
+   */
+  source?: FuenteDeHora;
   /** Minutos desde ahora en que pasa ese ómnibus por la parada. */
   departs_in_minutes?: number;
   /** El coche concreto que se va a tomar, cuando la espera es en vivo. */
@@ -318,6 +366,27 @@ interface CandidateStop {
   huntingMeters: number;
 }
 
+/**
+ * El reloj de un itinerario: desde cuándo se cuenta y qué se puede saber.
+ *
+ * Viaja junto en vez de pasar un `Date` suelto porque las dos cosas van
+ * siempre atadas y separarlas es el error fácil: con la fecha sola, cualquier
+ * método que se olvide de mirar si es futura vuelve a usar el GPS de ahora
+ * para contestar sobre mañana, y el resultado se ve perfectamente razonable
+ * en una lista.
+ */
+interface Reloj {
+  /** El momento desde el que corre la línea de tiempo del viaje. */
+  now: Date;
+  /**
+   * True cuando ese momento no es ahora.
+   *
+   * Es lo que apaga las dos fuentes que sólo saben del presente: las unidades
+   * en camino y la frecuencia medida. Ver el encabezado.
+   */
+  futuro: boolean;
+}
+
 /** Cuándo sale el ómnibus que se puede tomar, contado desde ahora. */
 interface Departure {
   /** Minutos desde ahora en que ese coche pasa por la parada. */
@@ -380,8 +449,24 @@ export class TripPlannerService {
     private readonly schedules: SchedulesService,
   ) {}
 
-  async plan(origin: PlannerPoint, destination: PlannerPoint): Promise<TripOption[]> {
+  /**
+   * Cómo llegar.
+   *
+   * `departAt` es cuándo se sale, si no es ahora. No es un parámetro más: una
+   * hora futura apaga las dos fuentes que sólo saben del presente y deja sólo
+   * el horario publicado. Ver el encabezado.
+   */
+  async plan(
+    origin: PlannerPoint,
+    destination: PlannerPoint,
+    departAt?: Date,
+  ): Promise<TripOption[]> {
     if (!this.stopSequences.isReady()) return [];
+
+    const reloj: Reloj = {
+      now: departAt ?? new Date(),
+      futuro: departAt !== undefined,
+    };
 
     // La velocidad de cada recorrido se mide una vez y después se lee de
     // memoria: el planificador calcula la duración de decenas de tramos.
@@ -389,7 +474,10 @@ export class TripPlannerService {
 
     const [stops, positions] = await Promise.all([
       this.stopsReader.findAll(),
-      this.vehiclePositions.getLatestPositions(),
+      // Para una hora futura no se le pregunta al GPS. Y no es sólo que el
+      // dato no sirva: son la consulta de posiciones más una consulta de
+      // llegadas por cada parada candidata -hasta 24- para tirarlas todas.
+      reloj.futuro ? ([] as any[]) : this.vehiclePositions.getLatestPositions(),
     ]);
 
     /** Cuántos coches está haciendo cada recorrido ahora mismo. */
@@ -418,20 +506,28 @@ export class TripPlannerService {
     // cinco segundos de reloj para dos décimas de trabajo. Medido: pasa de
     // 5.200 ms a 800 ms sin cambiar ni una cuenta.
     const etasByStop = new Map<number, Map<string, Arrival[]>>();
-    await Promise.all(
-      originStops.map(async (from) => {
-        etasByStop.set(
-          from.stop.id,
-          this.etasByItinerary(await this.arrivals.getForStop(from.stop.id)),
-        );
-      }),
-    );
+    if (!reloj.futuro) {
+      await Promise.all(
+        originStops.map(async (from) => {
+          etasByStop.set(
+            from.stop.id,
+            this.etasByItinerary(await this.arrivals.getForStop(from.stop.id)),
+          );
+        }),
+      );
+    }
 
     // En Maldonado el transbordo es la excepción, no una alternativa más.
     // Mientras haya una línea que te deje, esa es la respuesta; el transbordo
     // ni se calcula. Y por debajo de cierta distancia no se calcula nunca,
     // haya directo o no. Ver `transferOptions` para el porqué.
-    const direct = this.directOptions(originStops, destinationStops, etasByStop, runningByItinerary);
+    const direct = this.directOptions(
+      originStops,
+      destinationStops,
+      etasByStop,
+      runningByItinerary,
+      reloj,
+    );
 
     const tripMeters = distanceMeters(origin.lat, origin.lng, destination.lat, destination.lng);
     const longEnough = admiteTransbordo(tripMeters);
@@ -439,7 +535,13 @@ export class TripPlannerService {
     const planned = direct.length
       ? direct
       : longEnough
-        ? this.transferOptions(originStops, destinationStops, etasByStop, runningByItinerary)
+        ? this.transferOptions(
+            originStops,
+            destinationStops,
+            etasByStop,
+            runningByItinerary,
+            reloj,
+          )
         : [];
 
     const best = this.rank(planned);
@@ -448,7 +550,7 @@ export class TripPlannerService {
     // opciones que se van a mostrar y no para las decenas que se probaron.
     const options: TripOption[] = [];
     for (const option of best) {
-      options.push(await this.materialize(option, origin, destination, byVehicle));
+      options.push(await this.materialize(option, origin, destination, byVehicle, reloj));
     }
 
     const onFoot = await this.walkOnlyOption(origin, destination);
@@ -560,6 +662,7 @@ export class TripPlannerService {
     destinationStops: CandidateStop[],
     etasByStop: Map<number, Map<string, Arrival[]>>,
     running: Map<string, number>,
+    reloj: Reloj,
   ): PlannedOption[] {
     const planned: PlannedOption[] = [];
 
@@ -569,7 +672,7 @@ export class TripPlannerService {
       for (const sequence of this.stopSequences.getForStop(from.stop.id)) {
         const boarding = sequence.stops.find((stop) => stop.stopId === from.stop.id);
         if (!boarding) continue;
-        if (!this.isOfferable(sequence, boarding, from, running)) continue;
+        if (!this.isOfferable(sequence, boarding, from, running, reloj)) continue;
 
         for (const to of destinationStops) {
           const alighting = sequence.stops.find((stop) => stop.stopId === to.stop.id);
@@ -583,6 +686,7 @@ export class TripPlannerService {
             rides: [{ sequence, boarding, alighting }],
             etas,
             running,
+            reloj,
           });
           if (option) planned.push(option);
         }
@@ -612,6 +716,7 @@ export class TripPlannerService {
     destinationStops: CandidateStop[],
     etasByStop: Map<number, Map<string, Arrival[]>>,
     running: Map<string, number>,
+    reloj: Reloj,
   ): PlannedOption[] {
     const planned: PlannedOption[] = [];
 
@@ -621,7 +726,7 @@ export class TripPlannerService {
       for (const sequence of this.stopSequences.getForStop(from.stop.id)) {
         const boarding = sequence.stops.find((stop) => stop.stopId === from.stop.id);
         if (!boarding) continue;
-        if (!this.isOfferable(sequence, boarding, from, running)) continue;
+        if (!this.isOfferable(sequence, boarding, from, running, reloj)) continue;
 
         for (const to of destinationStops) {
           for (const secondSequence of this.stopSequences.getForStop(to.stop.id)) {
@@ -631,12 +736,13 @@ export class TripPlannerService {
             ) {
               continue;
             }
-            if (
-              !this.isRunning(secondSequence, running) &&
-              !this.schedules.hasScheduleFor(secondSequence)
-            ) {
-              continue;
-            }
+            // Para más tarde, que la línea esté circulando ahora no dice
+            // nada: lo único que la habilita es tener horario publicado.
+            const sirveLaSegunda = reloj.futuro
+              ? this.schedules.hasScheduleFor(secondSequence)
+              : this.isRunning(secondSequence, running) ||
+                this.schedules.hasScheduleFor(secondSequence);
+            if (!sirveLaSegunda) continue;
 
             const finalAlighting = secondSequence.stops.find(
               (stop) => stop.stopId === to.stop.id,
@@ -660,6 +766,7 @@ export class TripPlannerService {
               transferWalkMeters: transfer.walkMeters,
               etas,
               running,
+              reloj,
             });
             if (option) planned.push(option);
           }
@@ -688,6 +795,7 @@ export class TripPlannerService {
     transferWalkMeters?: number;
     etas: Map<string, Arrival[]>;
     running: Map<string, number>;
+    reloj: Reloj;
   }): PlannedOption | null {
     const walkInMinutes = this.walking.minutes(input.walkIn.walkMeters);
     const walkOutMinutes = this.walking.minutes(input.walkOut.walkMeters);
@@ -696,8 +804,9 @@ export class TripPlannerService {
       : 0;
 
     // Un mismo instante para todo el itinerario: el horario se lee contra un
-    // solo reloj de pared, no uno por tramo.
-    const now = new Date();
+    // solo reloj de pared, no uno por tramo. Y ese instante es el de la
+    // salida pedida, que no siempre es ahora.
+    const { now, futuro } = input.reloj;
 
     let clock = walkInMinutes;
     const rides: PlannedOption['rides'] = [];
@@ -721,9 +830,18 @@ export class TripPlannerService {
       }
 
       // Regla 1: el primero que se puede tomar desde que uno está en la parada.
-      // En vivo si hay coche; si no, el horario publicado; si no, la frecuencia.
-      const departure =
-        index === 0
+      // En vivo si hay coche; si no, el horario publicado; si no, la
+      // frecuencia.
+      //
+      // Salvo que se esté planificando para más tarde, y ahí queda una sola:
+      // el horario. Las otras dos hablan del tránsito de este momento -las
+      // ETAs salen de posiciones de ahora, la frecuencia de los coches que
+      // están dando la vuelta ahora- y a las seis de la tarde de mañana eso
+      // no dice nada. Sin horario cargado no hay viaje, que es la respuesta
+      // honesta.
+      const departure = futuro
+        ? this.schedules.nextDeparture(ride.sequence, ride.boarding, clock, now)
+        : index === 0
           ? this.departureFor(ride.sequence, ride.boarding, clock, input.etas, input.running, now)
           : this.schedules.nextDeparture(ride.sequence, ride.boarding, clock, now) ??
             this.headwayDeparture(ride.sequence, clock, input.running);
@@ -906,14 +1024,24 @@ export class TripPlannerService {
     boarding: StopOnRoute,
     from: CandidateStop,
     running: Map<string, number>,
+    reloj: Reloj,
   ): boolean {
-    if (this.isRunning(sequence, running)) return true;
+    // Que haya un coche en la calle habilita la línea sólo si el viaje es
+    // ahora. Para mañana a las 18:30, que la 24 esté circulando en este
+    // momento no dice absolutamente nada.
+    if (!reloj.futuro && this.isRunning(sequence, running)) return true;
 
     // La caminata hasta la parada decide qué salidas se alcanzan: preguntar
     // por la próxima "desde ahora" ofrecería un ómnibus que sale mientras uno
     // todavía está caminando.
+    //
+    // Y el reloj va explícito. Sin él caía al `new Date()` por defecto de
+    // `nextDeparture`, así que este filtro -que es el que decide qué líneas
+    // entran al ranking- se aplicaba con la hora equivocada: para un viaje de
+    // mañana a la tarde dejaba pasar las líneas que salen dentro de las
+    // próximas tres horas de hoy.
     const readyAtMinute = this.walking.minutes(from.walkMeters);
-    return this.schedules.nextDeparture(sequence, boarding, readyAtMinute) !== null;
+    return this.schedules.nextDeparture(sequence, boarding, readyAtMinute, reloj.now) !== null;
   }
 
   private itineraryId(sequence: RouteStopSequence): string {
@@ -985,12 +1113,12 @@ export class TripPlannerService {
     destination: PlannerPoint,
     /** Dónde está cada coche ahora, para dibujar por dónde viene el tuyo. */
     byVehicle: PositionsByVehicle,
+    reloj: Reloj,
   ): Promise<TripOption> {
     const originLabel = origin.label ?? 'Tu ubicación';
     const destinationLabel = destination.label ?? 'Tu destino';
 
     const legs: TripLeg[] = [];
-    const materializeNow = new Date();
     let walkMinutes = 0;
     let clock = 0;
     let leaveInMinutes = 0;
@@ -1030,11 +1158,20 @@ export class TripPlannerService {
       // La espera se vuelve a resolver con el reloj ya corrido: en el segundo
       // tramo recién acá se sabe a qué hora se llega a esa parada, y qué
       // ómnibus de esa línea se puede tomar de verdad.
+      //
+      // Las llegadas en vivo de esa parada sólo se piden cuando el viaje es
+      // ahora: para más tarde no hay coche que consultar y el segundo reloj
+      // -que antes era otro `new Date()`- es el mismo de todo el itinerario.
+      const refinada =
+        index === 0 || reloj.futuro
+          ? null
+          : await this.refineDeparture(ride.sequence, ride.boarding, clock);
+
       const departure =
         index === 0
           ? ride.departure
-          : (await this.refineDeparture(ride.sequence, ride.boarding, clock)) ??
-            this.schedules.nextDeparture(ride.sequence, ride.boarding, clock, materializeNow) ??
+          : refinada ??
+            this.schedules.nextDeparture(ride.sequence, ride.boarding, clock, reloj.now) ??
             ride.departure;
 
       const wait = Math.max(0, Math.round(departure.atMinute - clock));
@@ -1054,6 +1191,7 @@ export class TripPlannerService {
         headsign: ride.sequence.itineraryName,
         live: departure.live,
         scheduled: departure.scheduled,
+        source: fuenteDe(departure),
         vehicle_id: departure.vehicleId,
         // Por dónde viene el ómnibus hasta la parada donde uno lo espera. Es
         // el mismo trazo coral del mapa de Bondis en vivo: sin él, en el mapa
@@ -1076,6 +1214,7 @@ export class TripPlannerService {
         line_label: this.officialRoutes.lineLabel(ride.sequence.operator, ride.sequence.lineCode),
         operator: ride.sequence.operator,
         headsign: ride.sequence.itineraryName,
+        source: fuenteDe(departure),
         vehicle_id: departure.vehicleId,
         // Cómo es el coche, para que la tarjeta pueda dibujarlo. Se sabe sólo
         // cuando la espera es en vivo: si la salida salió del horario, todavía
