@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Bus,
+  ChevronRight,
   MapPin,
   QrCode,
   Share2,
@@ -18,6 +19,7 @@ import { useGeolocation } from '@hooks/useGeolocation';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/ui/States';
+import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
 import { operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
@@ -46,6 +48,9 @@ export default function ParadaDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+
+  /** La línea cuyo horario completo está abierto. */
+  const [scheduleLine, setScheduleLine] = useState<string | null>(null);
 
   const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
 
@@ -275,10 +280,16 @@ export default function ParadaDetailPage() {
           </div>
 
           <div className="card mt-3 flex flex-col gap-3">
+            {/* Cada renglón abre la tabla completa de esa línea.
+                Estaba escrita y sólo se podía abrir desde el mapa en vivo con
+                una línea ya filtrada: quien está parado en la parada mirando
+                que el próximo pasa a las 12:06 es exactamente quien quiere ver
+                a qué hora pasan los demás. */}
             {schedule.lines.map((linea) => (
-              <div
+              <button
                 key={`${linea.operator}-${linea.line_label}-${linea.headsign ?? ''}`}
-                className="flex items-baseline gap-2.5"
+                onClick={() => setScheduleLine(linea.line_label)}
+                className="flex w-full items-baseline gap-2.5 text-left"
               >
                 <span className="flex h-6 min-w-6 flex-none items-center justify-center rounded-chip bg-sand-100 px-1.5 text-xs font-extrabold text-ink-900">
                   {linea.line_label}
@@ -313,12 +324,14 @@ export default function ParadaDetailPage() {
                     </>
                   )}
                 </p>
-              </div>
+
+                <ChevronRight className="h-4 w-4 flex-none self-center text-ink-300" strokeWidth={2.5} />
+              </button>
             ))}
           </div>
 
           <p className="mt-2 px-1 text-xs text-ink-400">
-            Horario publicado por las empresas. Los minutos reales dependen del
+            Tocá una línea para ver su horario completo. Los minutos reales dependen del
             tránsito.
           </p>
         </section>
@@ -367,6 +380,10 @@ export default function ParadaDetailPage() {
         <div className="mt-3">
           <InlineNotice tone="info" message={shareNotice} />
         </div>
+      )}
+
+      {scheduleLine && (
+        <LineScheduleSheet label={scheduleLine} onClose={() => setScheduleLine(null)} />
       )}
     </div>
   );

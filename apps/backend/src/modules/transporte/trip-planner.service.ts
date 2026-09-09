@@ -8,7 +8,7 @@ import { OfficialRoutesService } from './official-routes.service';
 import { WalkingService } from './walking.service';
 import { LineSpeedService } from './line-speed.service';
 import { SchedulesService, StopServiceToday } from './schedules.service';
-import { isInService } from './fleet.util';
+import { isElectricVehicle, isInService } from './fleet.util';
 import { cumulativeDistances, distanceAlongPolyline, distanceMeters, LngLat } from './geo.util';
 import { slicePolyline } from './route-match.util';
 
@@ -246,6 +246,15 @@ export interface TripLeg {
   departs_in_minutes?: number;
   /** El coche concreto que se va a tomar, cuando la espera es en vivo. */
   vehicle_id?: string;
+  /**
+   * Cómo es el coche que se va a tomar.
+   *
+   * Con esto la pantalla dibuja el ómnibus de la empresa, con su color y su
+   * variante -accesible, eléctrico-. Es null mientras la espera venga del
+   * horario publicado y no de una unidad concreta en la calle.
+   */
+  accessible?: boolean | null;
+  electric?: boolean;
   stops_count?: number;
   /**
    * Dónde se sube y dónde se baja, por identificador.
@@ -338,6 +347,16 @@ interface PlannedOption {
   cost: number;
 }
 
+/** Lo que se sabe de cada coche que está en la calle ahora. */
+type PositionsByVehicle = Map<
+  string,
+  {
+    latitude: number | string;
+    longitude: number | string;
+    accessible?: boolean | null;
+  }
+>;
+
 @Injectable()
 export class TripPlannerService {
   /**
@@ -376,8 +395,14 @@ export class TripPlannerService {
     /** Cuántos coches está haciendo cada recorrido ahora mismo. */
     const runningByItinerary = this.countRunning(positions);
 
-    /** Dónde está cada coche, para dibujar por dónde viene el que se toma. */
-    const byVehicle = new Map<string, { latitude: number | string; longitude: number | string }>(
+    /**
+     * Dónde está cada coche y cómo es.
+     *
+     * La posición dibuja por dónde viene el que se toma; `accessible` es para
+     * que la pantalla pueda dibujar **ese** ómnibus con su diseño, que es lo
+     * que se reconoce a la distancia cuando uno está esperando en la vereda.
+     */
+    const byVehicle: PositionsByVehicle = new Map(
       positions.map((position) => [position.vehicle_id, position]),
     );
 
@@ -959,7 +984,7 @@ export class TripPlannerService {
     origin: PlannerPoint,
     destination: PlannerPoint,
     /** Dónde está cada coche ahora, para dibujar por dónde viene el tuyo. */
-    byVehicle: Map<string, { latitude: number | string; longitude: number | string }>,
+    byVehicle: PositionsByVehicle,
   ): Promise<TripOption> {
     const originLabel = origin.label ?? 'Tu ubicación';
     const destinationLabel = destination.label ?? 'Tu destino';
@@ -1052,6 +1077,13 @@ export class TripPlannerService {
         operator: ride.sequence.operator,
         headsign: ride.sequence.itineraryName,
         vehicle_id: departure.vehicleId,
+        // Cómo es el coche, para que la tarjeta pueda dibujarlo. Se sabe sólo
+        // cuando la espera es en vivo: si la salida salió del horario, todavía
+        // no hay una unidad asignada y no hay nada que dibujar.
+        accessible: departure.vehicleId
+          ? (byVehicle.get(departure.vehicleId)?.accessible ?? null)
+          : null,
+        electric: departure.vehicleId ? isElectricVehicle(departure.vehicleId) : false,
         stops_count: ride.alighting.sequence - ride.boarding.sequence,
         boarding_stop_id: ride.boarding.stopId,
         alighting_stop_id: ride.alighting.stopId,
@@ -1182,7 +1214,7 @@ export class TripPlannerService {
   private approachGeometry(
     sequence: RouteStopSequence,
     boarding: StopOnRoute,
-    byVehicle: Map<string, { latitude: number | string; longitude: number | string }>,
+    byVehicle: PositionsByVehicle,
     vehicleId?: string,
   ): LngLat[] | undefined {
     if (!vehicleId) return undefined;

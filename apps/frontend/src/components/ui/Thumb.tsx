@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
+import { initialFor, paletteFor } from '@lib/fallbackPalette';
 
 /**
  * Imagen con respaldo propio.
@@ -9,25 +10,9 @@ import clsx from 'clsx';
  * recibía una visita de cada usuario de la app. El respaldo ahora es local: un
  * bloque de color del sistema con la inicial del lugar.
  *
- * El color sale del nombre, así que el mismo lugar siempre se ve igual y una
- * lista sin fotos igual se distingue de un vistazo.
+ * El color sale del nombre —ver `@lib/fallbackPalette`—, así que el mismo
+ * lugar siempre se ve igual, acá y en el marcador del mapa.
  */
-
-const FALLBACK_COLORS = [
-  ['#0B1F33', '#2A3E52'],
-  ['#0E7C86', '#09515A'],
-  ['#DC4227', '#A32D17'],
-  ['#3D5063', '#1A2D3F'],
-  ['#B8A88F', '#7A6B52'],
-] as const;
-
-function paletteFor(seed: string): readonly [string, string] {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  }
-  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
-}
 
 interface ThumbProps {
   src?: string | null;
@@ -39,7 +24,7 @@ interface ThumbProps {
 
 export function Thumb({ src, name, className, eager = false }: ThumbProps) {
   const [failed, setFailed] = useState(false);
-  const initial = name.trim().charAt(0).toUpperCase() || 'M';
+  const initial = initialFor(name);
 
   if (!src || failed) {
     const [from, to] = paletteFor(name);

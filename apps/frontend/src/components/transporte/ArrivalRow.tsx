@@ -1,6 +1,7 @@
 import { Accessibility, Zap } from 'lucide-react';
 import { Arrival } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
+import { BondiSprite } from '@components/transporte/BondiSprite';
 import { formatStopName } from '@lib/stopNames';
 
 /**
@@ -58,6 +59,10 @@ export function ArrivalRow({ arrival }: { arrival: Arrival }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
+        {/* El ómnibus de la empresa que viene, con su diseño. Antes del número
+            porque es lo que se reconoce a la distancia: en la parada uno ve
+            venir un coche verde o uno azul mucho antes de leerle el cartel. */}
+        <BondiSprite vehicle={arrival} width={30} />
         <LineTag code={arrivalLine(arrival)} color={lineColor(arrival.operator)} size="sm" />
         <span className="truncate text-data text-ink-600">{arrivalDestination(arrival)}</span>
         {arrival.accessible && (

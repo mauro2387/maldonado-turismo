@@ -6,6 +6,7 @@ import { Layout } from '@components/layout/Layout';
 // Destinos principales
 import HomePage from '@pages/home/HomePage';
 import MoversePage from '@pages/moverse/MoversePage';
+import LineasPage from '@pages/moverse/LineasPage';
 
 /**
  * Las dos pantallas con mapa se cargan aparte.
@@ -57,6 +58,7 @@ function App() {
             }
           />
           <Route path="/moverse" element={<MoversePage />} />
+          <Route path="/moverse/lineas" element={<LineasPage />} />
           <Route
             path="/moverse/bondis"
             element={

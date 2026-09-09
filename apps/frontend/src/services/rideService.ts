@@ -48,6 +48,16 @@ export interface RideStatus {
   ride_geometry: [number, number][];
   line_label: string | null;
   headsign: string | null;
+  /**
+   * Cómo es el coche, para poder dibujarlo.
+   *
+   * Lo primero que hace cualquiera al abrir esta pantalla es confirmar que la
+   * app sigue el ómnibus en el que está sentado y no el que va adelante. El
+   * dibujo de la empresa se reconoce antes que el número del cartel.
+   */
+  operator: string | null;
+  accessible: boolean | null;
+  electric: boolean;
   /** `sin_coche` | `sin_senal` | `sin_recorrido` | `no_te_deja`. */
   reason: 'sin_coche' | 'sin_senal' | 'sin_recorrido' | 'no_te_deja' | null;
 }

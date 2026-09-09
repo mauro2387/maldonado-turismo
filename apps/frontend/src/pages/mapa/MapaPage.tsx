@@ -17,6 +17,7 @@ import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { distanceMeters, formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import { stopMarker } from '@components/map/stopMarker';
+import { firstImage, photoMarker } from '@components/map/photoMarker';
 
 /**
  * El mapa de la app: dónde queda cada cosa en Maldonado.
@@ -45,21 +46,6 @@ const INITIAL_ZOOM = DEFAULT_ZOOM;
 const STOPS_MIN_ZOOM = 15;
 
 
-
-function pinIcon(color: string): DivIcon {
-  return new DivIcon({
-    className: '',
-    iconSize: [24, 30],
-    iconAnchor: [12, 30],
-    html: `<svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <path d="M12 29c0 0 10-11.2 10-17A10 10 0 1 0 2 12c0 5.8 10 17 10 17z" fill="${color}" stroke="#fff" stroke-width="2"/>
-             <circle cx="12" cy="11.5" r="3.6" fill="#fff"/>
-           </svg>`,
-  });
-}
-
-const placeIcon = pinIcon('#0B1F33');
-const eventIcon = pinIcon('#DC4227');
 
 const userIcon = new DivIcon({
   className: '',
@@ -267,7 +253,12 @@ export default function MapaPage() {
             <Marker
               key={`place-${place.id}`}
               position={[Number(place.lat ?? place.latitude), Number(place.lng ?? place.longitude)]}
-              icon={placeIcon}
+              icon={photoMarker({
+                name: place.name,
+                imageUrl: firstImage(place),
+                zoom,
+                selected: selection?.kind === 'place' && selection.id === place.id,
+              })}
               eventHandlers={{
                 click: () =>
                   setSelection({
@@ -286,7 +277,12 @@ export default function MapaPage() {
             <Marker
               key={`event-${event.id}`}
               position={[Number(event.lat ?? event.latitude), Number(event.lng ?? event.longitude)]}
-              icon={eventIcon}
+              icon={photoMarker({
+                name: event.title,
+                imageUrl: firstImage(event),
+                zoom,
+                selected: selection?.kind === 'event' && selection.id === event.id,
+              })}
               eventHandlers={{
                 click: () =>
                   setSelection({

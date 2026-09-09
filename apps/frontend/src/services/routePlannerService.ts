@@ -33,6 +33,13 @@ export interface TripLeg {
   departs_in_minutes?: number;
   /** El coche concreto que hay que tomarse, cuando la espera es en vivo. */
   vehicle_id?: string;
+  /**
+   * Cómo es el coche que hay que tomarse, para poder dibujarlo con el diseño
+   * de su empresa. Es null mientras la espera salga del horario publicado y no
+   * de una unidad concreta en la calle.
+   */
+  accessible?: boolean | null;
+  electric?: boolean;
   stops_count?: number;
   /**
    * Dónde se sube y dónde se baja, por identificador.
