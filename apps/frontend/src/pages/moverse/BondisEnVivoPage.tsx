@@ -608,14 +608,32 @@ export default function BondisEnVivoPage() {
           )}
         </div>
 
+        {/* ---------- Filtrar por línea ----------
+            Los chips llevan sombra porque están **encima del mapa**: sin ella
+            el callejero se cuela por los huecos entre uno y otro y la fila se
+            lee como texto cortado, no como botones. Es la misma sombra que
+            usan los controles de zoom, que flotan igual que éstos.
+
+            Y la tira se desvanece a la derecha para decir que hay más: son
+            veinte líneas en una fila que se desplaza de costado, y sin borde
+            difuso la última que entra en pantalla parece la última que hay.
+            Se desvanecen **los chips**, con una máscara, y no se pinta un
+            degradado encima: cualquier color sólido sobre el mapa se ve como
+            una mancha, porque abajo hay callejero y no un fondo liso. */}
         {linesOnStreet.length > 0 && (
-          <div className="chip-row pointer-events-auto mx-0 mt-2 px-0">
+          <div
+            className="chip-row pointer-events-auto mx-0 mt-2 px-0"
+            style={{
+              maskImage: 'linear-gradient(to right, #000 88%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, #000 88%, transparent)',
+            }}
+          >
             <button
               onClick={() => {
                 setLineFilter(null);
                 clearSelection();
               }}
-              className={`chip ${lineFilter === null ? 'chip-active' : ''}`}
+              className={`chip shadow-float ${lineFilter === null ? 'chip-active' : ''}`}
             >
               Todas
             </button>
@@ -626,7 +644,7 @@ export default function BondisEnVivoPage() {
                   setLineFilter(code === lineFilter ? null : code);
                   clearSelection();
                 }}
-                className={`chip ${lineFilter === code ? 'chip-active' : ''}`}
+                className={`chip shadow-float ${lineFilter === code ? 'chip-active' : ''}`}
               >
                 {label}
               </button>
