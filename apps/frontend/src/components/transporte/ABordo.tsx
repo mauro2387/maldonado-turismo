@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, Footprints, MapPin, SignalZero, X } from 'lucide-react';
 import { rideService, RideStatus } from '@services/rideService';
+import { BondiSprite } from '@components/transporte/BondiSprite';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
 
@@ -170,12 +171,19 @@ export function ABordo({
           cualquiera al abrir esto es confirmar que la app está siguiendo el
           ómnibus en el que está sentado y no otro. */}
       <header className="flex items-center gap-3 bg-ink-900 px-4 py-3 text-white">
+        {/* El coche dibujado, con el color de su empresa. Lo primero que hace
+            cualquiera al abrir esto es confirmar que la app está siguiendo el
+            ómnibus en el que está sentado y no el que va adelante, y a eso se
+            contesta antes con el color que con el número. */}
+        {status && <BondiSprite vehicle={status} width={40} />}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">
             {status?.line_label ? `Línea ${status.line_label}` : 'A bordo'}
           </span>
           {status?.headsign && (
-            <span className="block truncate text-xs text-ink-300">{status.headsign}</span>
+            <span className="block truncate text-xs text-ink-300">
+              {formatStopName(status.headsign)}
+            </span>
           )}
         </span>
         <button

@@ -16,6 +16,7 @@ import { destinationsService, Destination } from '@services/destinationsService'
 import { TripMap, TripLegend, rideColor, legLine } from '@components/transporte/TripMap';
 import { DestinoEnMapa } from '@components/transporte/DestinoEnMapa';
 import { ABordo } from '@components/transporte/ABordo';
+import { BondiSprite } from '@components/transporte/BondiSprite';
 import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
 import { formatDistance } from '@lib/geo';
@@ -511,6 +512,13 @@ function TripCard({
             >
               {firstWait.live && (
                 <span className="h-1.5 w-1.5 flex-none rounded-full bg-live-dot animate-pulse-dot" />
+              )}
+              {/* El ómnibus que hay que tomarse, dibujado. Sólo cuando hay una
+                  unidad concreta en la calle: si la espera salió del horario
+                  publicado todavía no hay coche asignado, y dibujar uno sería
+                  prometer una empresa que puede no ser la que venga. */}
+              {busLegs[0]?.vehicle_id && (
+                <BondiSprite vehicle={busLegs[0]} width={28} className="-my-1" />
               )}
               {/* Lo que se dice es cuándo hay que salir, no cuánto falta para
                   que pase el ómnibus: el ómnibus pasa por la parada, y a la

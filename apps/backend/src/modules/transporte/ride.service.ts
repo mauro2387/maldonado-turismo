@@ -6,6 +6,7 @@ import { OfficialRoutesService } from './official-routes.service';
 import { LineSpeedService } from './line-speed.service';
 import { WalkingService } from './walking.service';
 import { slicePolyline } from './route-match.util';
+import { isElectricVehicle } from './fleet.util';
 import { cumulativeDistances, distanceAlongPolyline, distanceMeters, LngLat } from './geo.util';
 
 /**
@@ -193,6 +194,18 @@ export interface RideStatus {
   headsign: string | null;
 
   /**
+   * Cómo es el coche, para que la pantalla pueda dibujarlo.
+   *
+   * Arriba del ómnibus, lo primero que hace cualquiera al abrir esta pantalla
+   * es confirmar que la app está siguiendo el coche en el que está sentado y
+   * no el que va adelante. El número del cartel ayuda; el dibujo de la
+   * empresa, con su color, se reconoce antes de leer nada.
+   */
+  operator: string | null;
+  accessible: boolean | null;
+  electric: boolean;
+
+  /**
    * Por qué no se puede contestar:
    * - `sin_coche`: ese coche no está en el feed.
    * - `sin_senal`: está, pero su última posición es vieja.
@@ -232,6 +245,9 @@ const NO_RIDE: RideStatus = {
   ride_geometry: [],
   line_label: null,
   headsign: null,
+  operator: null,
+  accessible: null,
+  electric: false,
   reason: 'sin_coche',
 };
 
@@ -288,6 +304,11 @@ export class RideService {
       // vacía en la ficha se lee como un error de la app: mejor ausente.
       line_label: this.officialRoutes.lineLabel(vehicle.operator, vehicle.line_code) || null,
       headsign: vehicle.line_name ?? null,
+      operator: vehicle.operator ?? null,
+      accessible: vehicle.accessible ?? null,
+      // La propulsión no está en el feed: se resuelve por número de coche,
+      // igual que en el listado de vehículos.
+      electric: isElectricVehicle(vehicle.vehicle_id),
     };
 
     if (this.stale(vehicle)) return { ...NO_RIDE, ...identity, reason: 'sin_senal' };

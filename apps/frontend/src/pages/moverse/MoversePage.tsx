@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Bus, AlertTriangle, Map as MapIcon } from 'lucide-react';
+import { Search, ChevronRight, Bus, AlertTriangle, Clock, Map as MapIcon } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useNearbyDepartures, useVehiclePositions } from '@hooks/useDepartures';
 import { useAlerts, useLines } from '@hooks/useTransport';
@@ -56,6 +56,9 @@ const RADIUS_OPTIONS = [800, 1500, 3000];
 /** Cuántos ómnibus se listan antes de mandar al mapa, que los tiene todos. */
 const MAX_NEXT_BUSES = 8;
 
+/** Cuántas líneas se muestran acá antes de mandar a la lista completa. */
+const MAX_LINES_PREVIEW = 6;
+
 /**
  * ¿Se alcanza a tomar?
  *
@@ -81,7 +84,6 @@ export default function MoversePage() {
   const { alerts } = useAlerts();
   const { lines } = useLines();
   const { vehicles } = useVehiclePositions(true);
-  const [showAllLines, setShowAllLines] = useState(false);
 
   /**
    * Cuántos ómnibus están haciendo un servicio.
@@ -315,7 +317,7 @@ export default function MoversePage() {
           </div>
 
           <div className="mt-3 flex flex-col gap-2">
-            {(showAllLines ? lines : lines.slice(0, 8)).map((line) => (
+            {lines.slice(0, MAX_LINES_PREVIEW).map((line) => (
               <Link
                 key={`${line.operator}-${line.line_code}`}
                 to={`/moverse/bondis?linea=${encodeURIComponent(line.line_code)}`}
@@ -337,14 +339,14 @@ export default function MoversePage() {
             ))}
           </div>
 
-          {lines.length > 8 && (
-            <button
-              onClick={() => setShowAllLines(!showAllLines)}
-              className="btn btn-secondary mt-3 w-full"
-            >
-              {showAllLines ? 'Ver menos' : `Ver las ${lines.length} líneas`}
-            </button>
-          )}
+          {/* La lista completa vive en su propia pantalla, con buscador y con
+              el horario publicado de cada línea. Desplegar treinta tarjetas
+              acá dejaba el planificador -que está más abajo- fuera de alcance,
+              y no daba forma de encontrar una línea por el lugar al que va. */}
+          <Link to="/moverse/lineas" className="btn btn-secondary mt-3 w-full gap-1.5">
+            <Clock className="h-4 w-4" strokeWidth={2} />
+            Ver las {lines.length} líneas y sus horarios
+          </Link>
         </section>
       )}
 
