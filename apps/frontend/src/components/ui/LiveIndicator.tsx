@@ -16,6 +16,35 @@ export function isLive(fixAgeSeconds?: number | null): boolean {
   return typeof fixAgeSeconds === 'number' && fixAgeSeconds >= 0 && fixAgeSeconds < LIVE_MAX_AGE_SECONDS;
 }
 
+/**
+ * Qué tan viejo es el dato más fresco de un montón de coches.
+ *
+ * Un encabezado que dice "en vivo" habla de una flota entera, y una flota no
+ * tiene una sola antigüedad: tiene una por coche. La del conjunto es la del
+ * mejor de todos, porque alcanza con que **uno** esté reportando para que la
+ * pantalla efectivamente muestre algo de ahora.
+ *
+ * Devuelve null cuando no hay ni una marca de tiempo utilizable, que es
+ * distinto de "hace mucho": `isLive(null)` es false y el indicador cae al
+ * texto gris, que es exactamente lo que corresponde cuando no se sabe.
+ */
+export function freshestFixAge(times: (string | null | undefined)[]): number | null {
+  const now = Date.now();
+  let youngest: number | null = null;
+
+  for (const time of times) {
+    if (!time) continue;
+    const parsed = Date.parse(time);
+    if (Number.isNaN(parsed)) continue;
+
+    const seconds = (now - parsed) / 1000;
+    if (seconds < 0) continue;
+    if (youngest === null || seconds < youngest) youngest = seconds;
+  }
+
+  return youngest;
+}
+
 /** "hace 12 s" / "hace 3 min". */
 export function formatAge(seconds: number): string {
   if (seconds < 60) return `hace ${Math.max(0, Math.round(seconds))} s`;

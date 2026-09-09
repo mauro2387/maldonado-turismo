@@ -38,10 +38,25 @@ interface ErrorStateProps {
   title?: string;
   message: string;
   onRetry?: () => void;
+  /**
+   * Qué dice el botón.
+   *
+   * Existe porque no todas las salidas de un error son volver a intentar. La
+   * ficha de una parada que no existe ofrecía "Reintentar" y lo que hacía era
+   * mandarte a Moverse: el botón decía una cosa y hacía otra, que es peor que
+   * no tener botón. Cuando la acción no es reintentar, hay que nombrarla.
+   */
+  retryLabel?: string;
   className?: string;
 }
 
-export function ErrorState({ title = 'No se pudo cargar', message, onRetry, className }: ErrorStateProps) {
+export function ErrorState({
+  title = 'No se pudo cargar',
+  message,
+  onRetry,
+  retryLabel = 'Reintentar',
+  className,
+}: ErrorStateProps) {
   return (
     <div
       className={clsx('rounded-card border border-crit-soft bg-crit-soft p-4', className)}
@@ -57,8 +72,8 @@ export function ErrorState({ title = 'No se pudo cargar', message, onRetry, clas
               onClick={onRetry}
               className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-crit"
             >
-              <RefreshCw className="h-4 w-4" strokeWidth={2} />
-              Reintentar
+              {retryLabel === 'Reintentar' && <RefreshCw className="h-4 w-4" strokeWidth={2} />}
+              {retryLabel}
             </button>
           )}
         </div>

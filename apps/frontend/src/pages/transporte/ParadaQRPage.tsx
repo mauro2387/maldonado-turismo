@@ -1,109 +1,123 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { QrCode, Download, Share2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Download, Share2, ArrowLeft, Printer } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import { BusStop } from '@services/transportService';
-import Breadcrumbs from '@components/Breadcrumbs';
+import { BusStop, transportService } from '@services/transportService';
+import { ErrorState, SkeletonList } from '@components/ui/States';
+import { operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
+
+/**
+ * El QR de una parada, para imprimir y pegarlo en el refugio.
+ *
+ * No es una pantalla de uso público: la usa quien produce las calcomanías. Por
+ * eso lo único grande de la pantalla es el código, y lo demás son las tres
+ * acciones que hacen falta para sacarlo de acá —bajarlo, compartirlo,
+ * imprimirlo—.
+ *
+ * El código lleva la URL de la ficha de la parada, así que la cámara de
+ * cualquier teléfono lo abre sin tener la app instalada.
+ */
 
 export default function ParadaQRPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const [stop, setStop] = useState<BusStop | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
-  // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
-  // sistema operativo.
-  const [copied, setCopied] = useState(false);
+  /**
+   * Confirmación dentro de la interfaz, no un `alert()` del navegador: bloquea
+   * la pantalla y se ve distinto en cada sistema operativo.
+   */
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2500);
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 2500);
     return () => clearTimeout(timer);
-  }, [copied]);
-
+  }, [notice]);
 
   useEffect(() => {
-    const fetchStop = async () => {
-      try {
-        const { transportService } = await import('@services/transportService');
-        const stopData = await transportService.getStopById(id!);
-        setStop(stopData);
-      } catch (error) {
-        console.error('Error fetching stop:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!id) return;
+    let cancelled = false;
 
-    if (id) {
-      fetchStop();
-    }
+    transportService
+      .getStopById(id)
+      .then((data) => {
+        if (!cancelled) setStop(data);
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err?.message ?? 'No pudimos traer esta parada');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  const handleDownload = () => {
+  const download = () => {
     const svg = document.getElementById('qr-code');
     if (!svg) return;
 
-    const svgData = new XMLSerializer().serializeToString(svg);
+    const source = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
+    const context = canvas.getContext('2d');
+    const image = new Image();
 
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL('image/png');
+    image.onload = () => {
+      canvas.width = image.width;
+      canvas.height = image.height;
+      context?.drawImage(image, 0, 0);
 
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `parada-${stop?.code || id}-qr.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
+      const link = document.createElement('a');
+      link.download = `parada-${stop?.code ?? id}-qr.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     };
 
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+    // `btoa` sólo acepta latin-1 y el SVG puede traer acentos en el nombre.
+    image.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(source)))}`;
   };
 
-  const handleShare = async () => {
+  const share = async () => {
     const url = window.location.href;
-    
+
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `Parada ${stop?.name || id}`,
-          text: `Código QR de la parada ${stop?.name || id}`,
-          url: url,
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
+        await navigator.share({ title: `Parada ${stop?.name ?? id}`, url });
+        return;
+      } catch {
+        // Cancelar el diálogo del sistema no es un error que haya que contar.
+        return;
       }
-    } else {
-      // Fallback: copiar al portapapeles
-      navigator.clipboard.writeText(url);
-      setCopied(true);
     }
+
+    await navigator.clipboard.writeText(url);
+    setNotice('Enlace copiado');
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary-600" size={48} />
+      <div className="mx-auto max-w-2xl px-4 pt-6">
+        <SkeletonList rows={3} />
       </div>
     );
   }
 
-  if (!stop) {
+  if (error || !stop) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <QrCode className="mx-auto text-gray-400 mb-4" size={48} />
-          <p className="text-gray-600 mb-4">No se encontró la parada</p>
-          <button onClick={() => navigate('/moverse')} className="btn btn-primary">
-            Volver al transporte
-          </button>
-        </div>
+      <div className="mx-auto max-w-2xl px-4 pt-6">
+        <ErrorState
+          title="No encontramos esta parada"
+          message={error ?? 'Puede que ese número ya no esté en servicio.'}
+          onRetry={() => navigate('/moverse')}
+          retryLabel="Ver los ómnibus que andan ahora"
+        />
       </div>
     );
   }
@@ -111,131 +125,72 @@ export default function ParadaQRPage() {
   const qrValue = `${window.location.origin}/transporte/paradas/${id}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-14 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <Breadcrumbs
-            items={[
-              { label: 'Moverse', path: '/moverse' },
-              { label: 'Paradas', path: '/moverse' },
-              { label: formatStopName(stop.name), path: `/transporte/paradas/${id}` },
-              { label: 'Código QR' },
-            ]}
-          />
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft size={20} />
-            <span>Volver</span>
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">Código QR de Parada</h1>
-        </div>
-      </div>
+    <div className="min-h-[calc(100dvh-4.25rem)] bg-sand-100">
+      <header className="flex items-center gap-3 bg-ink-900 px-4 py-3 text-white">
+        <button
+          onClick={() => navigate(`/transporte/paradas/${id}`)}
+          aria-label="Volver a la parada"
+          className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/10"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold">{formatStopName(stop.name)}</span>
+          <span className="block truncate text-xs text-ink-300">
+            Código QR para el refugio
+          </span>
+        </span>
+      </header>
 
-      {/* Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* QR Card */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-            {/* Stop Info */}
-            <div className="text-center mb-8">
-              <div className="inline-block bg-primary-100 text-primary-800 px-4 py-2 rounded-lg font-bold text-lg mb-3">
-                {stop.code}
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{formatStopName(stop.name)}</h2>
-              <p className="text-gray-600">{stop.zone}</p>
-            </div>
+      <div className="mx-auto max-w-2xl px-4 py-4">
+        <div className="card text-center">
+          <p className="section-label">Parada {stop.code}</p>
+          <h1 className="mt-1 text-lg font-extrabold tracking-tight text-ink-900">
+            {formatStopName(stop.name)}
+          </h1>
+          {stop.operators && stop.operators.length > 0 && (
+            <p className="mt-0.5 text-data text-ink-400">{operatorNames(stop.operators)}</p>
+          )}
 
-            {/* QR Code */}
-            <div className="flex justify-center mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-inner border-4 border-gray-100">
-                <QRCode
-                  id="qr-code"
-                  value={qrValue}
-                  size={256}
-                  level="H"
-                  bgColor="#FFFFFF"
-                  fgColor="#000000"
-                />
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-              <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                <QrCode size={20} />
-                ¿Cómo usar este QR?
-              </h3>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Escanea el código con la cámara de tu teléfono</li>
-                <li>Accede a horarios y tiempos de llegada en tiempo real</li>
-                <li>Descarga el código para usarlo sin conexión</li>
-                <li>Comparte con otros viajeros</li>
-              </ul>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleDownload}
-                className="flex-1 btn btn-primary flex items-center justify-center gap-2"
-              >
-                <Download size={20} />
-                <span>Descargar</span>
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex-1 btn btn-secondary flex items-center justify-center gap-2"
-              >
-                <Share2 size={20} />
-                <span>Compartir</span>
-              </button>
+          {/* El marco blanco es parte del código: sin margen alrededor, muchos
+              lectores no lo enganchan. */}
+          <div className="mt-4 flex justify-center">
+            <div className="rounded-card border border-sand-200 bg-white p-5">
+              <QRCode id="qr-code" value={qrValue} size={224} level="H" fgColor="#0B1F33" />
             </div>
           </div>
 
-          {/* Stop Details */}
-          {stop.routes && stop.routes.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Líneas que pasan por esta parada</h3>
-              <div className="flex gap-2 flex-wrap">
-                {stop.routes.map((routeId: string) => (
-                  <span
-                    key={routeId}
-                    className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold"
-                  >
-                    {routeId}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          <p className="mx-auto mt-4 max-w-xs text-data text-ink-500">
+            Apuntándole la cámara se abre esta parada con los ómnibus que vienen, sin instalar
+            nada.
+          </p>
 
-          {/* Print Option */}
-          <div className="bg-gray-100 rounded-xl p-6 mt-6 text-center">
-            <p className="text-gray-700 mb-4">
-              💡 <strong>Tip:</strong> Imprime este QR para colocarlo en la parada física
-            </p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <button onClick={download} className="btn btn-secondary flex-col gap-1 text-xs">
+              <Download className="h-4 w-4" strokeWidth={2} />
+              Bajar
+            </button>
+            <button onClick={share} className="btn btn-secondary flex-col gap-1 text-xs">
+              <Share2 className="h-4 w-4" strokeWidth={2} />
+              Compartir
+            </button>
             <button
               onClick={() => window.print()}
-              className="btn btn-secondary"
+              className="btn btn-secondary flex-col gap-1 text-xs"
             >
-              Imprimir código QR
+              <Printer className="h-4 w-4" strokeWidth={2} />
+              Imprimir
             </button>
           </div>
         </div>
       </div>
 
-      {/* Print Styles */}
+      {/* Al imprimir queda sólo el código: el resto de la pantalla no va a la
+          calcomanía. */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          #qr-code, #qr-code * {
-            visibility: visible;
-          }
+          body * { visibility: hidden; }
+          #qr-code, #qr-code * { visibility: visible; }
           #qr-code {
             position: absolute;
             left: 50%;
@@ -245,12 +200,12 @@ export default function ParadaQRPage() {
         }
       `}</style>
 
-      {copied && (
+      {notice && (
         <div
           role="status"
           className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-float md:bottom-8"
         >
-          Enlace copiado
+          {notice}
         </div>
       )}
     </div>

@@ -1,319 +1,262 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, Camera, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { ScanLine, Camera, ArrowLeft, Keyboard } from 'lucide-react';
 import jsQR from 'jsqr';
+import { ErrorState, InlineNotice } from '@components/ui/States';
+
+/**
+ * El escáner del QR de la parada.
+ *
+ * Esta pantalla se usa parado en el refugio, con una mano, y muchas veces de
+ * noche: es el momento de menos paciencia de toda la app. Por eso contesta
+ * rápido y ofrece una salida —tipear el número— para cuando la cámara no
+ * arranca, la calcomanía está rayada o directamente no hay luz.
+ *
+ * El QR no consulta a ningún servidor: lleva la URL de la parada y lo único
+ * que se hace acá es leer el número y navegar. Eso es lo que permite que
+ * funcione con la conexión de un refugio.
+ */
+
+/**
+ * De qué formas viene escrito el número de parada en los QR que hay pegados.
+ *
+ * Se imprimieron en tandas distintas y no todas dicen lo mismo: las viejas
+ * llevan `/parada/123` y las nuevas `/transporte/paradas/123`. Las dos siguen
+ * en la calle, así que las dos tienen que funcionar.
+ */
+function stopIdFromQr(data: string): string | null {
+  const nueva = data.match(/\/transporte\/paradas\/(\d+)/);
+  if (nueva) return nueva[1];
+
+  const vieja = data.match(/\/parada\/(\d+)/);
+  if (vieja) return vieja[1];
+
+  // Un QR que sólo lleva el número, sin URL.
+  if (/^\d+$/.test(data.trim())) return data.trim();
+
+  return null;
+}
 
 export default function EscanerQRPage() {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [found, setFound] = useState<string | null>(null);
+  const [manual, setManual] = useState('');
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
 
-  const handleStartScan = async () => {
+  const startScan = async () => {
     try {
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
       });
-      
+
       streamRef.current = stream;
-      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       }
-      
+
       setScanning(true);
       setError(null);
-    } catch (err) {
-      setError('No se pudo acceder a la cámara. Verifica los permisos.');
-      console.error('Camera error:', err);
+    } catch {
+      setError(
+        'No pudimos abrir la cámara. Puede ser que el permiso esté denegado, o que otra app la esté usando.',
+      );
     }
   };
 
-  const handleStopScan = () => {
+  const stopScan = () => {
     setScanning(false);
-    
-    // Stop video stream
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
     }
-    
-    // Cancel animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    
-    // Clear video
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+
+    if (videoRef.current) videoRef.current.srcObject = null;
   };
 
-  const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current || !scanning) {
-      return;
-    }
-
+  const scanFrame = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    if (!video || !canvas) return;
 
+    const context = canvas.getContext('2d');
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
-      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+      frameRef.current = requestAnimationFrame(scanFrame);
       return;
     }
 
-    // Set canvas size to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Get image data from canvas
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
 
-    // Try to decode QR code
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
-    });
-
-    if (code) {
-      
-      handleQRCodeDetected(code.data);
-    } else {
-      // Continue scanning
-      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+    if (!code) {
+      frameRef.current = requestAnimationFrame(scanFrame);
+      return;
     }
+
+    stopScan();
+
+    const stopId = stopIdFromQr(code.data);
+    if (!stopId) {
+      setError('Ese código no es de una parada. Fijate que sea el de la calcomanía del refugio.');
+      return;
+    }
+
+    // Medio segundo de confirmación: sin eso la pantalla cambia sola y no
+    // queda claro que el escaneo funcionó.
+    setFound(stopId);
+    setTimeout(() => navigate(`/transporte/paradas/${stopId}`), 500);
   };
 
-  const handleQRCodeDetected = (data: string) => {
-    
-    
-    // Stop scanning
-    handleStopScan();
-    
-    try {
-      // Try to parse the QR data
-      // Expected formats:
-      // - http://localhost:5174/transporte/paradas/123
-      // - /transporte/paradas/123
-      // - 123 (just the stop ID)
-      
-      let stopId: string | null = null;
-      
-      // Check if it's a URL
-      if (data.includes('/transporte/paradas/')) {
-        const match = data.match(/\/transporte\/paradas\/(\d+)/);
-        if (match) {
-          stopId = match[1];
-        }
-      } else if (data.includes('/parada/')) {
-        // Legacy format
-        const match = data.match(/\/parada\/(\d+)/);
-        if (match) {
-          stopId = match[1];
-        }
-      } else if (/^\d+$/.test(data)) {
-        // Just a number
-        stopId = data;
-      }
-      
-      if (stopId) {
-        setSuccess(`Parada ${stopId} detectada`);
-        setTimeout(() => {
-          navigate(`/transporte/paradas/${stopId}`);
-        }, 500);
-      } else {
-        setError('Código QR no válido. Debe ser un código de parada.');
-        setScanning(false);
-      }
-    } catch (err) {
-      console.error('Error processing QR code:', err);
-      setError('Error al procesar el código QR');
-      setScanning(false);
-    }
-  };
-
-  // Start scanning when video is ready
   useEffect(() => {
-    if (scanning && videoRef.current) {
-      const video = videoRef.current;
-      
-      const handleLoadedMetadata = () => {
-        animationFrameRef.current = requestAnimationFrame(scanQRCode);
-      };
-      
-      video.addEventListener('loadedmetadata', handleLoadedMetadata);
-      
-      return () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      };
-    }
+    if (!scanning) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onReady = () => {
+      frameRef.current = requestAnimationFrame(scanFrame);
+    };
+
+    video.addEventListener('loadedmetadata', onReady);
+    return () => video.removeEventListener('loadedmetadata', onReady);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanning]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      handleStopScan();
-    };
-  }, []);
-
-  const handleManualInput = () => {
-    const code = prompt('Ingresá el código de la parada:');
-    if (code) {
-      navigate(`/transporte/paradas/${code}`);
-    }
-  };
+  useEffect(() => stopScan, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-6 px-4">
-        <div className="container mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Escanear QR</h1>
-            <button
-              onClick={() => navigate('/moverse')}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <X size={24} />
-            </button>
-          </div>
-          <p className="text-white/90">
-            Escaneá el código QR de la parada para ver información en tiempo real
-          </p>
-        </div>
-      </div>
+    <div className="min-h-[calc(100dvh-4.25rem)] bg-sand-100">
+      <header className="flex items-center gap-3 bg-ink-900 px-4 py-3 text-white">
+        <button
+          onClick={() => (scanning ? stopScan() : navigate('/moverse'))}
+          aria-label="Volver"
+          className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/10"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Escanear el QR de la parada</span>
+          <span className="block truncate text-xs text-ink-300">
+            Para ver qué viene, sin buscarla en una lista
+          </span>
+        </span>
+      </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {!scanning ? (
-          <div className="space-y-4">
-            {/* Scanner Card */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="p-8 text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 bg-blue-100 rounded-full mb-6">
-                  <ScanLine size={48} className="text-blue-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Escaneá un código QR
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Cada parada de bus tiene un código QR único con información en tiempo real
-                </p>
-                <button
-                  onClick={handleStartScan}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg"
-                >
-                  <Camera size={24} />
-                  <span>Abrir Cámara</span>
-                </button>
+      <div className="mx-auto max-w-2xl px-4 py-4">
+        {scanning ? (
+          <div className="overflow-hidden rounded-card bg-ink-900">
+            <div className="relative aspect-square">
+              <video
+                ref={videoRef}
+                className="absolute inset-0 h-full w-full object-cover"
+                playsInline
+                autoPlay
+                muted
+              />
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* El marco: el encuadre es la única instrucción que se necesita. */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="h-56 w-56 rounded-card border-4 border-coral-500 shadow-[0_0_0_9999px_rgba(11,31,51,.45)]" />
               </div>
+
+              <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/80 to-transparent px-4 pb-4 pt-8 text-center text-sm font-bold text-white">
+                Apuntá al código de la parada
+              </p>
             </div>
 
-            {/* Success Alert */}
-            {success && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
-                <div className="text-sm text-green-800">
-                  <p className="font-medium">{success}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Error Alert */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
-                <div className="text-sm text-red-800">
-                  <p className="font-medium mb-1">Error al acceder a la cámara</p>
-                  <p>{error}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Manual Input */}
-            <div className="bg-white rounded-xl shadow p-6">
-              <h3 className="font-semibold text-gray-900 mb-3">
-                ¿No podés escanear?
-              </h3>
-              <button
-                onClick={handleManualInput}
-                className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-600 hover:text-blue-600 font-medium"
-              >
-                Ingresar código manualmente
+            <div className="p-3">
+              <button onClick={stopScan} className="btn btn-ghost w-full text-white">
+                Cancelar
               </button>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-3">
-                ¿Cómo funciona?
-              </h3>
-              <ol className="space-y-2 text-sm text-blue-800">
-                <li className="flex gap-2">
-                  <span className="font-semibold">1.</span>
-                  <span>Buscá el código QR en la parada de bus</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold">2.</span>
-                  <span>Escanealo con tu cámara</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold">3.</span>
-                  <span>Verás los horarios en tiempo real y las líneas que pasan por esa parada</span>
-                </li>
-              </ol>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Scanner View */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="aspect-square bg-gray-900 relative">
-                {/* Video element (hidden, used for capture) */}
-                <video
-                  ref={videoRef}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  playsInline
-                  autoPlay
-                />
-                
-                {/* Hidden canvas for QR detection */}
-                <canvas ref={canvasRef} className="hidden" />
+          <>
+            <div className="card text-center">
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
+                <ScanLine className="h-7 w-7 text-ink-900" strokeWidth={2} />
+              </span>
+              <h2 className="mt-3 text-base font-extrabold tracking-tight text-ink-900">
+                Escaneá el código del refugio
+              </h2>
+              <p className="mx-auto mt-1 max-w-xs text-data text-ink-500">
+                Cada parada tiene el suyo. Te lleva derecho a qué ómnibus viene y en cuánto.
+              </p>
+              <button onClick={startScan} className="btn btn-primary mt-4 w-full gap-2">
+                <Camera className="h-4 w-4" strokeWidth={2.5} />
+                Abrir la cámara
+              </button>
+            </div>
 
-                {/* Scanner frame overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-64 h-64 border-4 border-blue-500 rounded-xl relative">
-                    {/* Scanning animation */}
-                    <div className="absolute inset-0 border-t-4 border-blue-400 animate-pulse"></div>
-                  </div>
-                </div>
-
-                {/* Instructions overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 text-center">
-                  <p className="text-white text-lg font-medium">
-                    Apuntá la cámara al código QR
-                  </p>
-                </div>
+            {found && (
+              <div className="mt-3">
+                <InlineNotice tone="info" message={`Parada ${found} encontrada. Abriendo…`} />
               </div>
+            )}
 
-              <div className="p-4 text-center">
+            {error && (
+              <ErrorState
+                title="No se pudo escanear"
+                message={error}
+                onRetry={startScan}
+                className="mt-3"
+              />
+            )}
+
+            {/* ---------- La salida cuando la cámara no es opción ----------
+                Antes esto era un `prompt()` del navegador: una ventanita gris
+                del sistema, sin teclado numérico y sin forma de corregir el
+                número sin volver a empezar. */}
+            <form
+              className="card mt-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const value = manual.trim();
+                if (/^\d+$/.test(value)) navigate(`/transporte/paradas/${value}`);
+              }}
+            >
+              <h3 className="section-label">¿No podés escanear?</h3>
+              <p className="mt-1 text-data text-ink-500">
+                El número está impreso abajo del código, en la misma calcomanía.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <label className="sr-only" htmlFor="codigo-parada">
+                  Número de parada
+                </label>
+                <input
+                  id="codigo-parada"
+                  className="input flex-1"
+                  value={manual}
+                  onChange={(event) => setManual(event.target.value.replace(/\D/g, ''))}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="Número de la parada"
+                />
                 <button
-                  onClick={handleStopScan}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                  type="submit"
+                  disabled={!manual.trim()}
+                  className="btn btn-secondary flex-none gap-1.5 disabled:opacity-40"
                 >
-                  Cancelar
+                  <Keyboard className="h-4 w-4" strokeWidth={2.5} />
+                  Ir
                 </button>
               </div>
-            </div>
-          </div>
+            </form>
+          </>
         )}
       </div>
     </div>

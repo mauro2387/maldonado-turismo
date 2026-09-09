@@ -10,7 +10,7 @@ import { LineTag } from '@components/ui/LineTag';
 import { Thumb } from '@components/ui/Thumb';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { InlineNotice } from '@components/ui/States';
-import { arrivalLine, lineColor } from '@components/transporte/ArrivalRow';
+import { arrivalDestination, arrivalLine, lineColor } from '@components/transporte/ArrivalRow';
 import { formatDistance, walkingMinutes } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import type { Arrival, NearbyDeparture } from '@services/transportService';
@@ -158,7 +158,7 @@ export default function HomePage() {
                 />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-ink-900">
-                    {nextArrival.destination ?? nextArrival.line_name ?? 'En recorrido'}
+                    {arrivalDestination(nextArrival)}
                   </p>
                   <p className="truncate text-xs text-ink-400">
                     {formatStopName(nextStop.name)} · a {formatDistance(nextStop.distance_m)} tuyo

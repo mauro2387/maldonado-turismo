@@ -18,6 +18,7 @@ import { useGeolocation } from '@hooks/useGeolocation';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/ui/States';
+import { operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
 
@@ -35,17 +36,6 @@ const SERVICES = [
   { key: 'has_lighting' as const, icon: Lightbulb, label: 'Iluminación' },
   { key: 'accessibility' as const, icon: Accessibility, label: 'Accesible' },
 ];
-
-/** Los identificadores del feed, escritos como se conoce a cada empresa. */
-const OPERATOR_LABELS: Record<string, string> = {
-  codesa: 'CODESA',
-  'maldonado-turismo': 'Maldonado Turismo',
-  micro: 'Micro',
-};
-
-function operatorNames(operators: string[]): string {
-  return operators.map((operator) => OPERATOR_LABELS[operator] ?? operator).join(' · ');
-}
 
 export default function ParadaDetailPage() {
   const { id } = useParams();
@@ -152,6 +142,7 @@ export default function ParadaDetailPage() {
           title="No encontramos esta parada"
           message={error ?? 'Puede que el código del QR ya no esté en servicio.'}
           onRetry={() => navigate('/moverse')}
+          retryLabel="Ver los ómnibus que andan ahora"
         />
       </div>
     );
