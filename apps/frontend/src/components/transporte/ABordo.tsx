@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, Footprints, MapPin, SignalZero, X } from 'lucide-react';
 import { rideService, RideStatus } from '@services/rideService';
 import { BondiSprite } from '@components/transporte/BondiSprite';
+import { Llegaste } from '@components/transporte/Llegaste';
+import { useWakeLock } from '@hooks/useWakeLock';
+import { avisar } from '@lib/avisos';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
 
@@ -31,6 +34,12 @@ import { formatDistance } from '@lib/geo';
  * pantalla no sigue contando cuadras con la última posición buena: lo dice. Es
  * la diferencia entre una app que no sabe y una app que miente, y acá mentir
  * es que alguien se pase de parada.
+ *
+ * **Y el aviso sale de la pantalla.** Todo lo de arriba supone que alguien
+ * está mirando, y nadie viaja veinte minutos mirando el teléfono: está en el
+ * bolsillo. Así que en las dos transiciones que importan —preparate y
+ * bajate— el teléfono además vibra, suena y, si la app quedó atrás, notifica.
+ * Ver `avisos.ts` y `useWakeLock`.
  */
 
 /**
@@ -129,7 +138,53 @@ export function ABordo({
   const [status, setStatus] = useState<RideStatus | null>(null);
   const [failed, setFailed] = useState(false);
 
+  /**
+   * El viaje terminado, congelado.
+   *
+   * Es una foto del último estado y no el dato vivo: cuando esto tiene valor,
+   * el viaje se dio por cerrado y se deja de preguntar. Seguir al coche
+   * después de bajarse no aporta nada y haría cambiar los números de una
+   * pantalla que ya es un resumen. Volver a `null` es "no me bajé".
+   */
+  const [llegada, setLlegada] = useState<RideStatus | null>(null);
+
+  /**
+   * Qué avisos ya se dieron en este viaje.
+   *
+   * Sin esto el aviso saldría **en cada poll**: el coche pasa varios minutos
+   * dentro de las ocho cuadras de "preparate", así que el teléfono vibraría
+   * cada ocho segundos todo el tramo final. Lo que se avisa es el cambio de
+   * estado, no el estado.
+   *
+   * Y se guarda "ya lo di" en vez de comparar contra el estado anterior
+   * porque el estado anterior no alcanza: el aviso sale de proyectar una
+   * posición de GPS sobre el recorrido, y con el coche justo en el borde de
+   * las ocho cuadras esa proyección va y viene entre `viaja` y `preparate` de
+   * un poll al otro. Comparando contra el anterior, cada ida y vuelta es otra
+   * vibración. Cada aviso se da una sola vez por viaje.
+   *
+   * `cierre` es el mismo problema una vez más: sin él, quien contesta "no me
+   * bajé" en la pantalla de llegada vuelve al seguimiento con el coche todavía
+   * pasado de la parada, y el viaje se da por terminado otra vez en el poll
+   * siguiente. El cierre automático se ofrece una sola vez.
+   *
+   * Va en un `ref` y no en estado porque nada de esto se dibuja: cambiarlo no
+   * tiene por qué volver a pintar la pantalla.
+   */
+  const avisado = useRef({ preparate: false, bajate: false, cierre: false });
+
+  /**
+   * La pantalla prendida mientras dura el viaje.
+   *
+   * No es comodidad: con la pantalla apagada el navegador frena el poll de
+   * abajo y el aviso llega tarde. Ver `useWakeLock`.
+   */
+  useWakeLock(llegada === null);
+
   useEffect(() => {
+    // Viaje cerrado, no hay nada más que preguntar.
+    if (llegada) return;
+
     let cancelled = false;
 
     const ask = () => {
@@ -155,10 +210,65 @@ export function ABordo({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [vehicleId, destination.lat, destination.lng, stopId]);
+  }, [vehicleId, destination.lat, destination.lng, stopId, llegada]);
 
   const alert = status?.alert ?? null;
   const perdido = status?.reason === 'sin_coche' || status?.reason === 'sin_senal';
+
+  /**
+   * El aviso que no depende de que alguien esté mirando.
+   *
+   * Los dos momentos en los que hay que hacer algo —juntar las cosas y tocar
+   * el timbre— y el que cierra el viaje. El tercero no se avisa: para cuando
+   * el coche pasó la parada, la persona ya está en la vereda.
+   */
+  useEffect(() => {
+    if (alert === 'preparate' && !avisado.current.preparate) {
+      avisado.current.preparate = true;
+      avisar({
+        titulo: 'Preparate para bajar',
+        cuerpo: status?.stop ? `Bajás en ${formatStopName(status.stop.name)}` : undefined,
+      });
+      return;
+    }
+
+    if (alert === 'bajate' && !avisado.current.bajate) {
+      // También se marca el de preparate: si el coche llegó acá sin pasar por
+      // ahí -o pasó tan rápido que cayó entre dos polls-, no tiene sentido
+      // avisar de "preparate" después de haber dicho que se baje.
+      avisado.current.preparate = true;
+      avisado.current.bajate = true;
+      avisar({
+        titulo: 'Tocá el timbre',
+        cuerpo: status?.stop ? `Bajás en ${formatStopName(status.stop.name)}` : undefined,
+        insistente: true,
+      });
+      return;
+    }
+
+    // El coche pasó la parada después de haber avisado que se bajara: el viaje
+    // terminó. Sin el aviso previo esto es otra cosa -alguien que abrió la
+    // pantalla cuando ya se había pasado- y se dice tal cual, ver abajo.
+    if (alert === 'te_pasaste' && avisado.current.bajate && !avisado.current.cierre && status) {
+      avisado.current.cierre = true;
+      setLlegada(status);
+    }
+  }, [alert, status]);
+
+  if (llegada) {
+    return (
+      <Llegaste
+        status={llegada}
+        destination={destination}
+        onClose={onClose}
+        onSeguir={() => {
+          // Se vuelve a seguir el coche, pero sin volver a avisar: el timbre
+          // ya sonó y la parada ya quedó atrás.
+          setLlegada(null);
+        }}
+      />
+    );
+  }
 
   // Por arriba de Leaflet: sus controles (`leaflet-bottom`, donde va el ⓘ del
   // crédito del mapa) se dibujan en z-index 1000. Con el overlay en el mismo
@@ -247,6 +357,22 @@ export function ABordo({
                 <p className="mt-2 text-data font-semibold opacity-90">
                   Bajás {enCuadras(status.blocks_away ?? 0)}
                 </p>
+
+                {/* Bajarse es lo último que se hace mirando el teléfono, así
+                    que el botón no es obligatorio: si nadie lo toca, el viaje
+                    se cierra solo cuando el coche pasa la parada. Está para
+                    quien se bajó antes -en la parada de antes, o porque el
+                    coche paró donde no debía- y no tiene por qué esperar a que
+                    el GPS se entere. */}
+                <button
+                  onClick={() => {
+                    avisado.current.cierre = true;
+                    setLlegada(status);
+                  }}
+                  className="mt-4 w-full rounded-card bg-white/15 py-2.5 text-sm font-bold active:bg-white/25"
+                >
+                  Ya me bajé
+                </button>
               </>
             ) : (
               <>
