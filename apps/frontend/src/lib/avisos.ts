@@ -33,15 +33,19 @@
  * aviso llegue con la app cerrada es Web Push: un service worker y una tabla
  * de suscripciones en el backend. Eso es otra tarea.
  *
- * ## Y en Android la notificación puede no salir
+ * ## En Android la notificación va por el service worker
  *
  * En Chrome de Android `new Notification(...)` desde la página tira
  * `Illegal constructor`: ahí la única forma de mostrar una notificación es
- * `ServiceWorkerRegistration.showNotification()`, o sea que hace falta un
- * service worker registrado, y no lo hay. El catch se la come y el aviso queda
- * en vibración y sonido, que en un teléfono guardado son igual los dos que
- * llegan. Está escrito acá para que nadie lo descubra probando en el
- * escritorio, donde sí funciona.
+ * `ServiceWorkerRegistration.showNotification()`. O sea que el canal que cubre
+ * "me fui a otra app" no funcionaba **justamente en el teléfono para el que
+ * está hecha esta app**, y en el escritorio andaba, que es lo que hacía que no
+ * se notara.
+ *
+ * Así que se registra un service worker mínimo (`public/sw.js`) y la
+ * notificación sale por ahí, con el constructor de la página como respaldo
+ * para el navegador que no tenga service workers. Ese archivo no intercepta
+ * pedidos ni cachea nada: existe sólo para prestarle una superficie al aviso.
  */
 
 /**
@@ -87,6 +91,16 @@ const TAG = 'viaje-a-bordo';
 let audio: AudioContext | null = null;
 
 /**
+ * El service worker, una vez activo.
+ *
+ * Se guarda porque `notificar` se llama en el momento del aviso y no puede
+ * ponerse a esperar una promesa: para entonces el worker ya tiene que estar
+ * listo. Se registra en `prepararAvisos`, diez minutos antes del primer aviso
+ * en el peor caso, que es tiempo de sobra.
+ */
+let registro: ServiceWorkerRegistration | null = null;
+
+/**
  * Preparar los avisos. Se llama desde el toque en "Ya me subí".
  *
  * El momento importa más que el código. Pedir el permiso de notificaciones al
@@ -100,6 +114,7 @@ let audio: AudioContext | null = null;
  */
 export function prepararAvisos(): void {
   abrirAudio();
+  registrarElServiceWorker();
 
   try {
     // `default` es "todavía no se preguntó". Volver a preguntar cuando ya está
@@ -134,13 +149,22 @@ export function avisar({
   notificar(titulo, cuerpo);
 }
 
-/** Vibra, si el teléfono sabe. En un escritorio no existe y no pasa nada. */
+/**
+ * Vibra, si el teléfono sabe. En un escritorio no existe y no pasa nada.
+ *
+ * Ojo con el caso que más importa: **con la página oculta esto no vibra**. La
+ * especificación pide que el documento esté visible y Android lo cumple al
+ * pie de la letra, así que quien se fue a otra app no siente nada por acá. Ese
+ * caso lo cubre la notificación con `renotify`, ver `notificar`. Con la
+ * pantalla prendida y la app adelante —que es lo que sostiene el wake lock—
+ * esta vibración es la que llega.
+ */
 function vibrar(patron: number[]): void {
   try {
     if ('vibrate' in navigator) navigator.vibrate(patron);
   } catch {
-    // Hay navegadores que tiran cuando la página no está visible. No importa:
-    // el aviso ya salió por los otros canales.
+    // Hay navegadores que además tiran. No importa: el aviso ya salió por los
+    // otros canales.
   }
 }
 
@@ -194,10 +218,66 @@ function notificar(titulo: string, cuerpo?: string): void {
 
   try {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    new Notification(titulo, { body: cuerpo, tag: TAG });
+
+    // `renotify` es lo que hace que la de "tocá el timbre" vuelva a sonar y
+    // vibrar al reemplazar a la de "preparate": sin eso, con el mismo `tag`,
+    // el sistema cambia el texto en silencio y el segundo aviso -que es el
+    // único que no se puede perder- pasa desapercibido. Y acá es lo único que
+    // vibra: con la app atrás, `navigator.vibrate` no hace nada (ver
+    // `vibrar`), así que el golpe en el bolsillo lo tiene que dar la
+    // notificación.
+    //
+    // Va con el tipo ensanchado porque `NotificationOptions` de esta versión
+    // de TypeScript no lo declara, aunque la API lo tiene desde siempre.
+    const opciones: NotificationOptions & { renotify?: boolean } = {
+      body: cuerpo,
+      tag: TAG,
+      renotify: true,
+    };
+
+    // Por el service worker cuando está: es la única vía que funciona en
+    // Android. El constructor queda de respaldo para los navegadores que no
+    // tienen service workers.
+    if (registro) {
+      void registro.showNotification(titulo, opciones);
+      return;
+    }
+
+    new Notification(titulo, opciones);
   } catch {
-    // Android tira acá (ver el encabezado). Queda la vibración, que en un
-    // teléfono guardado es la que llega igual.
+    // Si ninguna de las dos vías sale, queda la vibración, que en un teléfono
+    // guardado es la que llega igual.
+  }
+}
+
+/**
+ * Registra el service worker que le presta una superficie a la notificación.
+ *
+ * Se espera a `ready` y no al `register`: la promesa de registrar resuelve con
+ * el worker todavía instalándose, y `showNotification` necesita uno **activo**.
+ * `ready` resuelve recién ahí, y no cuelga porque acá siempre hay un registro
+ * pedido justo antes.
+ *
+ * Va acá y no al arrancar la app: quien nunca se sube a un ómnibus no tiene
+ * por qué cargar con un service worker.
+ */
+function registrarElServiceWorker(): void {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+
+    void navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .then((listo) => {
+        registro = listo;
+      })
+      .catch(() => {
+        // Sin service worker el aviso sigue saliendo por el constructor de la
+        // página, que es lo que había hasta ahora.
+        registro = null;
+      });
+  } catch {
+    registro = null;
   }
 }
 
