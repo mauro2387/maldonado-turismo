@@ -7,12 +7,15 @@ import {
   ChevronRight,
   Bus,
   MapPin,
+  MapPinned,
   RouteOff,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
 import { destinationsService, Destination } from '@services/destinationsService';
 import { TripMap, TripLegend, rideColor, legLine } from '@components/transporte/TripMap';
+import { DestinoEnMapa } from '@components/transporte/DestinoEnMapa';
+import { ABordo } from '@components/transporte/ABordo';
 import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
 import { formatDistance } from '@lib/geo';
@@ -42,13 +45,32 @@ import { formatStopName } from '@lib/stopNames';
 /** Lo que se espera después de la última tecla antes de salir a buscar. */
 const SEARCH_DEBOUNCE_MS = 250;
 
+/**
+ * A dónde vas.
+ *
+ * No es `Destination` a secas porque un destino ya no es sólo un lugar del
+ * catálogo: también puede ser un punto marcado en el mapa, que no tiene id ni
+ * categoría ni figura en ninguna tabla. Al planificador le da igual —recibe
+ * dos coordenadas— y esta pantalla no tiene por qué inventarle una ficha a un
+ * punto para poder mandarlo. Ver `DestinoEnMapa`.
+ */
+interface Destino {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export default function PlanificadorPage() {
   const [searchParams] = useSearchParams();
   const { coords, granted } = useGeolocation();
 
   const [query, setQuery] = useState(searchParams.get('destino') ?? '');
   const [suggestions, setSuggestions] = useState<Destination[]>([]);
-  const [destination, setDestination] = useState<Destination | null>(null);
+  const [destination, setDestination] = useState<Destino | null>(null);
+  /** El selector de punto en el mapa, abierto. */
+  const [pickingOnMap, setPickingOnMap] = useState(false);
+  /** Ya se subió: la pantalla pasa a seguir el coche. */
+  const [boarded, setBoarded] = useState(false);
   const [options, setOptions] = useState<TripOption[]>([]);
   /**
    * La última vuelta desde el destino.
@@ -110,6 +132,9 @@ export default function PlanificadorPage() {
     setSearching(true);
     setError(null);
     setSelected(0);
+    // Cambiar de destino termina el viaje a bordo: el coche que se estaba
+    // siguiendo no lleva al destino nuevo.
+    setBoarded(false);
 
     routePlannerService
       .plan(
@@ -137,6 +162,17 @@ export default function PlanificadorPage() {
   }, [destination, coords.lat, coords.lng, granted]);
 
   const current = options[selected];
+
+  /**
+   * El tramo en ómnibus que se puede seguir en vivo.
+   *
+   * Es el primero con un coche concreto: sin `vehicle_id` la espera salió del
+   * horario publicado o de la frecuencia de la línea, y no hay ninguna unidad
+   * a la que seguirle el rastro. En un viaje con transbordo alcanza con el
+   * primero —el segundo todavía no existe cuando uno se sube al primero—.
+   */
+  const boardable = current?.legs.find((leg) => leg.type === 'bus' && leg.vehicle_id) ?? null;
+  const onBoard = boarded ? boardable : null;
 
   return (
     <div className="min-h-[calc(100dvh-4.25rem)] bg-sand-100">
@@ -176,7 +212,39 @@ export default function PlanificadorPage() {
             className="w-full bg-transparent text-sm font-bold text-white placeholder:font-semibold placeholder:text-ink-300 focus:outline-none"
           />
         </div>
+
+        {/*
+          Marcar en el mapa, al lado de escribir y no escondido en un menú.
+
+          Buena parte de los viajes de Maldonado no van a un lugar con nombre:
+          van a una casa, a una obra, a un punto de la Ruta 10. Escribiendo,
+          para todos esos la app contestaba "no encontramos ese lugar" —y el
+          lugar existe, sólo que no se llama de ninguna manera—.
+        */}
+        <button
+          onClick={() => setPickingOnMap(true)}
+          className="ml-[1.05rem] mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-200 active:text-white"
+        >
+          <MapPinned className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Marcalo en el mapa
+        </button>
       </header>
+
+      {/* ---------- El destino, marcado con el dedo ---------- */}
+      {pickingOnMap && (
+        <DestinoEnMapa
+          center={coords}
+          onCancel={() => setPickingOnMap(false)}
+          onConfirm={(point) => {
+            setPickingOnMap(false);
+            setQuery(point.label);
+            setSuggestions([]);
+            setSearched(false);
+            setOptions([]);
+            setDestination({ name: point.label, lat: point.lat, lng: point.lng });
+          }}
+        />
+      )}
 
       {/* ---------- Sugerencias ---------- */}
       {!destination && suggestions.length > 0 && (
@@ -217,9 +285,32 @@ export default function PlanificadorPage() {
         </ul>
       )}
 
+      {/* ---------- Ya me subí ----------
+          Sólo cuando el viaje tiene un coche concreto en la calle: sin
+          `vehicle_id` la espera salió del horario o de la frecuencia, y no hay
+          nada que seguir. Ofrecerlo igual sería prometer un seguimiento en
+          vivo de un ómnibus que no está reportando. */}
+      {onBoard && destination && (
+        <ABordo
+          vehicleId={onBoard.vehicle_id!}
+          destination={{ ...destination, label: destination.name }}
+          stopId={onBoard.alighting_stop_id}
+          onClose={() => setBoarded(false)}
+        />
+      )}
+
       {/* ---------- El viaje elegido, dibujado ---------- */}
       {current && !searching && (
         <div className="border-b border-sand-200">
+          {boardable && (
+            <button
+              onClick={() => setBoarded(true)}
+              className="flex w-full items-center justify-center gap-2 bg-ink-900 py-2.5 text-sm font-bold text-white active:bg-ink-800"
+            >
+              <Bus className="h-4 w-4" strokeWidth={2.5} />
+              Ya me subí
+            </button>
+          )}
           <div className="h-64 w-full">
             <TripMap option={current} />
           </div>
@@ -232,7 +323,8 @@ export default function PlanificadorPage() {
         {!destination && suggestions.length === 0 && query.trim().length < 2 && (
           <p className="px-1 text-sm text-ink-400">
             Escribí a dónde querés ir: una parada, una playa, el shopping, el hospital o el
-            liceo.
+            liceo. Si no tiene nombre —una casa, una obra, un punto de la ruta— marcalo en el
+            mapa.
           </p>
         )}
 
@@ -290,7 +382,12 @@ export default function PlanificadorPage() {
                   key={option.id}
                   option={option}
                   selected={index === selected}
-                  onSelect={() => setSelected(index)}
+                  onSelect={() => {
+                    setSelected(index);
+                    // Otra opción es otro coche: seguir mostrando el anterior
+                    // sería seguirle el rastro a un ómnibus que no se tomó.
+                    setBoarded(false);
+                  }}
                 />
               ))}
             </div>

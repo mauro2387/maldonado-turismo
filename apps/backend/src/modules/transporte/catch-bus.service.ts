@@ -187,8 +187,6 @@ export class CatchBusService {
     if (!along) return { ...NO_ROUTE };
 
     await this.lineSpeeds.warm();
-    const metersPerMinute =
-      (this.lineSpeeds.kmh(sequence.operator, sequence.lineCode, sequence.itineraryKey) * 1000) / 60;
 
     // --- Las candidatas, con cuentas baratas -------------------------------
     //
@@ -215,7 +213,20 @@ export class CatchBusService {
       }
       if (straightMeters > MAX_CATCH_WALK_M) continue;
 
-      const busMinutes = remaining / metersPerMinute;
+      // Con la velocidad del tramo que le falta recorrer, no con la del
+      // recorrido entero. La 15 promedia 30 km/h porque son treinta
+      // kilómetros de ruta, pero las paradas donde alguien la alcanza están
+      // en el centro, donde anda a 20: con el promedio la app le daba diez
+      // minutos a un tramo que la propia empresa publica en quince.
+      const busMinutes = this.lineSpeeds.travelMinutes(
+        sequence.operator,
+        sequence.lineCode,
+        sequence.itineraryKey,
+        geometry.geometry,
+        geometry.cumulative,
+        along.alongMeters,
+        stop.alongMeters,
+      );
 
       // La recta es una cota inferior de la caminata real: si ni caminando en
       // línea recta se llega, rutear por calle sólo va a dar peor.

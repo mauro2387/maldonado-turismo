@@ -36,4 +36,32 @@ export class DestinationsController {
 
     return { results };
   }
+
+  /**
+   * Cómo se llama el punto que se marcó en el mapa.
+   *
+   * Contesta "cerca de X" o nada. Ver `DestinationsService.nearest`: no se
+   * inventa un nombre para una coordenada, se dice de qué está cerca cuando
+   * hay algo lo bastante cerca como para que sea cierto.
+   *
+   * Va por GET porque el punto que se marca en el mapa no es dónde está la
+   * persona, y el mapa mismo ya es público. Igual llega redondeado desde la
+   * pantalla: para nombrar una esquina no hacen falta los siete decimales.
+   */
+  @Get('cercano')
+  async nearest(
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+  ): Promise<{ near: Destination | null; distance_m: number | null }> {
+    const point = { lat: Number(lat), lng: Number(lng) };
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+      return { near: null, distance_m: null };
+    }
+
+    const found = await this.destinations.nearest(point);
+    return {
+      near: found?.destination ?? null,
+      distance_m: found?.distanceM ?? null,
+    };
+  }
 }

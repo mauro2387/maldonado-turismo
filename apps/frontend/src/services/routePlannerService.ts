@@ -35,6 +35,17 @@ export interface TripLeg {
   vehicle_id?: string;
   stops_count?: number;
   /**
+   * Dónde se sube y dónde se baja, por identificador.
+   *
+   * `from` y `to` son nombres para mostrar y no identifican una parada: hay
+   * tres "HOSPITAL" y cada empresa las numera aparte. Estos dos son los que la
+   * pantalla de a bordo le pasa al backend para **fijar** la bajada, y fijarla
+   * es lo que evita que la app prometa una parada antes de salir y otra
+   * distinta con la persona ya arriba del ómnibus.
+   */
+  boarding_stop_id?: number;
+  alighting_stop_id?: number;
+  /**
    * El tramo dibujado, en orden GeoJSON [lng, lat]. En el ómnibus es el
    * pedazo del recorrido publicado que va de una parada a la otra; en la
    * caminata, el camino por la calle.

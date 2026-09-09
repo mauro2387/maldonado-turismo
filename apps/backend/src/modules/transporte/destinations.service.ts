@@ -307,6 +307,59 @@ export class DestinationsService implements OnModuleInit {
     return results;
   }
 
+  /**
+   * Cómo se llama este punto del mapa.
+   *
+   * Cuando alguien marca un destino tocando el mapa, la app tiene una
+   * coordenada y ningún nombre. Mostrar "-34.90812, -54.95003" no le sirve a
+   * nadie para confirmar que marcó bien: lo que confirma es el lugar de al
+   * lado.
+   *
+   * No se inventa un nombre ni se le pone el del lugar más cercano como si
+   * fuera ese lugar. Se contesta **de qué está cerca**, y sólo si hay algo lo
+   * bastante cerca como para que la frase sea cierta. Si no hay nada, no hay
+   * nombre: la pantalla dirá "punto en el mapa", que es exactamente lo que es.
+   *
+   * Las paradas quedan para el final aunque estén más cerca: "cerca de la
+   * parada 412" no ubica a nadie, y hay una parada cada dos cuadras, así que
+   * con las paradas compitiendo por distancia ganarían casi siempre.
+   */
+  async nearest(
+    point: { lat: number; lng: number },
+    maxMeters = 200,
+  ): Promise<{ destination: Destination; distanceM: number } | null> {
+    if (this.catalog.length === 0) await this.load();
+
+    let best: { item: Indexed; distance: number } | null = null;
+
+    for (const item of this.catalog) {
+      const distance = distanceMeters(point.lat, point.lng, item.lat, item.lng);
+      if (distance > maxMeters) continue;
+
+      if (!best) {
+        best = { item, distance };
+        continue;
+      }
+
+      const eraParada = best.item.source === 'parada';
+      const esParada = item.source === 'parada';
+      if (eraParada !== esParada) {
+        if (eraParada) best = { item, distance };
+        continue;
+      }
+
+      if (distance < best.distance) best = { item, distance };
+    }
+
+    if (!best) return null;
+
+    const { search, importance, ...destination } = best.item;
+    void search;
+    void importance;
+
+    return { destination, distanceM: Math.round(best.distance) };
+  }
+
   /** Un destino por su identificador ("lugar:412", "parada:87"). */
   async byId(id: string): Promise<Destination | null> {
     if (this.catalog.length === 0) await this.load();

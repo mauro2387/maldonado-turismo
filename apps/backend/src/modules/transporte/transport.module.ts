@@ -43,6 +43,8 @@ import { DestinationsController } from './destinations.controller';
 import { WalkingController } from './walking.controller';
 import { LinesController } from './lines.controller';
 import { TripPlannerController } from './trip-planner.controller';
+import { RideService } from './ride.service';
+import { RideController } from './ride.controller';
 
 @Module({
   imports: [
@@ -75,6 +77,7 @@ import { TripPlannerController } from './trip-planner.controller';
     RouteShapesController,
     ArrivalsController,
     TripPlannerController,
+    RideController,
     DestinationsController,
     WalkingController,
     LinesController,
@@ -100,6 +103,7 @@ import { TripPlannerController } from './trip-planner.controller';
     WalkingService,
     LineSpeedService,
     CatchBusService,
+    RideService,
     FeedHealthService,
     DestinationsService,
     SchedulesService,

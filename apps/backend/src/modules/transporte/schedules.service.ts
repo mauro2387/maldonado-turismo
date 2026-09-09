@@ -6,6 +6,7 @@ import { OfficialRoutesService } from './official-routes.service';
 import { RouteStopSequence, StopOnRoute } from './stop-sequence.service';
 import { cumulativeDistances, distanceAlongPolyline, LngLat } from './geo.util';
 import { resolveTimepoint } from './schedule-timepoints';
+import { LineSpeedService } from './line-speed.service';
 
 /**
  * Los horarios publicados por las empresas.
@@ -84,6 +85,47 @@ export interface StopServiceToday {
   services_today: number;
 }
 
+/**
+ * Cómo le va al modelo de velocidad contra el horario publicado, por recorrido.
+ *
+ * `ratio` es lo que se mira: minutos que calcula la app sobre minutos que
+ * publica la empresa, para los mismos tramos. Debajo de 1 la app se cree más
+ * rápida que el papel y va a decir "no llegás" de más; encima de 1, al revés.
+ */
+export interface SpeedCheck {
+  operator: string;
+  line_label: string;
+  itinerary: string | null;
+  /** Tramos entre puntos de control que se pudieron comparar. */
+  segments: number;
+  meters: number;
+  published_minutes: number;
+  measured_minutes: number;
+  ratio: number;
+  /**
+   * El tramo donde más se apartan.
+   *
+   * Es el dato que importa y el que el total esconde: el recorrido entero de
+   * la 15 coincidía con el papel -treinta kilómetros de ruta tapan cinco de
+   * ciudad- y el tramo urbano estaba a un tercio de error. Un promedio que
+   * cierra no dice que el modelo esté bien, dice que los errores se
+   * compensaron.
+   */
+  worst_segment: SegmentCheck | null;
+}
+
+/** Un tramo entre dos puntos de control, comparado contra el papel. */
+export interface SegmentCheck {
+  from: string;
+  to: string;
+  meters: number;
+  /** Cuántos servicios del día recorren este tramo. Los minutos son la suma. */
+  passes: number;
+  published_minutes: number;
+  measured_minutes: number;
+  ratio: number;
+}
+
 export interface LineTimetable {
   line_label: string;
   season: string;
@@ -118,6 +160,44 @@ const HORIZON_MIN = 180;
 /** Margen para llegar a la parada antes que el ómnibus (mismo criterio que el planner). */
 const BOARD_SLACK_MIN = 1;
 
+/**
+ * El tramo más corto que se compara contra el horario publicado.
+ *
+ * Entre dos puntos de control pegados, el minuto redondeado del papel y el
+ * error de proyección pesan más que la velocidad, y el cociente se vuelve
+ * ruido. Medio kilómetro es donde el dato empieza a decir algo.
+ */
+const MIN_SEGMENTO_M = 500;
+
+/**
+ * Entre qué horas se acepta que un servicio cruce la medianoche.
+ *
+ * Los puntos de control de un servicio tienen que ir creciendo. Cuando uno da
+ * una hora menor que el anterior hay dos explicaciones posibles: o el servicio
+ * pasó la medianoche -la 17/19 sale 23:20 y llega 00:20- o el punto quedó mal
+ * ubicado sobre el trazo y el orden que se está leyendo no es el real.
+ *
+ * Distinguirlas importa: sumarle un día a un punto mal ubicado no arregla
+ * nada, corre todas las horas de ese servicio media jornada y la app termina
+ * anunciando un ómnibus a las cuatro de la mañana. Pasó: la 52, que el papel
+ * cierra a las 23:00, aparecía con "última vuelta 03:53".
+ *
+ * Un cruce de medianoche de verdad va de tarde-noche a madrugada. Cualquier
+ * otro salto hacia atrás es un desorden, y ahí no se inventa una hora: no se
+ * contesta.
+ */
+const MEDIANOCHE_DESDE_MIN = 18 * 60;
+const MEDIANOCHE_HASTA_MIN = 6 * 60;
+
+/**
+ * Lo que puede durar un servicio de punta a punta.
+ *
+ * El más largo que publican las empresas es la 100 a Pan de Azúcar, algo más
+ * de dos horas. Cinco es una cota holgada que no descarta nada real y sí
+ * descarta cualquier resto de un día mal sumado, venga de donde venga.
+ */
+const MAX_SERVICIO_MIN = 5 * 60;
+
 @Injectable()
 export class SchedulesService implements OnModuleInit {
   private readonly logger = new Logger(SchedulesService.name);
@@ -133,6 +213,7 @@ export class SchedulesService implements OnModuleInit {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly routeShapes: RouteShapesService,
     private readonly officialRoutes: OfficialRoutesService,
+    private readonly lineSpeeds: LineSpeedService,
   ) {}
 
   async onModuleInit() {
@@ -469,6 +550,142 @@ export class SchedulesService implements OnModuleInit {
   }
 
   /**
+   * ¿La velocidad que mide la app coincide con el horario que publican las
+   * empresas?
+   *
+   * Es la única verificación independiente que hay. La velocidad sale del GPS
+   * y el horario sale del papel: si los dos dicen lo mismo, el modelo anda; si
+   * uno dice diez minutos donde el otro dice quince, alguien va a recibir un
+   * "no llegás" que no corresponde. Fue exactamente el caso de la 15.
+   *
+   * Se compara tramo por tramo entre puntos de control consecutivos, que es la
+   * granularidad a la que publica la empresa, y se agrega por recorrido. El
+   * cociente es lo que importa: 1,00 es acuerdo, 0,70 es la app creyéndose un
+   * 30% más rápida que el papel.
+   *
+   * No corrige nada por sí solo. Sirve para saber dónde mirar, y para que el
+   * día que entren los horarios de verano se pueda comprobar de una pasada que
+   * el modelo sigue de acuerdo con ellos.
+   */
+  speedCheck(sequences: RouteStopSequence[]): SpeedCheck[] {
+    const filas: SpeedCheck[] = [];
+
+    for (const sequence of sequences) {
+      const label = this.officialRoutes.lineLabel(sequence.operator, sequence.lineCode);
+      const services = this.byLine.get(`${sequence.operator}|${label}`);
+      if (!services || services.length === 0) continue;
+
+      const alongByPoint = this.pointAlongs(sequence);
+      if (!alongByPoint || alongByPoint.size < 2) continue;
+
+      const shape = this.routeShapes
+        .getShapes()
+        .find(
+          (candidate) =>
+            candidate.operator === sequence.operator &&
+            candidate.lineCode === sequence.lineCode &&
+            candidate.itineraryKey === sequence.itineraryKey,
+        );
+      const geometry = shape?.geometry as LngLat[] | undefined;
+      if (!geometry || geometry.length < 2) continue;
+      const cumulative = cumulativeDistances(geometry);
+
+      // Por par de puntos de control. Un mismo tramo lo recorren los dieciséis
+      // servicios del día, y lo que se compara es el conjunto: un servicio
+      // suelto con un minuto raro no mueve nada, un tramo mal modelado sí.
+      const porTramo = new Map<string, SegmentCheck>();
+
+      for (const service of services) {
+        const puntos = service.timepoints
+          .map((paso) => ({
+            point: paso.point,
+            along: alongByPoint.get(paso.point),
+            min: hhmmToMinutes(paso.time),
+          }))
+          .filter(
+            (p): p is { point: string; along: number; min: number } =>
+              p.along !== undefined && p.min !== null,
+          )
+          .sort((a, b) => a.along - b.along);
+
+        // El mismo criterio que usa la interpolación: si el servicio no se
+        // puede poner en hora, tampoco se puede comparar contra él.
+        if (!alinearEnElTiempo(puntos)) continue;
+
+        for (let i = 1; i < puntos.length; i++) {
+          const distancia = puntos[i].along - puntos[i - 1].along;
+          const publicado = puntos[i].min - puntos[i - 1].min;
+          // Tramos demasiado cortos o de duración cero no dicen nada y sí
+          // hacen ruido en el cociente.
+          if (distancia < MIN_SEGMENTO_M || publicado <= 0) continue;
+
+          const clave = `${puntos[i - 1].point}||${puntos[i].point}`;
+          const tramo = porTramo.get(clave) ?? {
+            from: puntos[i - 1].point,
+            to: puntos[i].point,
+            meters: Math.round(distancia),
+            passes: 0,
+            published_minutes: 0,
+            measured_minutes: 0,
+            ratio: 0,
+          };
+
+          tramo.passes += 1;
+          tramo.published_minutes += publicado;
+          tramo.measured_minutes += this.lineSpeeds.travelMinutes(
+            sequence.operator,
+            sequence.lineCode,
+            sequence.itineraryKey,
+            geometry,
+            cumulative,
+            puntos[i - 1].along,
+            puntos[i].along,
+          );
+          porTramo.set(clave, tramo);
+        }
+      }
+
+      if (porTramo.size === 0) continue;
+
+      let publicados = 0;
+      let medidos = 0;
+      let metros = 0;
+      let peor: SegmentCheck | null = null;
+
+      for (const tramo of porTramo.values()) {
+        tramo.ratio = Number((tramo.measured_minutes / tramo.published_minutes).toFixed(3));
+        tramo.published_minutes = Math.round(tramo.published_minutes);
+        tramo.measured_minutes = Math.round(tramo.measured_minutes);
+
+        publicados += tramo.published_minutes;
+        medidos += tramo.measured_minutes;
+        metros += tramo.meters;
+        if (!peor || Math.abs(tramo.ratio - 1) > Math.abs(peor.ratio - 1)) peor = tramo;
+      }
+
+      if (publicados === 0) continue;
+
+      filas.push({
+        operator: sequence.operator,
+        line_label: label,
+        itinerary: sequence.itineraryName,
+        segments: porTramo.size,
+        meters: Math.round(metros),
+        published_minutes: publicados,
+        measured_minutes: medidos,
+        ratio: Number((medidos / publicados).toFixed(3)),
+        worst_segment: peor,
+      });
+    }
+
+    // Se ordena por el peor **tramo**, no por el total del recorrido. Si se
+    // ordenara por el total, la 15 -que es de donde salió todo esto- quedaría
+    // en el medio de la lista con un 1,00 impecable.
+    const desvio = (fila: SpeedCheck) => Math.abs((fila.worst_segment?.ratio ?? fila.ratio) - 1);
+    return filas.sort((a, b) => desvio(b) - desvio(a));
+  }
+
+  /**
    * La hora a la que este servicio pasa por una parada, interpolada entre los
    * dos puntos de control que la rodean. Devuelve minutos del día, o null si la
    * parada queda fuera del tramo que cubren los puntos de control conocidos.
@@ -486,11 +703,7 @@ export class SchedulesService implements OnModuleInit {
 
     if (puntos.length < 2) return null;
 
-    // Las horas tienen que crecer con el trazo; si una cae después de
-    // medianoche, se le suma un día para que la interpolación no dé negativo.
-    for (let i = 1; i < puntos.length; i++) {
-      while (puntos[i].min < puntos[i - 1].min) puntos[i].min += 1440;
-    }
+    if (!alinearEnElTiempo(puntos)) return null;
 
     const primero = puntos[0];
     const ultimo = puntos[puntos.length - 1];
@@ -513,6 +726,46 @@ export class SchedulesService implements OnModuleInit {
 
     return null;
   }
+}
+
+/**
+ * Pone en hora los puntos de control de un servicio, ya ordenados por trazo.
+ *
+ * Modifica `puntos` en el lugar y devuelve si quedaron utilizables. Es la
+ * regla que decide **cuándo se contesta y cuándo se calla**, y por eso está
+ * separada y probada aparte.
+ *
+ * Un servicio recorre su trazo hacia adelante, así que sus horas tienen que ir
+ * creciendo. Cuando una cae hacia atrás hay dos causas posibles y una sola
+ * respuesta correcta para cada una:
+ *
+ * - **Cruzó la medianoche.** La 17/19 sale 23:20 y llega 00:20. Se le suma un
+ *   día al resto y la interpolación sigue funcionando.
+ * - **El punto quedó mal ubicado sobre el trazo.** Entonces el orden que se
+ *   está leyendo no es el que hizo el ómnibus, y sumar un día no arregla nada:
+ *   corre las horas de ese servicio media jornada. Acá se devuelve `false`, y
+ *   esa parada se queda sin horario en vez de con uno inventado.
+ *
+ * La segunda pasaba y se veía: la 52, que el papel cierra a las 23:00,
+ * anunciaba "última vuelta 03:53".
+ */
+export function alinearEnElTiempo(puntos: Array<{ along: number; min: number }>): boolean {
+  if (puntos.length < 2) return false;
+
+  for (let i = 1; i < puntos.length; i++) {
+    if (puntos[i].min >= puntos[i - 1].min) continue;
+
+    const cruzaMedianoche =
+      puntos[i - 1].min % 1440 >= MEDIANOCHE_DESDE_MIN && puntos[i].min <= MEDIANOCHE_HASTA_MIN;
+    if (!cruzaMedianoche) return false;
+
+    puntos[i].min += 1440;
+    // Un solo día. Si con eso todavía no alcanza, no era una medianoche.
+    if (puntos[i].min < puntos[i - 1].min) return false;
+  }
+
+  // Y aunque cada paso cierre, el total tiene que durar lo que dura un viaje.
+  return puntos[puntos.length - 1].min - puntos[0].min <= MAX_SERVICIO_MIN;
 }
 
 /**

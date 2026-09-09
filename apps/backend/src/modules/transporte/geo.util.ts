@@ -171,6 +171,52 @@ export function distanceAlongPolyline(
 }
 
 /**
+ * El punto del trazo que queda a `meters` del inicio.
+ *
+ * Es la operación inversa de `distanceAlongPolyline`: aquella pregunta "¿en
+ * qué metro del recorrido estoy?" y ésta "¿qué lugar es el metro 20.500?".
+ * Sirve para recorrer un tramo de a pasos y preguntar algo en cada paso —por
+ * ejemplo a qué velocidad se anda por ahí—, que es lo que hace falta cuando el
+ * recorrido no es homogéneo: la 15 son treinta kilómetros de ruta y cinco de
+ * ciudad, y no se viaja igual por los dos.
+ *
+ * Fuera de los extremos devuelve la punta correspondiente, no null: pedir el
+ * metro -3 o el 40.000 de un recorrido de 34 km es preguntar por el principio
+ * y por el final.
+ */
+export function pointAtDistance(
+  polyline: LngLat[],
+  cumulative: number[],
+  meters: number,
+): LngLat | null {
+  if (polyline.length === 0) return null;
+  if (polyline.length === 1) return polyline[0];
+
+  const total = cumulative[cumulative.length - 1];
+  if (!(meters > 0)) return polyline[0];
+  if (meters >= total) return polyline[polyline.length - 1];
+
+  // Búsqueda binaria: `cumulative` viene ordenado por construcción y estos
+  // trazos tienen decenas de miles de puntos.
+  let low = 0;
+  let high = cumulative.length - 1;
+  while (high - low > 1) {
+    const middle = (low + high) >> 1;
+    if (cumulative[middle] <= meters) low = middle;
+    else high = middle;
+  }
+
+  const segmentMeters = cumulative[high] - cumulative[low];
+  if (segmentMeters <= 0) return polyline[low];
+
+  const fraction = (meters - cumulative[low]) / segmentMeters;
+  const [lngA, latA] = polyline[low];
+  const [lngB, latB] = polyline[high];
+
+  return [lngA + (lngB - lngA) * fraction, latA + (latB - latA) * fraction];
+}
+
+/**
  * Parte una traza GPS en tramos continuos, cortando donde hay un hueco.
  *
  * Un hueco es un salto que el ómnibus no pudo haber hecho entre dos

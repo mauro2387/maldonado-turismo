@@ -48,6 +48,29 @@ export const destinationsService = {
 
     return response.results ?? [];
   },
+
+  /**
+   * De qué está cerca este punto del mapa.
+   *
+   * Para cuando el destino se marca tocando el mapa y no escribiendo: la
+   * pantalla tiene una coordenada y ningún nombre, y "-34.90812, -54.95003" no
+   * le sirve a nadie para confirmar que marcó bien. El backend contesta el
+   * lugar de al lado, o nada si no hay nada lo bastante cerca —no se le pone
+   * un nombre a un punto que no lo tiene—.
+   */
+  nearest: async (
+    point: { lat: number; lng: number },
+  ): Promise<{ near: Destination | null; distanceM: number | null }> => {
+    const response = await api.get<{ near: Destination | null; distance_m: number | null }>(
+      '/transport/destinations/cercano',
+      {
+        // Cinco decimales es un metro: de sobra para nombrar una esquina.
+        params: { lat: Number(point.lat.toFixed(5)), lng: Number(point.lng.toFixed(5)) },
+      },
+    );
+
+    return { near: response.near ?? null, distanceM: response.distance_m ?? null };
+  },
 };
 
 export default destinationsService;

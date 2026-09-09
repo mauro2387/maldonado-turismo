@@ -247,6 +247,17 @@ export interface TripLeg {
   /** El coche concreto que se va a tomar, cuando la espera es en vivo. */
   vehicle_id?: string;
   stops_count?: number;
+  /**
+   * Dónde se sube y dónde se baja, por identificador.
+   *
+   * `from` y `to` son nombres para mostrar y no sirven para identificar una
+   * parada: hay tres "HOSPITAL" y cada empresa las numera aparte. Estos dos
+   * son los que la pantalla de a bordo le pasa al backend para fijar la
+   * bajada, y fijarla es lo que evita que la app prometa una parada antes de
+   * salir y otra distinta con la persona ya arriba del ómnibus.
+   */
+  boarding_stop_id?: number;
+  alighting_stop_id?: number;
   /** El tramo dibujado, en orden GeoJSON [lng, lat]. */
   geometry?: LngLat[];
   /** True cuando la caminata se dibuja derecha porque no hubo ruteo. */
@@ -329,6 +340,15 @@ interface PlannedOption {
 
 @Injectable()
 export class TripPlannerService {
+  /**
+   * Las distancias acumuladas de cada trazo, calculadas una sola vez.
+   *
+   * La clave es el propio arreglo de puntos: cuando `RouteShapesService`
+   * reconstruye los recorridos entrega arreglos nuevos, así que esto se
+   * invalida solo y no hay que acordarse de vaciarlo.
+   */
+  private readonly cumulativeByShape = new WeakMap<object, number[]>();
+
   constructor(
     private readonly stopSequences: StopSequenceService,
     private readonly arrivals: ArrivalsService,
@@ -1033,6 +1053,8 @@ export class TripPlannerService {
         headsign: ride.sequence.itineraryName,
         vehicle_id: departure.vehicleId,
         stops_count: ride.alighting.sequence - ride.boarding.sequence,
+        boarding_stop_id: ride.boarding.stopId,
+        alighting_stop_id: ride.alighting.stopId,
         geometry: this.rideGeometry(ride.sequence, ride.boarding, ride.alighting),
         stops: ride.sequence.stops
           .filter(
@@ -1165,8 +1187,8 @@ export class TripPlannerService {
   ): LngLat[] | undefined {
     if (!vehicleId) return undefined;
 
-    const shape = this.shapeFor(sequence);
-    if (!shape?.geometry || shape.geometry.length < 2) return undefined;
+    const shape = this.geometryFor(sequence);
+    if (!shape) return undefined;
 
     const position = byVehicle.get(vehicleId);
     if (!position) return undefined;
@@ -1174,8 +1196,8 @@ export class TripPlannerService {
     const along = distanceAlongPolyline(
       Number(position.latitude),
       Number(position.longitude),
-      shape.geometry as LngLat[],
-      cumulativeDistances(shape.geometry as LngLat[]),
+      shape.geometry,
+      shape.cumulative,
     );
     if (!along || along.alongMeters >= boarding.alongMeters) return undefined;
 
@@ -1207,6 +1229,27 @@ export class TripPlannerService {
     boarding: StopOnRoute;
     alighting: StopOnRoute;
   }): number {
+    const geometry = this.geometryFor(ride.sequence);
+
+    // Con la velocidad de cada parte del recorrido. El promedio único servía
+    // mientras el tramo fuera todo del mismo tipo; en un viaje que arranca en
+    // el centro y sigue por la ruta subestima la primera mitad y sobrestima
+    // la segunda, y las dos cosas juntas mueven la hora de llegada.
+    if (geometry) {
+      const minutes = this.lineSpeeds.travelMinutes(
+        ride.sequence.operator,
+        ride.sequence.lineCode,
+        ride.sequence.itineraryKey,
+        geometry.geometry,
+        geometry.cumulative,
+        ride.boarding.alongMeters,
+        ride.alighting.alongMeters,
+      );
+      if (minutes > 0) return Math.max(1, Math.round(minutes));
+    }
+
+    // Sin trazo no hay tramo que recorrer: queda el promedio del recorrido,
+    // que es con lo que se venía calculando.
     const meters = ride.alighting.alongMeters - ride.boarding.alongMeters;
     const kmh = this.lineSpeeds.kmh(
       ride.sequence.operator,
@@ -1215,6 +1258,23 @@ export class TripPlannerService {
     );
 
     return Math.max(1, Math.round(meters / ((kmh * 1000) / 60)));
+  }
+
+  /** El trazo de un recorrido con sus distancias acumuladas ya calculadas. */
+  private geometryFor(
+    sequence: RouteStopSequence,
+  ): { geometry: LngLat[]; cumulative: number[] } | null {
+    const shape = this.shapeFor(sequence);
+    if (!shape?.geometry || shape.geometry.length < 2) return null;
+
+    const geometry = shape.geometry as LngLat[];
+    let cumulative = this.cumulativeByShape.get(geometry);
+    if (!cumulative) {
+      cumulative = cumulativeDistances(geometry);
+      this.cumulativeByShape.set(geometry, cumulative);
+    }
+
+    return { geometry, cumulative };
   }
 
   private nearbyStops(stops: StopRecord[], point: PlannerPoint, maxMeters: number): CandidateStop[] {
