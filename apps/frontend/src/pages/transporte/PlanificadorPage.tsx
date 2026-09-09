@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUpDown,
+  Clock,
   Footprints,
   ChevronRight,
   Bus,
@@ -42,6 +43,14 @@ import { formatStopName } from '@lib/stopNames';
  * Las opciones se comparan de un vistazo, como en Uber y en Moovit: la tira
  * visual del recorrido, cuándo sale, cuánto dura. El nombre de la línea es una
  * ficha de color, no un título — la gente decide con dos números, no leyendo.
+ *
+ * **Y el viaje puede ser más tarde.** "Quiero ir al Hospital mañana a las
+ * 18:30" no se podía preguntar: el planificador siempre contestaba sobre este
+ * momento. Con una hora elegida cambia lo que la pantalla puede decir, y no
+ * por prolijidad: a esa hora no hay ningún coche en la calle del que hablar,
+ * así que no hay punto verde de "en vivo", no hay ómnibus dibujado y no hay
+ * "ya me subí". Y deja de hablarse en relativo: "salí en 13 min" no significa
+ * nada para un viaje de mañana. Ver `clockIn`.
  */
 
 /** Lo que se espera después de la última tecla antes de salir a buscar. */
@@ -71,6 +80,24 @@ export default function PlanificadorPage() {
   const [destination, setDestination] = useState<Destino | null>(null);
   /** El selector de punto en el mapa, abierto. */
   const [pickingOnMap, setPickingOnMap] = useState(false);
+  /**
+   * Cuándo se sale. `null` es ahora, que es el 95% de los viajes.
+   *
+   * No hay "llegar a las", que sería la otra mitad de la pregunta. Es otro
+   * problema y no un tercer botón: hay que buscar hacia atrás desde la hora de
+   * llegada probando salidas, no alcanza con mover el reloj. Ofrecer el
+   * control sin poder cumplirlo es peor que no tenerlo.
+   */
+  const [departAt, setDepartAt] = useState<Date | null>(null);
+  /**
+   * Desde qué momento cuenta los minutos la respuesta que está en pantalla.
+   *
+   * Sale del backend y no de `departAt`: son los minutos de **esta**
+   * respuesta, y mientras se está buscando la nueva la pantalla sigue
+   * mostrando la anterior. Tomándolo del selector, las horas de la lista
+   * saltarían a la hora nueva antes de que llegaran los viajes nuevos.
+   */
+  const [plannedFor, setPlannedFor] = useState<number | null>(null);
   /** Ya se subió: la pantalla pasa a seguir el coche. */
   const [boarded, setBoarded] = useState(false);
   const [options, setOptions] = useState<TripOption[]>([]);
@@ -142,12 +169,14 @@ export default function PlanificadorPage() {
       .plan(
         { ...coords, label: granted ? 'Tu ubicación' : 'Centro de Maldonado' },
         { lat: destination.lat, lng: destination.lng, label: destination.name },
+        departAt ?? undefined,
       )
       .then((result) => {
         if (cancelled) return;
         setOptions(result.options);
         setReady(result.ready);
         setReturnTrip(result.return_trip ?? null);
+        setPlannedFor(result.planned_for ? new Date(result.planned_for).getTime() : null);
       })
       .catch((err: any) => {
         if (!cancelled) setError(err?.message || 'No pudimos calcular el viaje');
@@ -161,9 +190,17 @@ export default function PlanificadorPage() {
     return () => {
       cancelled = true;
     };
-  }, [destination, coords.lat, coords.lng, granted]);
+  }, [destination, coords.lat, coords.lng, granted, departAt]);
 
   const current = options[selected];
+
+  /**
+   * El viaje que se está mostrando es de más tarde.
+   *
+   * Sale de la respuesta y no del selector por lo mismo que `plannedFor`:
+   * mientras se busca el viaje nuevo, en pantalla sigue el anterior.
+   */
+  const futuro = plannedFor !== null;
 
   /**
    * El tramo en ómnibus que se puede seguir en vivo.
@@ -172,8 +209,15 @@ export default function PlanificadorPage() {
    * horario publicado o de la frecuencia de la línea, y no hay ninguna unidad
    * a la que seguirle el rastro. En un viaje con transbordo alcanza con el
    * primero —el segundo todavía no existe cuando uno se sube al primero—.
+   *
+   * Y nunca en un viaje planificado para más tarde. El backend ya no manda
+   * coche en esos, así que la condición de arriba alcanzaría; está escrito
+   * igual porque lo que no se puede ofrecer es seguir en vivo un ómnibus que
+   * todavía no salió, y eso no puede depender de que el backend siga
+   * comportándose como hoy.
    */
-  const boardable = current?.legs.find((leg) => leg.type === 'bus' && leg.vehicle_id) ?? null;
+  const boardable =
+    (!futuro && current?.legs.find((leg) => leg.type === 'bus' && leg.vehicle_id)) || null;
   const onBoard = boarded ? boardable : null;
 
   return (
@@ -231,6 +275,51 @@ export default function PlanificadorPage() {
           Marcalo en el mapa
         </button>
       </header>
+
+      {/*
+        ---------- Cuándo ----------
+
+        Va debajo del bloque de origen y destino y no entre los dos: son un par
+        y separarlos rompe la lectura "de acá a allá" que se entiende sin leer.
+        Acá abajo queda igual antes que los resultados, que es lo que importa —
+        se elige la hora y recién después se miran los viajes.
+
+        Por defecto "ahora": es el 95% de los usos y no tiene que costar un
+        toque más.
+      */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-sand-200 bg-white px-4 py-2.5">
+        <button
+          onClick={() => setDepartAt(null)}
+          aria-pressed={departAt === null}
+          className={`chip ${departAt === null ? 'chip-active' : ''}`}
+        >
+          <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Ahora
+        </button>
+        <button
+          onClick={() => setDepartAt((actual) => actual ?? proximaHoraRedonda())}
+          aria-pressed={departAt !== null}
+          className={`chip ${departAt !== null ? 'chip-active' : ''}`}
+        >
+          Salir a las
+        </button>
+
+        {departAt !== null && (
+          <input
+            type="datetime-local"
+            aria-label="Hora de salida"
+            value={paraElInput(departAt)}
+            min={paraElInput(new Date())}
+            onChange={(event) => {
+              // Vacío es lo que deja el input mientras se está editando: no se
+              // vuelve a "ahora" por eso, se conserva la hora que había.
+              const elegida = new Date(event.target.value);
+              if (Number.isFinite(elegida.getTime())) setDepartAt(elegida);
+            }}
+            className="tabular rounded-chip border border-sand-300 bg-white px-2 py-1.5 text-xs font-bold text-ink-900 focus:border-ink-900 focus:outline-none"
+          />
+        )}
+      </div>
 
       {/* ---------- El destino, marcado con el dedo ---------- */}
       {pickingOnMap && (
@@ -346,13 +435,25 @@ export default function PlanificadorPage() {
         {searching && <SkeletonList rows={3} />}
 
         {!searching && !error && searched && options.length === 0 && (
+          // Con una hora futura, "no hay línea" sería mentira: la línea puede
+          // existir y estar pasando todos los días. Lo que no hay es horario
+          // publicado que podamos ubicar en esa parada, que es lo único con lo
+          // que se puede contestar sobre una hora que todavía no llegó.
           <EmptyState
             icon={RouteOff}
-            title={ready ? 'No encontramos un viaje en ómnibus' : 'Todavía no podemos planificar'}
+            title={
+              !ready
+                ? 'Todavía no podemos planificar'
+                : futuro
+                  ? 'No tenemos horario para esa hora'
+                  : 'No encontramos un viaje en ómnibus'
+            }
             description={
-              ready
-                ? 'No hay una línea que conecte estos dos puntos con una caminata razonable. Probá con una parada cercana.'
-                : 'Estamos cargando los recorridos de las empresas. Mientras tanto podés ver las paradas y sus llegadas.'
+              !ready
+                ? 'Estamos cargando los recorridos de las empresas. Mientras tanto podés ver las paradas y sus llegadas.'
+                : futuro
+                  ? 'Para un viaje más tarde sólo podemos usar el horario publicado por las empresas, y no tenemos ninguna salida cargada que te sirva a esa hora. Probá con "ahora", que además mira los ómnibus que están en la calle.'
+                  : 'No hay una línea que conecte estos dos puntos con una caminata razonable. Probá con una parada cercana.'
             }
           />
         )}
@@ -370,8 +471,16 @@ export default function PlanificadorPage() {
               >
                 {returnTrip.finished ? (
                   <>
-                    <span className="font-bold">Hoy ya no podés volver en ómnibus.</span>{' '}
-                    La última vuelta salió {returnTrip.last_at}
+                    {/* La vuelta se mira desde la hora de salida pedida, así
+                        que con un viaje de más tarde esto no es "hoy ya no":
+                        es que **a esa hora** ya no va a haber con qué volver,
+                        que es justo lo que hay que saber antes de ir. */}
+                    <span className="font-bold">
+                      {futuro
+                        ? 'Si salís a esa hora, después no vas a poder volver en ómnibus.'
+                        : 'Hoy ya no podés volver en ómnibus.'}
+                    </span>{' '}
+                    La última vuelta {futuro ? 'sale' : 'salió'} {returnTrip.last_at}
                     {returnTrip.line_label ? ` (línea ${returnTrip.line_label})` : ''}.
                   </>
                 ) : (
@@ -388,12 +497,18 @@ export default function PlanificadorPage() {
 
             <p className="mb-3 section-label">
               {options.length} {options.length === 1 ? 'forma de llegar' : 'formas de llegar'}
+              {/* Para cuándo son. Con hora futura toda la lista habla en horas
+                  de reloj y ninguna dice de qué día: sin esto, el viaje de
+                  mañana y el de hoy se ven exactamente iguales. */}
+              {futuro && plannedFor !== null ? ` · ${etiquetaDeSalida(plannedFor)}` : ''}
             </p>
             <div className="flex flex-col gap-3">
               {options.map((option, index) => (
                 <TripCard
                   key={option.id}
                   option={option}
+                  desde={plannedFor}
+                  futuro={futuro}
                   selected={index === selected}
                   onSelect={() => {
                     setSelected(index);
@@ -412,21 +527,80 @@ export default function PlanificadorPage() {
 }
 
 /**
- * La hora que va a ser dentro de tantos minutos.
+ * La hora que va a ser tantos minutos después de arrancado el viaje.
  *
  * "Pasa en 31 minutos" obliga a hacer la cuenta y a rehacerla cada vez que uno
  * mira el teléfono; "pasa 23:58" se compara con el reloj de la pantalla. Las
  * dos cosas se muestran juntas: la cuenta para decidir y la hora para
  * organizarse.
+ *
+ * `desde` es el momento desde el que el backend contó esos minutos, y es
+ * obligatorio pasarlo: para un viaje pedido para mañana a las 18:30, sumarlos
+ * al reloj del teléfono daría horas corridas un día entero. `null` es ahora.
  */
-function clockIn(minutes: number): string {
+function clockIn(minutes: number, desde: number | null): string {
   // En Uruguay el reloj es de 24 horas: 'es-UY' por defecto devuelve
   // "12:41 a. m.", que además de largo se lee mal de un vistazo.
-  return new Date(Date.now() + minutes * 60_000).toLocaleTimeString('es-UY', {
+  return new Date((desde ?? Date.now()) + minutes * 60_000).toLocaleTimeString('es-UY', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   });
+}
+
+/**
+ * La hora que propone el selector al elegir "salir a las".
+ *
+ * El próximo cuarto de hora, con quince minutos de aire. No es "ahora mismo":
+ * el backend rechaza una hora que ya pasó, y entre que se abre el selector y
+ * se toca buscar pasan segundos. Y no es una hora redonda lejana porque lo que
+ * más se pide es un rato más tarde el mismo día.
+ */
+function proximaHoraRedonda(): Date {
+  const cuarto = 15 * 60_000;
+  return new Date(Math.ceil((Date.now() + cuarto) / cuarto) * cuarto);
+}
+
+/**
+ * La fecha como la quiere un `<input type="datetime-local">`.
+ *
+ * A mano y no con `toISOString()`, que devuelve UTC: en Uruguay eso pondría el
+ * selector tres horas adelante de lo que la persona eligió.
+ */
+function paraElInput(date: Date): string {
+  const dosDigitos = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${dosDigitos(date.getMonth() + 1)}-${dosDigitos(date.getDate())}` +
+    `T${dosDigitos(date.getHours())}:${dosDigitos(date.getMinutes())}`
+  );
+}
+
+/**
+ * Para cuándo son los viajes que se están mostrando: "mañana 18:30".
+ *
+ * Con una hora futura, la lista entera habla en horas de reloj y ninguna de
+ * ellas dice de qué día es. Sin este renglón, un viaje de mañana y uno de hoy
+ * se ven exactamente iguales.
+ */
+function etiquetaDeSalida(desde: number): string {
+  const salida = new Date(desde);
+  const hora = salida.toLocaleTimeString('es-UY', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const dia = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+  const hoy = new Date();
+  const diasDeDiferencia = Math.round(
+    (dia.getTime() - new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()) /
+      86_400_000,
+  );
+
+  if (diasDeDiferencia === 0) return `hoy ${hora}`;
+  if (diasDeDiferencia === 1) return `mañana ${hora}`;
+
+  return `${salida.toLocaleDateString('es-UY', { weekday: 'short', day: 'numeric' })} ${hora}`;
 }
 
 /**
@@ -447,10 +621,16 @@ function TripCard({
   option,
   selected,
   onSelect,
+  desde,
+  futuro,
 }: {
   option: TripOption;
   selected: boolean;
   onSelect: () => void;
+  /** Desde qué momento contó el backend los minutos de esta opción. */
+  desde: number | null;
+  /** El viaje es de más tarde: nada se dice en relativo. Ver `clockIn`. */
+  futuro: boolean;
 }) {
   const busLegs = option.legs.filter((leg) => leg.type === 'bus');
   const firstWait = option.legs.find((leg) => leg.type === 'wait');
@@ -510,7 +690,7 @@ function TripCard({
               <span className="text-xs font-semibold"> min</span>
             </p>
             <p className="tabular mt-0.5 text-[0.6875rem] font-semibold text-ink-400">
-              llegás {clockIn(option.total_minutes)}
+              llegás {clockIn(option.total_minutes, desde)}
             </p>
           </div>
         </div>
@@ -535,10 +715,18 @@ function TripCard({
               {/* Lo que se dice es cuándo hay que salir, no cuánto falta para
                   que pase el ómnibus: el ómnibus pasa por la parada, y a la
                   parada hay que llegar caminando. */}
+              {/* Con una hora futura no se puede hablar en relativo: "salí en
+                  13 min" no significa nada para un viaje de mañana, y el
+                  minuto cero de esa cuenta es una hora que todavía no llegó.
+                  Pasa a ser la hora de reloj a la que hay que salir. */}
               <span className="truncate">
-                {option.leave_in_minutes <= 0 ? 'Salí ahora' : `Salí en ${option.leave_in_minutes} min`}
+                {futuro
+                  ? `Salí ${clockIn(option.leave_in_minutes, desde)}`
+                  : option.leave_in_minutes <= 0
+                    ? 'Salí ahora'
+                    : `Salí en ${option.leave_in_minutes} min`}
                 {firstWait.departs_in_minutes != null
-                  ? ` · pasa ${clockIn(firstWait.departs_in_minutes)}`
+                  ? ` · pasa ${clockIn(firstWait.departs_in_minutes, desde)}`
                   : ''}
               </span>
             </span>
@@ -577,14 +765,18 @@ function TripCard({
                   <>
                     <span className="font-bold text-ink-900">
                       Esperá {waitText(leg)}
-                      {leg.departs_in_minutes != null ? ` (pasa ${clockIn(leg.departs_in_minutes)})` : ''}
+                      {leg.departs_in_minutes != null
+                        ? ` (pasa ${clockIn(leg.departs_in_minutes, desde)})`
+                        : ''}
                     </span>
                     <span className="text-ink-400">
                       {' '}
                       la línea {legLine(leg)} en {formatStopName(leg.from)}
-                      {leg.live
+                      {/* De dónde salió esa hora. Se lee de `source`, que lo
+                          dice en un campo, y no combinando dos banderas. */}
+                      {leg.source === 'vivo'
                         ? ` · viene el coche ${leg.vehicle_id?.split('-').pop() ?? ''}`
-                        : leg.scheduled
+                        : leg.source === 'horario'
                           ? ' · según el horario de la empresa'
                           : ' · estimado por la frecuencia de la línea'}
                     </span>

@@ -395,12 +395,25 @@ export class SchedulesService implements OnModuleInit {
     readyAtMinute: number,
     now = new Date(),
   ): ScheduledDeparture | null {
-    if (this.loadedSeason && this.loadedSeason !== currentSeason(now)) {
-      // Cambió la temporada desde que se cargó: se rehace en segundo plano y por
-      // ahora se contesta sin horario, que cae a la frecuencia.
-      void this.reload(now);
+    // Cambió la temporada desde que se cargó: se rehace en segundo plano y por
+    // ahora se contesta sin horario, que cae a la frecuencia.
+    //
+    // Se mira contra el reloj de verdad y **no** contra `now`, que desde que
+    // el planificador acepta una hora de salida ya no es siempre el momento
+    // actual. Con `now` acá, alguien preguntando "¿cómo llego el 2 de enero?"
+    // hacía que el servicio recargara la temporada de verano y se quedara con
+    // ella: el horario de todos los demás, que están preguntando por hoy,
+    // pasaba a ser el de otra temporada.
+    if (this.loadedSeason && this.loadedSeason !== currentSeason(new Date())) {
+      void this.reload();
       return null;
     }
+
+    // Y preguntar por una fecha de otra temporada no se contesta con el
+    // horario de ésta. Es el mismo criterio de siempre: si no lo sabemos, no
+    // lo inventamos. Cargar las dos temporadas a la vez es lo que faltaría
+    // para poder contestarlo, y no es esta tarea.
+    if (this.loadedSeason && this.loadedSeason !== currentSeason(now)) return null;
 
     const label = this.officialRoutes.lineLabel(sequence.operator, sequence.lineCode);
     const services = this.byLine.get(`${sequence.operator}|${label}`);
