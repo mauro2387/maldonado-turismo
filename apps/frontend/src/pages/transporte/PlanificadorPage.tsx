@@ -19,6 +19,7 @@ import { ABordo } from '@components/transporte/ABordo';
 import { BondiSprite } from '@components/transporte/BondiSprite';
 import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 
@@ -305,7 +306,18 @@ export default function PlanificadorPage() {
         <div className="border-b border-sand-200">
           {boardable && (
             <button
-              onClick={() => setBoarded(true)}
+              onClick={() => {
+                // El permiso de notificaciones se pide **acá** y no al abrir
+                // la pantalla de a bordo. Un permiso pedido sin contexto es un
+                // permiso negado, y negado no se vuelve a pedir nunca: queda
+                // así para siempre en este dominio y con él se pierde el único
+                // aviso que llega con la app en segundo plano. Pedido justo
+                // después de "ya me subí", la pregunta se explica sola. Este
+                // toque es además el gesto que habilita el sonido, que sin
+                // gesto de la persona no arranca.
+                prepararAvisos();
+                setBoarded(true);
+              }}
               className="flex w-full items-center justify-center gap-2 bg-ink-900 py-2.5 text-sm font-bold text-white active:bg-ink-800"
             >
               <Bus className="h-4 w-4" strokeWidth={2.5} />

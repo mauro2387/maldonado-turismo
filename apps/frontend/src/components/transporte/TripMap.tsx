@@ -115,8 +115,14 @@ function liveBusIcon(sprite: string | null, heading: number, color: string): Div
   });
 }
 
-/** Encuadra el viaje entero cada vez que cambia la opción elegida. */
-function FitToTrip({ points }: { points: LatLng[] }) {
+/**
+ * Encuadra un conjunto de puntos cada vez que cambia.
+ *
+ * Lo usan el viaje entero de esta pantalla y la caminata final de `Llegaste`:
+ * es el mismo encuadre —con el mismo margen— y tenerlo dos veces era la forma
+ * de que un día los dos mapas de un mismo viaje abrieran distinto.
+ */
+export function FitToPoints({ points }: { points: LatLng[] }) {
   const map = useMap();
 
   useEffect(() => {
@@ -194,7 +200,7 @@ export function TripMap({ option }: { option: TripOption }) {
       style={{ background: '#EAE6DF' }}
     >
       <Basemap />
-      <FitToTrip points={allPoints} />
+      <FitToPoints points={allPoints} />
 
       {/* Las caminatas van abajo: en las cuadras que comparte con el ómnibus,
           lo que importa ver es el ómnibus. */}
