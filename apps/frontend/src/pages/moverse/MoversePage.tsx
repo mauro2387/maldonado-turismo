@@ -4,29 +4,34 @@ import { Search, ChevronRight, Bus, AlertTriangle, Clock, Map as MapIcon } from 
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useNearbyDepartures, useVehiclePositions } from '@hooks/useDepartures';
 import { useAlerts, useLines } from '@hooks/useTransport';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { Arrival, NearbyDeparture, TransportLine } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
 import { ArrivalRow, lineColor } from '@components/transporte/ArrivalRow';
 import { LiveIndicator, freshestFixAge } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { formatDistance, walkingMinutes } from '@lib/geo';
+import { operatorName } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 
 /**
  * Moverse.
  *
- * La sección abre en los ómnibus, no en las paradas ni en un buscador de
- * destino. Ese es el cambio: la pregunta de alguien parado en la vereda es
- * "¿cuál me sirve y por dónde viene?", y la pantalla contestaba "¿qué paradas
- * hay cerca?" —que es como está organizada la empresa, no como se usa un
- * ómnibus—. Antes de eso eran cuatro pestañas anidadas (Paradas / Líneas /
- * Avisos / Planificar) y un listado alfabético de las mil paradas del
- * departamento.
+ * La sección no se organiza por paradas. Esa fue la primera corrección: la
+ * pregunta de alguien parado en la vereda es "¿cuál me sirve y por dónde
+ * viene?", y la pantalla contestaba "¿qué paradas hay cerca?" —que es como
+ * está organizada la empresa, no como se usa un ómnibus—. Antes de eso eran
+ * cuatro pestañas anidadas (Paradas / Líneas / Avisos / Planificar) y un
+ * listado alfabético de las mil paradas del departamento.
  *
- * De arriba abajo: cuántos ómnibus están haciendo servicio ahora, el mapa en
- * vivo, los que te pasan cerca, las líneas con su ida y su vuelta, y recién al
- * final el planificador de viaje, que es la herramienta que se usa cuando
- * ninguno de los de arriba alcanza.
+ * Y la segunda: **primero se pregunta a dónde vas.** El buscador de destino
+ * estaba al final, después de un contador de flota, un aviso, una tarjeta que
+ * manda a otra pantalla, ocho ómnibus y ocho líneas. Es la acción principal de
+ * una app de transporte y estaba a seis pantallazos de scroll.
+ *
+ * De arriba abajo: a dónde vas, si el GPS de alguna empresa no está entrando,
+ * los avisos de servicio, el mapa en vivo, los que te pasan cerca —una fila
+ * por línea, no por coche— y las líneas con sus horarios.
  *
  * Cada renglón lleva al mapa con ese coche ya elegido: ahí se ve por dónde
  * viene, en qué parada conviene esperarlo, cuánto hay que caminar hasta ella y
@@ -84,6 +89,9 @@ export default function MoversePage() {
   const { alerts } = useAlerts();
   const { lines } = useLines();
   const { vehicles } = useVehiclePositions(true);
+  // Si el GPS de las empresas está entrando. Decide entre "no viene ninguno"
+  // y "no tenemos el dato", que no son lo mismo.
+  const { sinGps, gpsParcial, empresasCaidas } = useTransportHealth();
 
   /**
    * Cuántos ómnibus están haciendo un servicio.
@@ -112,13 +120,22 @@ export default function MoversePage() {
   );
 
   /**
-   * Los que te pasan ahora y llegás a tomar, uno por coche.
+   * Los que te pasan ahora y llegás a tomar, **uno por línea**.
    *
-   * El mismo ómnibus llega a varias paradas de la misma cuadra y sin agrupar
-   * por coche aparece tres veces con tres minutos distintos. Se queda con la
-   * parada donde llega antes **de las que se alcanzan**: si a una parada llega
-   * en un minuto y está a cuatro cuadras, esa no cuenta, y capaz que a la
-   * parada de la otra cuadra llega en seis y esa sí.
+   * Dos agrupaciones, una arriba de la otra.
+   *
+   * Por coche, porque el mismo ómnibus llega a varias paradas de la misma
+   * cuadra y sin eso aparece tres veces con tres minutos distintos. Se queda
+   * con la parada donde llega antes **de las que se alcanzan**: si a una
+   * parada llega en un minuto y está a cuatro cuadras, esa no cuenta, y capaz
+   * que a la parada de la otra cuadra llega en seis y esa sí.
+   *
+   * Y por línea, que es lo que faltaba. La pregunta de quien mira esta lista
+   * es "¿cuál me sirve?", y la 24 puede venir en tres coches distintos: sin
+   * agrupar, esos tres ocupaban tres de las ocho filas y tapaban a las otras
+   * líneas, que son las que hacen falta para elegir. El segundo coche de la
+   * misma línea no se pierde -queda como "y otro en N min"-, que es
+   * exactamente el dato que uno quiere cuando ve que al primero no llega.
    */
   const nextBuses = useMemo(() => {
     const byVehicle = new Map<string, { arrival: Arrival; stop: NearbyDeparture }>();
@@ -133,8 +150,51 @@ export default function MoversePage() {
       }
     }
 
-    return [...byVehicle.values()].sort((a, b) => a.arrival.eta_minutes - b.arrival.eta_minutes);
+    const byLine = new Map<string, { arrival: Arrival; stop: NearbyDeparture; next?: number }>();
+
+    for (const entry of [...byVehicle.values()].sort(
+      (a, b) => a.arrival.eta_minutes - b.arrival.eta_minutes,
+    )) {
+      const known = byLine.get(entry.arrival.line_code);
+
+      if (!known) {
+        byLine.set(entry.arrival.line_code, entry);
+      } else if (known.next === undefined) {
+        // El segundo de la misma línea: se guarda el minuto y se descarta el
+        // resto. Un tercero no cambia ninguna decisión.
+        known.next = entry.arrival.eta_minutes;
+      }
+    }
+
+    return [...byLine.values()].sort((a, b) => a.arrival.eta_minutes - b.arrival.eta_minutes);
   }, [stops]);
+
+  /**
+   * Las mismas líneas, juntadas por la parada donde se las toma.
+   *
+   * Un renglón de esta lista son dos datos: qué ómnibus viene, y a qué esquina
+   * hay que ir. El segundo es de la parada y no del ómnibus -a la misma
+   * esquina van cinco líneas- y estaba escrito una vez por fila: "Pasa por A
+   * Tamaro · a 340 m, 4 min caminando", seis veces seguidas. Repetido deja de
+   * leerse: se vuelve textura y empuja hacia abajo lo único que cambia de fila
+   * en fila.
+   *
+   * Escribirlo sólo cuando cambia tampoco alcanzaba: ordenadas por minuto, las
+   * dos esquinas se alternan y la frase volvía a aparecer en todas las filas.
+   * Así que se agrupa de verdad, y los grupos van ordenados por el ómnibus que
+   * llega antes: la primera esquina de la lista sigue siendo la del próximo.
+   */
+  const porParada = useMemo(() => {
+    const grupos = new Map<number, { stop: NearbyDeparture; buses: typeof nextBuses }>();
+
+    for (const fila of nextBuses.slice(0, MAX_NEXT_BUSES)) {
+      const grupo = grupos.get(fila.stop.id);
+      if (grupo) grupo.buses.push(fila);
+      else grupos.set(fila.stop.id, { stop: fila.stop, buses: [fila] });
+    }
+
+    return [...grupos.values()];
+  }, [nextBuses]);
 
   const canWidenSearch = radiusIndex < RADIUS_OPTIONS.length - 1;
 
@@ -168,6 +228,72 @@ export default function MoversePage() {
           <LiveIndicator fixAgeSeconds={fleetFixAge} showAge={false} className="mb-1.5" />
         )}
       </header>
+
+      {/* ---------- ¿A dónde vas? ----------
+          Arriba de todo, que es donde tiene que estar.
+
+          Estaba al final de la pantalla, después de un contador de flota, un
+          aviso, una tarjeta que manda a otro lado, ocho ómnibus y ocho líneas.
+          Ir a un lugar es la acción principal de una app de transporte -es
+          para lo que la abre alguien que no sabe cómo llegar- y estaba a seis
+          pantallazos de scroll. Mirar lo que pasa cerca sigue estando: abajo,
+          que es donde va lo que se mira, no lo que se hace. */}
+      <form
+        className="mt-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submitSearch(query);
+        }}
+      >
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+            strokeWidth={2}
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="¿A dónde vas?"
+            aria-label="Destino"
+            className="input pl-10 font-semibold"
+          />
+        </div>
+
+        <div className="chip-row mt-2">
+          {QUICK_DESTINATIONS.map((destination) => (
+            <button
+              key={destination}
+              type="button"
+              onClick={() => submitSearch(destination)}
+              className="chip"
+            >
+              {destination}
+            </button>
+          ))}
+        </div>
+      </form>
+
+      {/* ---------- Si el GPS de alguna empresa no está entrando ----------
+          El dato existía y sólo lo usaba la portada. Sin esto, cuando un feed
+          se cae la pantalla muestra listas vacías sin explicar por qué, y
+          "ningún ómnibus que llegues a tomar" suena a dato cuando en realidad
+          es ignorancia. Se nombra la empresa: la 24 puede estar andando
+          perfecto mientras la 17 es la que no reporta. */}
+      {(sinGps || gpsParcial) && (
+        <div className="mt-4">
+          <InlineNotice
+            tone="warn"
+            message={
+              sinGps
+                ? 'Ninguna empresa está reportando la posición de sus ómnibus. Los horarios siguen sirviendo; las llegadas en vivo, no.'
+                : `No estamos recibiendo el GPS de ${empresasCaidas
+                    .map(operatorName)
+                    .join(' y ')}. Sus ómnibus no aparecen en esta lista.`
+            }
+          />
+        </div>
+      )}
 
       {/* ---------- Avisos del servicio ---------- */}
       {alerts.length > 0 && (
@@ -263,26 +389,42 @@ export default function MoversePage() {
           />
         )}
 
-        <div className="mt-3 flex flex-col gap-2">
-          {nextBuses.slice(0, MAX_NEXT_BUSES).map(({ arrival, stop }) => (
-            <div key={arrival.vehicle_id} className="card py-3">
-              {/* El ómnibus: es el renglón principal y abre el mapa en vivo. */}
-              <Link to={busLink(arrival)} className="block">
-                <ArrivalRow arrival={arrival} />
-              </Link>
-
-              {/* La parada, como contexto y como atajo a todo lo que viene ahí.
-                  Va en su propio enlace: uno adentro de otro no es válido. */}
+        <div className="mt-3 flex flex-col gap-3">
+          {porParada.map(({ stop, buses }) => (
+            <div key={stop.id} className="card py-3">
+              {/* La esquina, una sola vez y arriba: es el encabezado de las
+                  líneas que la usan, no una nota al pie de cada una. */}
               <Link
                 to={`/transporte/paradas/${stop.id}`}
-                className="mt-1.5 flex items-center gap-1 text-xs text-ink-400"
+                className="flex items-center gap-1 border-b border-sand-200 pb-2.5 text-xs"
               >
-                <span className="min-w-0 truncate">
-                  Pasa por {formatStopName(stop.name)} · a {formatDistance(stop.distance_m)},{' '}
-                  {walkingMinutes(stop.distance_m)} min caminando
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-bold text-ink-900">{formatStopName(stop.name)}</span>
+                  <span className="text-ink-400">
+                    {' '}
+                    · a {formatDistance(stop.distance_m)}, {walkingMinutes(stop.distance_m)} min
+                    caminando
+                  </span>
                 </span>
-                <ChevronRight className="h-3 w-3 flex-none" strokeWidth={2.5} />
+                <ChevronRight className="h-3 w-3 flex-none text-ink-300" strokeWidth={2.5} />
               </Link>
+
+              <div className="flex flex-col divide-y divide-sand-200">
+                {buses.map(({ arrival, next }) => (
+                  <div key={arrival.line_code} className="py-2.5 last:pb-0">
+                    {/* El ómnibus: abre el mapa en vivo con ese coche. */}
+                    <Link to={busLink(arrival)} className="block">
+                      <ArrivalRow arrival={arrival} />
+                    </Link>
+
+                    {/* El siguiente de la misma línea. Es lo que uno pregunta
+                        apenas ve que al primero no llega. */}
+                    {next !== undefined && (
+                      <p className="mt-1 pl-[2.6rem] text-xs text-ink-400">y otro en {next} min</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -350,51 +492,6 @@ export default function MoversePage() {
         </section>
       )}
 
-      {/* ---------- Ir a un lugar ----------
-          Baja al final a propósito. Escribir un destino es lo que se hace
-          cuando no alcanza con mirar lo que pasa: para ir a un lugar al que no
-          se sabe cómo llegar, no para tomarse el que ya viene. */}
-      <section className="mt-7" aria-labelledby="planificar">
-        <h2 id="planificar" className="section-label">
-          Ir a un lugar
-        </h2>
-
-        <form
-          className="mt-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submitSearch(query);
-          }}
-        >
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-              strokeWidth={2}
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="¿A dónde vas?"
-              aria-label="Destino"
-              className="input pl-10 font-semibold"
-            />
-          </div>
-
-          <div className="chip-row mt-2">
-            {QUICK_DESTINATIONS.map((destination) => (
-              <button
-                key={destination}
-                type="button"
-                onClick={() => submitSearch(destination)}
-                className="chip"
-              >
-                {destination}
-              </button>
-            ))}
-          </div>
-        </form>
-      </section>
     </div>
   );
 }
