@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import { transportService, LineTimetable } from '@services/transportService';
+import { SheetGrab } from '@components/ui/SheetGrab';
 import { formatStopName } from '@lib/stopNames';
 
 /**
@@ -59,7 +60,7 @@ export function LineScheduleSheet({ label, onClose }: { label: string; onClose: 
 
   return (
     <div className="sheet absolute inset-x-0 bottom-0 z-[560] max-h-[80%] animate-sheet-up overflow-y-auto px-4 pb-6 pt-2">
-      <div className="sheet-grab" />
+      <SheetGrab onDismiss={onClose} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

@@ -7,7 +7,7 @@ import { useAlerts, useLines } from '@hooks/useTransport';
 import { Arrival, NearbyDeparture, TransportLine } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
 import { ArrivalRow, lineColor } from '@components/transporte/ArrivalRow';
-import { LiveIndicator } from '@components/ui/LiveIndicator';
+import { LiveIndicator, freshestFixAge } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { formatDistance, walkingMinutes } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
@@ -96,6 +96,20 @@ export default function MoversePage() {
   );
 
   /**
+   * Qué tan de ahora es "ahora".
+   *
+   * Esto estaba puesto en cero, que es el único valor que `isLive()` no puede
+   * rechazar: la pantalla decía "en vivo" siempre, incluso con los tres feeds
+   * caídos hace media hora. El indicador existe justamente para lo contrario
+   * —una app de transporte se gana la confianza mostrando cuándo *no* sabe— y
+   * el dato para hacerlo bien ya venía en cada coche y en cada llegada.
+   */
+  const fleetFixAge = useMemo(
+    () => freshestFixAge(vehicles.map((vehicle) => vehicle.fix_time ?? vehicle.recorded_at)),
+    [vehicles],
+  );
+
+  /**
    * Los que te pasan ahora y llegás a tomar, uno por coche.
    *
    * El mismo ómnibus llega a varias paradas de la misma cuadra y sin agrupar
@@ -148,7 +162,9 @@ export default function MoversePage() {
               : 'Los ómnibus de Maldonado, en vivo'}
           </p>
         </div>
-        {onStreet > 0 && <LiveIndicator fixAgeSeconds={0} showAge={false} className="mb-1.5" />}
+        {onStreet > 0 && (
+          <LiveIndicator fixAgeSeconds={fleetFixAge} showAge={false} className="mb-1.5" />
+        )}
       </header>
 
       {/* ---------- Avisos del servicio ---------- */}
@@ -203,7 +219,14 @@ export default function MoversePage() {
           <h2 id="te-pasan" className="section-label">
             Los que te pasan ahora
           </h2>
-          {nextBuses.length > 0 && <LiveIndicator fixAgeSeconds={0} showAge={false} />}
+          {nextBuses.length > 0 && (
+            // El más fresco de los que se están listando: alcanza con que uno
+            // reporte de ahora para que la lista tenga algo en vivo.
+            <LiveIndicator
+              fixAgeSeconds={Math.min(...nextBuses.map(({ arrival }) => arrival.fix_age_seconds))}
+              showAge={false}
+            />
+          )}
         </div>
 
         {error && <ErrorState message={error} onRetry={refetch} className="mt-3" />}

@@ -1,6 +1,7 @@
 import { Accessibility, Zap } from 'lucide-react';
 import { Arrival } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
+import { formatStopName } from '@lib/stopNames';
 
 /**
  * Una llegada: línea, destino y minutos.
@@ -39,14 +40,26 @@ export function arrivalLine(arrival: Arrival): string {
   return arrival.line_label ?? arrival.line_code;
 }
 
+/**
+ * A dónde va, escrito como se lee.
+ *
+ * El feed manda el cartel del ómnibus tal cual lo escribió el despacho de la
+ * empresa: "R P DEL PUERTO", "AV P SIERRA", "TNAL. SAN CARLOS". Este renglón
+ * es el más repetido de la app -aparece en Moverse, en la ficha de parada, en
+ * el mapa y en la portada-, así que era también el que más gritaba en
+ * mayúsculas.
+ */
+export function arrivalDestination(arrival: Arrival): string {
+  const raw = arrival.destination ?? arrival.line_name;
+  return raw ? formatStopName(raw) : 'En recorrido';
+}
+
 export function ArrivalRow({ arrival }: { arrival: Arrival }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <LineTag code={arrivalLine(arrival)} color={lineColor(arrival.operator)} size="sm" />
-        <span className="truncate text-data text-ink-600">
-          {arrival.destination ?? arrival.line_name ?? 'En recorrido'}
-        </span>
+        <span className="truncate text-data text-ink-600">{arrivalDestination(arrival)}</span>
         {arrival.accessible && (
           <Accessibility
             className="h-3.5 w-3.5 flex-none text-sea-500"

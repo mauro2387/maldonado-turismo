@@ -12,6 +12,7 @@ import { useGeolocation, MALDONADO_CENTER } from '@hooks/useGeolocation';
 import { Basemap, DEFAULT_ZOOM } from '@components/map/basemap';
 import { MapControls } from '@components/map/MapControls';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
+import { SheetGrab } from '@components/ui/SheetGrab';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { distanceMeters, formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
@@ -410,7 +411,7 @@ function SelectionSheet({
 
   return (
     <div className="sheet absolute inset-x-0 bottom-0 z-[520] animate-sheet-up px-4 pb-5 pt-2">
-      <div className="sheet-grab" />
+      <SheetGrab onDismiss={onClose} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
