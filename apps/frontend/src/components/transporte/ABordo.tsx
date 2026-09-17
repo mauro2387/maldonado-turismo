@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Footprints, MapPin, SignalZero, X } from 'lucide-react';
+import { Bell, Footprints, MapPin, Share2, SignalZero, X } from 'lucide-react';
 import { rideService, RideStatus } from '@services/rideService';
 import { BondiSprite } from '@components/transporte/BondiSprite';
 import { Llegaste } from '@components/transporte/Llegaste';
@@ -7,6 +7,8 @@ import { useWakeLock } from '@hooks/useWakeLock';
 import { avisar } from '@lib/avisos';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
+import { compartir, mensajeDeCompartir } from '@lib/compartir';
+import { horaDeReloj } from '@lib/hora';
 
 /**
  * Ya te subiste.
@@ -137,6 +139,8 @@ export function ABordo({
 }) {
   const [status, setStatus] = useState<RideStatus | null>(null);
   const [failed, setFailed] = useState(false);
+  /** Lo que pasó al mandar "voy en camino", para decirlo acá y no en un alert. */
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   /**
    * El viaje terminado, congelado.
@@ -427,6 +431,41 @@ export function ABordo({
               {destination.label ? ` hasta ${destination.label}` : ''}.
             </p>
           </div>
+        )}
+
+        {/* ---------- Voy en camino ----------
+            Lo que uno manda por WhatsApp arriba del ómnibus: "llego 18:25".
+            Sólo mientras el coche reporta y se sabe cuánto falta, y siempre
+            con "aprox.": son los minutos del GPS más la caminata, y ninguno
+            de los dos es una promesa. */}
+        {status?.active && status.minutes_away !== null && !perdido && (
+          <button
+            onClick={async () => {
+              const minutos = status.minutes_away! + (status.walk_minutes ?? 0);
+              const llegoA = horaDeReloj(Date.now() + minutos * 60_000);
+              const linea = status.line_label ? ` en la línea ${status.line_label}` : ' en ómnibus';
+              const adonde = destination.label
+                ? ` a ${destination.label}`
+                : status.stop
+                  ? ` a ${formatStopName(status.stop.name)}`
+                  : '';
+              const resultado = await compartir({
+                titulo: 'Voy en camino',
+                texto: `Voy en camino${linea}. Llego${adonde} a las ${llegoA} aprox. (${minutos} min).`,
+              });
+              const mensaje = mensajeDeCompartir(resultado);
+              setShareNotice(mensaje);
+              if (mensaje) setTimeout(() => setShareNotice(null), 3000);
+            }}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-card bg-white py-3 text-sm font-bold text-ink-900 active:bg-sand-200"
+          >
+            <Share2 className="h-4 w-4" strokeWidth={2.25} />
+            Avisar que voy en camino
+          </button>
+        )}
+
+        {shareNotice && (
+          <p className="mt-2 text-center text-xs text-ink-500">{shareNotice}</p>
         )}
 
         {failed && (

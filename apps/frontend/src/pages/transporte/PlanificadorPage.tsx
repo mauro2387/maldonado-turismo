@@ -13,6 +13,7 @@ import {
   Star,
   Bell,
   BellRing,
+  Share2,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
@@ -22,9 +23,10 @@ import { DestinoEnMapa } from '@components/transporte/DestinoEnMapa';
 import { ABordo } from '@components/transporte/ABordo';
 import { BondiSprite } from '@components/transporte/BondiSprite';
 import { LineTag } from '@components/ui/LineTag';
-import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet';
-import { estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
+import { enlaceParaIr, estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
+import { compartir, mensajeDeCompartir } from '@lib/compartir';
 import { useRecordatorioStore } from '@store/recordatorioStore';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
@@ -67,8 +69,11 @@ import { formatStopName } from '@lib/stopNames';
  * **Y el destino puede venir ya resuelto.** `?destino=<texto>` se busca y se
  * elige el primer resultado, que sirve desde una ficha con nombre y no sirve
  * para "casa": eso no está en ningún catálogo. `?lat=&lng=&nombre=` va directo
- * con la coordenada; es lo que usan los chips de lo tuyo y lo que va a usar
- * compartir un viaje.
+ * con la coordenada; es lo que usan los chips de lo tuyo y lo que usa
+ * compartir un viaje, que además lleva `&salir=` o `&llegar=` con la hora.
+ * Se comparte el destino y la hora, no el origen: el origen es dónde está la
+ * persona que comparte, y quien recibe el enlace quiere llegar desde donde
+ * está **él**.
  */
 
 /** Lo que se espera después de la última tecla antes de salir a buscar. */
@@ -137,6 +142,22 @@ function destinoDeLaUrl(params: URLSearchParams): Destino | null {
   return { id: id || undefined, name: nombre || 'Punto en el mapa', lat, lng };
 }
 
+/**
+ * Una hora que llega por la URL, si es una hora y todavía no pasó.
+ *
+ * Un enlace compartido se abre cuando se abre: el viaje "para llegar a las
+ * 18:30" mandado el lunes, abierto el martes, ya no es ese viaje. Una hora
+ * pasada se ignora y se planifica para ahora, que es lo que la pantalla
+ * hace sin hora.
+ */
+function horaDeLaUrl(params: URLSearchParams, clave: string): Date | null {
+  const crudo = params.get(clave);
+  if (!crudo) return null;
+  const hora = new Date(crudo);
+  if (!Number.isFinite(hora.getTime()) || hora.getTime() <= Date.now()) return null;
+  return hora;
+}
+
 export default function PlanificadorPage() {
   const [searchParams] = useSearchParams();
   const { coords, granted } = useGeolocation();
@@ -161,8 +182,14 @@ export default function PlanificadorPage() {
    * Cuándo se sale y a qué hora hay que estar. Con las dos en `null` es
    * ahora, que es el 95% de los viajes; nunca están puestas las dos a la vez.
    */
-  const [departAt, setDepartAt] = useState<Date | null>(null);
-  const [arriveBy, setArriveBy] = useState<Date | null>(null);
+  const [departAt, setDepartAt] = useState<Date | null>(() => horaDeLaUrl(searchParams, 'salir'));
+  const [arriveBy, setArriveBy] = useState<Date | null>(() =>
+    // Si vinieran las dos, gana llegar: es la más específica de las dos
+    // preguntas y la que más cuesta rehacer a mano.
+    horaDeLaUrl(searchParams, 'llegar'),
+  );
+  /** Lo que pasó al compartir, para decirlo adentro de la pantalla. */
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   /**
    * Desde qué momento cuenta los minutos la respuesta que está en pantalla.
    *
@@ -288,6 +315,46 @@ export default function PlanificadorPage() {
   const destinoGuardado = destination ? estaGuardado(loTuyo, idDeDestino(destination)) : false;
 
   /**
+   * Compartir el viaje: un enlace que abre esta pantalla con el mismo destino
+   * y la misma hora, y un renglón que se entiende sin abrirlo.
+   *
+   * El enlace es el de lo tuyo más la hora, así que quien lo recibe planifica
+   * desde donde está él. Si hay una opción elegida se nombra la línea en el
+   * texto: "en la 24" es lo que uno le diría a alguien por WhatsApp.
+   */
+  const compartirViaje = async () => {
+    if (!destination) return;
+
+    const lugar = { ...destination, id: idDeDestino(destination) };
+    const hora = arriveBy ?? departAt;
+    const url =
+      `${window.location.origin}${enlaceParaIr(lugar)}` +
+      (arriveBy
+        ? `&llegar=${encodeURIComponent(arriveBy.toISOString())}`
+        : departAt
+          ? `&salir=${encodeURIComponent(departAt.toISOString())}`
+          : '');
+
+    const cuando = hora
+      ? arriveBy
+        ? ` para estar ${etiquetaDeSalida(hora.getTime())}`
+        : ` saliendo ${etiquetaDeSalida(hora.getTime())}`
+      : '';
+    const linea = current?.legs.find((leg) => leg.type === 'bus');
+    const enQue = linea ? ` en la línea ${legLine(linea)}` : '';
+
+    const resultado = await compartir({
+      titulo: `Cómo llegar a ${destination.name}`,
+      texto: `Cómo llegar a ${destination.name} en ómnibus${enQue}${cuando}:`,
+      url,
+    });
+
+    const mensaje = mensajeDeCompartir(resultado);
+    setShareNotice(mensaje);
+    if (mensaje) setTimeout(() => setShareNotice(null), 3000);
+  };
+
+  /**
    * El viaje que se está mostrando es de más tarde.
    *
    * Sale de la respuesta y no del selector por lo mismo que `plannedFor`:
@@ -397,9 +464,18 @@ export default function PlanificadorPage() {
             aria-label="Destino"
             className="w-full bg-transparent text-sm font-bold text-white placeholder:font-semibold placeholder:text-ink-300 focus:outline-none"
           />
-          {/* Guardar el destino: como casa, como trabajo o en tus lugares.
-              Sólo con un destino elegido; guardar lo que se está escribiendo
-              no significa nada. */}
+          {/* Compartir y guardar el destino. Sólo con un destino elegido;
+              guardar o mandar lo que se está escribiendo no significa nada. */}
+          {destination && (
+            <button
+              type="button"
+              onClick={compartirViaje}
+              aria-label="Compartir este viaje"
+              className="-my-2 flex h-10 w-10 flex-none items-center justify-center rounded-full active:bg-white/10"
+            >
+              <Share2 className="h-[1.15rem] w-[1.15rem] text-ink-300" strokeWidth={2} />
+            </button>
+          )}
           {destination && (
             <button
               type="button"
@@ -499,6 +575,12 @@ export default function PlanificadorPage() {
           />
         )}
       </div>
+
+      {shareNotice && (
+        <div className="px-4 pt-3">
+          <InlineNotice tone="info" message={shareNotice} />
+        </div>
+      )}
 
       {/* ---------- Guardar el destino ---------- */}
       {saving && destination && (
