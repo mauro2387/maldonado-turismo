@@ -57,7 +57,11 @@ export default function ParadaDetailPage() {
   /** La línea cuyo horario completo está abierto. */
   const [scheduleLine, setScheduleLine] = useState<string | null>(null);
 
-  const { arrivals: todasLasLlegadas, loading: loadingArrivals } = useStopArrivals(id);
+  const {
+    arrivals: todasLasLlegadas,
+    loading: loadingArrivals,
+    error: errorArrivals,
+  } = useStopArrivals(id);
   const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
 
   /** Con "sólo con rampa", las que no la tienen o no se sabe quedan afuera. */
@@ -302,6 +306,15 @@ export default function ParadaDetailPage() {
 
         {loadingArrivals ? (
           <SkeletonList rows={2} className="mt-3" />
+        ) : errorArrivals && arrivals.length === 0 ? (
+          // No se pudo preguntar: no es lo mismo que "ninguno en camino", y
+          // el horario de abajo -que se pidió aparte- sigue valiendo.
+          <div className="mt-3">
+            <InlineNotice
+              tone="warn"
+              message="No pudimos traer las llegadas en vivo. Seguimos intentando; el horario de abajo sigue valiendo."
+            />
+          </div>
         ) : arrivals.length > 0 ? (
           <div className="card mt-3 flex flex-col gap-3.5">
             {arrivals.map((arrival) => (

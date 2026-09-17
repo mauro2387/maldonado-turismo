@@ -44,7 +44,7 @@ export function ParadaGuardadaCard({
   /** Cuánto hay hasta ahí desde donde está la persona, si se sabe. */
   distanceM: number | null;
 }) {
-  const { arrivals: todas, loading } = useStopArrivals(parada.id);
+  const { arrivals: todas, loading, error } = useStopArrivals(parada.id);
   const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
   const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
 
@@ -115,6 +115,12 @@ export function ParadaGuardadaCard({
           <div className="skeleton h-4 w-3/5" />
           <div className="skeleton h-4 w-2/5" />
         </div>
+      ) : error && arrivals.length === 0 ? (
+        // No es "no viene ninguno": no se pudo preguntar. Decir lo otro con
+        // la red caída es convertir ignorancia en dato.
+        <p className="mt-2.5 text-xs text-warn">
+          No pudimos traer las llegadas. Seguimos intentando.
+        </p>
       ) : arrivals.length > 0 ? (
         <div className="flex flex-col divide-y divide-sand-200">
           {arrivals.slice(0, MAX_LLEGADAS).map((arrival) => (
