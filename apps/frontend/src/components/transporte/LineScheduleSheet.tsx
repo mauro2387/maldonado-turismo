@@ -3,6 +3,7 @@ import { X, Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import { transportService, LineTimetable } from '@services/transportService';
 import { SheetGrab } from '@components/ui/SheetGrab';
 import { formatStopName } from '@lib/stopNames';
+import { fechaDeGuardado } from '@lib/guardadoLocal';
 
 /**
  * El horario publicado de una línea.
@@ -97,6 +98,17 @@ export function LineScheduleSheet({ label, onClose }: { label: string; onClose: 
         </div>
 
         {loading && <p className="mt-6 text-sm text-ink-400">Cargando el horario…</p>}
+
+        {/* Vino del respaldo del teléfono y no de la red. Se dice arriba de
+            la tabla y con la fecha: el papel de la empresa cambia de
+            temporada, y un horario de invierno mirado en enero sin aviso es
+            un ómnibus que no pasa. */}
+        {!loading && schedule?.offline && schedule.guardado_el && (
+          <div className="mt-4 rounded-card bg-warn-soft px-3.5 py-2.5 text-xs font-semibold text-warn">
+            Sin conexión. Este es el horario guardado el {fechaDeGuardado(schedule.guardado_el)};
+            puede haber cambiado.
+          </div>
+        )}
 
         {!loading && !schedule?.available && (
           <div className="mt-5 rounded-card bg-sand-100 px-3.5 py-4">

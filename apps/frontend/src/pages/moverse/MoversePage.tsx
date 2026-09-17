@@ -125,7 +125,7 @@ export default function MoversePage() {
   );
   const { alerts } = useAlerts();
   const { lines } = useLines();
-  const { vehicles } = useVehiclePositions(true);
+  const { vehicles, error: vehiclesError } = useVehiclePositions(true);
   // Si el GPS de las empresas está entrando. Decide entre "no viene ninguno"
   // y "no tenemos el dato", que no son lo mismo.
   const { sinGps, gpsParcial, empresasCaidas } = useTransportHealth();
@@ -654,6 +654,7 @@ export default function MoversePage() {
                           empresasCaidas,
                           guardada.operator,
                           guardada.code,
+                          vehiclesError !== null,
                         )}
                       />
                     </span>

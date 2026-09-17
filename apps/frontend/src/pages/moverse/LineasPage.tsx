@@ -13,7 +13,8 @@ import {
   estadoDeLinea,
   EstadoDeLineaChip,
 } from '@components/transporte/EstadoDeLinea';
-import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
+import { fechaDeGuardado } from '@lib/guardadoLocal';
 import { Estrella } from '@components/ui/Estrella';
 import { useLoTuyoStore } from '@store/loTuyoStore';
 import { operatorName } from '@lib/operators';
@@ -76,7 +77,7 @@ function porDondePasa(line: TransportLine): string {
 }
 
 export default function LineasPage() {
-  const { lines, loading, error } = useLines();
+  const { lines, loading, error, guardadoEl } = useLines();
   const [query, setQuery] = useState('');
 
   /** La línea cuyo horario está abierto. */
@@ -90,7 +91,7 @@ export default function LineasPage() {
    * empresa no reporta. Es lo que faltaba al lado del número: "24 · 2
    * recorridos" no dice si vale la pena ir a la parada.
    */
-  const { vehicles } = useVehiclePositions(true);
+  const { vehicles, error: vehiclesError } = useVehiclePositions(true);
   const { empresasCaidas } = useTransportHealth();
   const porLinea = useMemo(() => cochesPorLinea(vehicles), [vehicles]);
 
@@ -152,6 +153,15 @@ export default function LineasPage() {
       <div className="mx-auto max-w-2xl px-4 pt-4">
         {error && <ErrorState message={error} />}
 
+        {guardadoEl !== null && (
+          <div className="mb-3">
+            <InlineNotice
+              tone="warn"
+              message={`Sin conexión. Esta es la lista guardada el ${fechaDeGuardado(guardadoEl)}; los horarios que abriste con señal también están guardados.`}
+            />
+          </div>
+        )}
+
         {loading && !error && <SkeletonList rows={4} />}
 
         {!loading && !error && shown.length === 0 && (
@@ -187,7 +197,13 @@ export default function LineasPage() {
                     </p>
                     <p className="mt-1.5">
                       <EstadoDeLineaChip
-                        estado={estadoDeLinea(porLinea, empresasCaidas, line.operator, line.line_code)}
+                        estado={estadoDeLinea(
+                          porLinea,
+                          empresasCaidas,
+                          line.operator,
+                          line.line_code,
+                          vehiclesError !== null,
+                        )}
                       />
                     </p>
                   </div>

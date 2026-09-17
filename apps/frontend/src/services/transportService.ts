@@ -1,4 +1,5 @@
 import { api } from '@lib/apiClient';
+import { guardar, leer } from '@lib/guardadoLocal';
 
 export interface BusStop {
   id: number;
@@ -311,6 +312,14 @@ export interface RouteShapeStop {
 export interface LineTimetable {
   /** False cuando la línea no tiene horario cargado para la temporada de hoy. */
   available: boolean;
+  /**
+   * True cuando esto no vino de la red sino del respaldo guardado en el
+   * teléfono, porque el pedido falló. `guardado_el` dice de cuándo es. La
+   * pantalla lo tiene que decir: un horario viejo mostrado como actual es
+   * peor que ninguno.
+   */
+  offline?: boolean;
+  guardado_el?: number;
   line_label?: string;
   /** invierno | verano. */
   season?: string;
@@ -534,7 +543,18 @@ export const transportService = {
 
   /** Las líneas que circulan, con sus recorridos de ida y de vuelta. */
   getLines: async (): Promise<TransportLine[]> => {
-    return api.get<TransportLine[]>('/transport/lines');
+    const lines = await api.get<TransportLine[]>('/transport/lines');
+    if (lines.length > 0) guardar('lineas', lines);
+    return lines;
+  },
+
+  /**
+   * El catálogo de líneas como se vio la última vez con señal, o null si
+   * nunca se vio. Para la lista de líneas sin conexión; ver `useLines`.
+   */
+  getLinesGuardadas: (): { lines: TransportLine[]; guardadoEl: number } | null => {
+    const respaldo = leer<TransportLine[]>('lineas');
+    return respaldo ? { lines: respaldo.valor, guardadoEl: respaldo.guardadoEl } : null;
   },
 
   /**
@@ -542,7 +562,20 @@ export const transportService = {
    * no tiene horario cargado para la temporada de hoy.
    */
   getLineSchedule: async (label: string): Promise<LineTimetable> => {
-    return api.get<LineTimetable>(`/transport/lines/${encodeURIComponent(label)}/schedule`);
+    const clave = `horario:${label}`;
+    try {
+      const timetable = await api.get<LineTimetable>(
+        `/transport/lines/${encodeURIComponent(label)}/schedule`,
+      );
+      // Lo que se vio con señal se guarda para cuando no haya: el horario
+      // de la 24 se necesita justo en la Ruta 10, donde no hay datos.
+      if (timetable.available) guardar(clave, timetable);
+      return timetable;
+    } catch (error) {
+      const respaldo = leer<LineTimetable>(clave);
+      if (!respaldo) throw error;
+      return { ...respaldo.valor, offline: true, guardado_el: respaldo.guardadoEl };
+    }
   },
 
   /**

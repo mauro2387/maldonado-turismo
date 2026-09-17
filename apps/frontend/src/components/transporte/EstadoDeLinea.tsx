@@ -19,12 +19,16 @@ import { operatorName } from '@lib/operators';
  *   el horario de la línea es el que lo dice.
  * - **Sin GPS de la empresa**: no se sabe. No es "sin coches": es que no hay
  *   dato, y la app no convierte ignorancia en un cero.
+ * - **Sin conexión**: tampoco se sabe, pero por el teléfono y no por la
+ *   empresa. Sin esto, con la red caída la lista de coches llega vacía y
+ *   todas las líneas decían "sin coches", que es la misma mentira.
  */
 
 export type EstadoDeLinea =
   | { tipo: 'en-calle'; coches: number }
   | { tipo: 'sin-coches' }
-  | { tipo: 'sin-gps'; empresa: string };
+  | { tipo: 'sin-gps'; empresa: string }
+  | { tipo: 'sin-conexion' };
 
 /**
  * Cuántos coches en servicio está haciendo cada línea, por empresa y código.
@@ -47,7 +51,10 @@ export function estadoDeLinea(
   empresasCaidas: string[],
   operator: string,
   lineCode: string,
+  /** El pedido de posiciones falló: no hay con qué contar. */
+  sinConexion = false,
 ): EstadoDeLinea {
+  if (sinConexion) return { tipo: 'sin-conexion' };
   if (empresasCaidas.includes(operator)) {
     return { tipo: 'sin-gps', empresa: operatorName(operator) };
   }
@@ -69,6 +76,14 @@ export function EstadoDeLineaChip({ estado }: { estado: EstadoDeLinea }) {
     return (
       <span className="inline-flex items-center rounded-chip bg-warn-soft px-1.5 py-0.5 text-xs font-semibold text-warn">
         Sin GPS de {estado.empresa}
+      </span>
+    );
+  }
+
+  if (estado.tipo === 'sin-conexion') {
+    return (
+      <span className="text-xs font-semibold text-ink-400">
+        Sin conexión: no sabemos si hay coches en la calle
       </span>
     );
   }

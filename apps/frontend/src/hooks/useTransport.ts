@@ -129,6 +129,12 @@ export function useLines() {
   const [lines, setLines] = useState<TransportLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Cuándo se guardó lo que se está mostrando, si no vino de la red. Null
+   * es "es de ahora". La pantalla lo dice: una lista vieja presentada como
+   * actual es peor que ninguna.
+   */
+  const [guardadoEl, setGuardadoEl] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,10 +142,21 @@ export function useLines() {
     transportService
       .getLines()
       .then((data) => {
-        if (!cancelled) setLines(data);
+        if (cancelled) return;
+        setLines(data);
+        setGuardadoEl(null);
       })
       .catch((err: any) => {
-        if (!cancelled) setError(err?.message ?? 'No pudimos traer las líneas');
+        if (cancelled) return;
+        // Sin red, lo último que se vio con red. Sólo si existe: sin
+        // respaldo el error se muestra como siempre.
+        const respaldo = transportService.getLinesGuardadas();
+        if (respaldo) {
+          setLines(respaldo.lines);
+          setGuardadoEl(respaldo.guardadoEl);
+        } else {
+          setError(err?.message ?? 'No pudimos traer las líneas');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -150,5 +167,5 @@ export function useLines() {
     };
   }, []);
 
-  return { lines, loading, error };
+  return { lines, loading, error, guardadoEl };
 }
