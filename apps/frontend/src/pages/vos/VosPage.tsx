@@ -1,8 +1,20 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Newspaper, QrCode, Route, Languages, ChevronRight, Accessibility } from 'lucide-react';
+import {
+  Newspaper,
+  QrCode,
+  Route,
+  Languages,
+  ChevronRight,
+  Accessibility,
+  Home,
+  Briefcase,
+} from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { InlineNotice } from '@components/ui/States';
+import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 
 /**
  * Vos.
@@ -46,9 +58,88 @@ export default function VosPage() {
   const { i18n } = useTranslation();
   const { granted, status, message, request } = useGeolocation(false);
 
+  const loTuyo = useLoTuyoStore();
+  /** Cuál de los dos se está cambiando en el sheet, si alguno. */
+  const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
+
+  const LUGARES_FIJOS = [
+    { key: 'casa' as const, icon: Home, titulo: 'Tu casa', lugar: loTuyo.casa },
+    { key: 'trabajo' as const, icon: Briefcase, titulo: 'Tu trabajo', lugar: loTuyo.trabajo },
+  ];
+
   return (
     <div className="mx-auto max-w-3xl px-4 pb-8 pt-4 md:px-6 md:pt-8">
       <h1 className="text-display text-ink-900">Vos</h1>
+
+      {/* ---------- Tu casa y tu trabajo ----------
+          Se ponen desde Moverse la primera vez; acá es donde se cambian. Es
+          la única pantalla que es "del usuario", y una casa se muda. */}
+      <section className="mt-5" aria-labelledby="tus-lugares">
+        <h2 id="tus-lugares" className="section-label">
+          Tus lugares
+        </h2>
+        <div className="mt-2.5 flex flex-col gap-2">
+          {LUGARES_FIJOS.map(({ key, icon: Icon, titulo, lugar }) => (
+            <button
+              key={key}
+              onClick={() => setConfigurando(key)}
+              className="card flex items-center gap-3.5 py-3.5 text-left"
+            >
+              <span
+                className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${
+                  lugar ? 'bg-ink-900 text-white' : 'bg-sand-100 text-ink-600'
+                }`}
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-data font-bold text-ink-900">{titulo}</p>
+                <p className="truncate text-xs text-ink-400">
+                  {lugar ? lugar.name : 'Todavía no la pusiste. Tocá para elegirla.'}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+            </button>
+          ))}
+        </div>
+        {(loTuyo.lugares.length > 0 || loTuyo.paradas.length > 0 || loTuyo.lineas.length > 0) && (
+          <p className="mt-2 px-1 text-xs text-ink-400">
+            Además guardaste{' '}
+            {[
+              loTuyo.lugares.length > 0 &&
+                `${loTuyo.lugares.length} ${loTuyo.lugares.length === 1 ? 'lugar' : 'lugares'}`,
+              loTuyo.paradas.length > 0 &&
+                `${loTuyo.paradas.length} ${loTuyo.paradas.length === 1 ? 'parada' : 'paradas'}`,
+              loTuyo.lineas.length > 0 &&
+                `${loTuyo.lineas.length} ${loTuyo.lineas.length === 1 ? 'línea' : 'líneas'}`,
+            ]
+              .filter(Boolean)
+              .join(', ')}
+            . Están en Moverse; se quitan con la misma estrella.
+          </p>
+        )}
+        <p className="mt-2 px-1 text-xs text-ink-300">
+          Todo esto se guarda en este teléfono, no en una cuenta.
+        </p>
+      </section>
+
+      {configurando && (
+        <ElegirLugarSheet
+          titulo={configurando === 'casa' ? 'Tu casa' : 'Tu trabajo'}
+          actual={configurando === 'casa' ? loTuyo.casa : loTuyo.trabajo}
+          onPick={(lugar) => {
+            if (configurando === 'casa') loTuyo.setCasa(lugar);
+            else loTuyo.setTrabajo(lugar);
+            setConfigurando(null);
+          }}
+          onRemove={() => {
+            if (configurando === 'casa') loTuyo.setCasa(null);
+            else loTuyo.setTrabajo(null);
+            setConfigurando(null);
+          }}
+          onClose={() => setConfigurando(null)}
+        />
+      )}
 
       {/* ---------- Herramientas ---------- */}
       <section className="mt-5" aria-labelledby="herramientas">

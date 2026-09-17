@@ -5,12 +5,27 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { usePlace } from '@hooks/usePlaces';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 
 export default function PlaceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+
+  /**
+   * El corazón guarda de verdad.
+   *
+   * Era un `useState(false)`: se pintaba de rojo y se olvidaba al salir de la
+   * ficha. Ahora va a "tus lugares", que es lo mismo que la estrella del
+   * planificador, así que el lugar aparece como chip en Moverse y se puede ir
+   * en ómnibus con un toque. El id lleva el prefijo para no chocar con los
+   * ids del buscador de destinos, que son otra numeración.
+   */
+  const lugarId = `lugar:${id}`;
+  const isFavorite = useLoTuyoStore((estado) =>
+    estado.lugares.some((lugar) => lugar.id === lugarId),
+  );
+  const toggleLugar = useLoTuyoStore((estado) => estado.toggleLugar);
 
   // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
   // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
@@ -107,7 +122,16 @@ export default function PlaceDetailPage() {
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsFavorite(!isFavorite)}
+              onClick={() => {
+                const lat = place.lat ?? place.latitude;
+                const lng = place.lng ?? place.longitude;
+                // Sin coordenada no hay a dónde ir: no se guarda un lugar al
+                // que después no se puede planificar.
+                if (typeof lat !== 'number' || typeof lng !== 'number') return;
+                toggleLugar({ id: lugarId, name: place.name, lat, lng });
+              }}
+              aria-pressed={isFavorite}
+              aria-label={isFavorite ? 'Quitar de tus lugares' : 'Guardar en tus lugares'}
               className="btn-ghost rounded-full p-2"
             >
               <Heart

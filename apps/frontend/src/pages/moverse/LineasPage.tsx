@@ -7,6 +7,8 @@ import { LineTag } from '@components/ui/LineTag';
 import { lineColor } from '@components/transporte/ArrivalRow';
 import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { Estrella } from '@components/ui/Estrella';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 import { operatorName } from '@lib/operators';
 import { normalizeStopName } from '@lib/stopNames';
 
@@ -73,19 +75,31 @@ export default function LineasPage() {
   /** La línea cuyo horario está abierto. */
   const [schedule, setSchedule] = useState<string | null>(null);
 
+  const guardadas = useLoTuyoStore((estado) => estado.lineas);
+  const toggleLinea = useLoTuyoStore((estado) => estado.toggleLinea);
+
+  const estaGuardada = (line: TransportLine) =>
+    guardadas.some(
+      (guardada) => guardada.operator === line.operator && guardada.code === line.line_code,
+    );
+
   const shown = useMemo(
     () =>
       lines
         .filter((line) => matches(line, query))
         // Por número y no por el orden en que los devuelva la base: es como
-        // están impresas en los carteles y como las nombra la gente.
+        // están impresas en los carteles y como las nombra la gente. Las
+        // guardadas van primero: son las que se vienen a mirar.
         .sort((a, b) => {
+          const ga = estaGuardada(a) ? 0 : 1;
+          const gb = estaGuardada(b) ? 0 : 1;
+          if (ga !== gb) return ga - gb;
           const na = Number(a.line_code);
           const nb = Number(b.line_code);
           if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
           return (a.line_label ?? a.line_code).localeCompare(b.line_label ?? b.line_code);
         }),
-    [lines, query],
+    [lines, query, guardadas],
   );
 
   return (
@@ -156,6 +170,14 @@ export default function LineasPage() {
                       {line.stops_count} paradas
                     </p>
                   </div>
+                  <Estrella
+                    activa={estaGuardada(line)}
+                    que={`la línea ${label}`}
+                    onToggle={() =>
+                      toggleLinea({ code: line.line_code, label, operator: line.operator })
+                    }
+                    className="-mr-2 -mt-2"
+                  />
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">

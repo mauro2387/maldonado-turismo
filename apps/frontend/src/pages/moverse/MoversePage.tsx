@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Bus, AlertTriangle, Clock, Map as MapIcon } from 'lucide-react';
+import {
+  Search,
+  ChevronRight,
+  Bus,
+  AlertTriangle,
+  Clock,
+  Map as MapIcon,
+  Home,
+  Briefcase,
+  Star,
+  History,
+  Plus,
+} from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useNearbyDepartures, useVehiclePositions } from '@hooks/useDepartures';
 import { useAlerts, useLines } from '@hooks/useTransport';
@@ -8,11 +20,15 @@ import { useTransportHealth } from '@hooks/useTransportHealth';
 import { Arrival, NearbyDeparture, TransportLine } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
 import { ArrivalRow, lineColor } from '@components/transporte/ArrivalRow';
+import { ParadaGuardadaCard } from '@components/transporte/ParadaGuardadaCard';
+import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
+import { Estrella } from '@components/ui/Estrella';
 import { LiveIndicator, freshestFixAge } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
-import { formatDistance, walkingMinutes } from '@lib/geo';
+import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
 import { operatorName } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
+import { enlaceParaIr, estaGuardado, useLoTuyoStore } from '@store/loTuyoStore';
 
 /**
  * Moverse.
@@ -30,8 +46,15 @@ import { formatStopName } from '@lib/stopNames';
  * una app de transporte y estaba a seis pantallazos de scroll.
  *
  * De arriba abajo: a dónde vas, si el GPS de alguna empresa no está entrando,
- * los avisos de servicio, el mapa en vivo, los que te pasan cerca —una fila
- * por línea, no por coche— y las líneas con sus horarios.
+ * los avisos de servicio, el mapa en vivo, tus paradas, los que te pasan
+ * cerca —una fila por línea, no por coche—, tus líneas y las líneas con sus
+ * horarios.
+ *
+ * **Y lo tuyo va antes que lo de todos.** Debajo del buscador están tu casa,
+ * tu trabajo, los lugares que guardaste y a dónde fuiste últimamente, antes
+ * que los destinos que se piden mucho en general: para quien toma el ómnibus
+ * todos los días el viaje es siempre el mismo, y escribirlo cada vez era el
+ * costo más alto de la app. Ver `loTuyoStore`.
  *
  * Cada renglón lleva al mapa con ese coche ya elegido: ahí se ve por dónde
  * viene, en qué parada conviene esperarlo, cuánto hay que caminar hasta ella y
@@ -81,6 +104,10 @@ export default function MoversePage() {
   const { coords, granted, status, message, request } = useGeolocation();
   const [radiusIndex, setRadiusIndex] = useState(0);
   const [query, setQuery] = useState('');
+  /** Cuál de los dos se está configurando en el sheet, si alguno. */
+  const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
+
+  const loTuyo = useLoTuyoStore();
 
   const { stops, ready, loading, error, refetch } = useNearbyDepartures(
     coords,
@@ -198,6 +225,21 @@ export default function MoversePage() {
 
   const canWidenSearch = radiusIndex < RADIUS_OPTIONS.length - 1;
 
+  /**
+   * A dónde fuiste últimamente, sin lo que ya tiene su propio chip: si el
+   * último viaje fue a casa, "A casa" ya está a la izquierda y repetirlo como
+   * reciente es ocupar un lugar con nada.
+   */
+  const recientes = loTuyo.recientes.filter((lugar) => !estaGuardado(loTuyo, lugar.id));
+
+  /**
+   * Cuánto hay hasta cada parada guardada. Sólo con la ubicación real: desde
+   * el centro de Maldonado la distancia a la parada de tu casa es un número
+   * que no significa nada.
+   */
+  const distanciaA = (lat: number, lng: number) =>
+    granted ? distanceMeters(coords.lat, coords.lng, lat, lng) : null;
+
   const submitSearch = (destination: string) => {
     const value = destination.trim();
     if (!value) return;
@@ -260,6 +302,68 @@ export default function MoversePage() {
           />
         </div>
 
+        {/* Lo tuyo primero. Casa y trabajo están siempre, configurados o no:
+            un chip que dice "Agregá tu casa" es la única forma de que alguien
+            descubra que se puede. */}
+        <div className="chip-row mt-2">
+          <button
+            type="button"
+            onClick={() =>
+              loTuyo.casa ? navigate(enlaceParaIr(loTuyo.casa)) : setConfigurando('casa')
+            }
+            className={`chip ${loTuyo.casa ? 'chip-active' : 'border-dashed'}`}
+          >
+            {loTuyo.casa ? (
+              <Home className="h-3.5 w-3.5" strokeWidth={2.5} />
+            ) : (
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            )}
+            {loTuyo.casa ? 'A casa' : 'Agregá tu casa'}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              loTuyo.trabajo
+                ? navigate(enlaceParaIr(loTuyo.trabajo))
+                : setConfigurando('trabajo')
+            }
+            className={`chip ${loTuyo.trabajo ? 'chip-active' : 'border-dashed'}`}
+          >
+            {loTuyo.trabajo ? (
+              <Briefcase className="h-3.5 w-3.5" strokeWidth={2.5} />
+            ) : (
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            )}
+            {loTuyo.trabajo ? 'Al trabajo' : 'Agregá tu trabajo'}
+          </button>
+
+          {loTuyo.lugares.map((lugar) => (
+            <button
+              key={lugar.id}
+              type="button"
+              onClick={() => navigate(enlaceParaIr(lugar))}
+              className="chip"
+            >
+              <Star className="h-3.5 w-3.5 fill-coral-500 text-coral-500" strokeWidth={2} />
+              {lugar.name}
+            </button>
+          ))}
+
+          {recientes.map((lugar) => (
+            <button
+              key={lugar.id}
+              type="button"
+              onClick={() => navigate(enlaceParaIr(lugar))}
+              className="chip"
+            >
+              <History className="h-3.5 w-3.5 text-ink-400" strokeWidth={2} />
+              {lugar.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Los de todos, en su propia fila: después de lo tuyo, y sin
+            mezclarse con lo tuyo. */}
         <div className="chip-row mt-2">
           {QUICK_DESTINATIONS.map((destination) => (
             <button
@@ -273,6 +377,19 @@ export default function MoversePage() {
           ))}
         </div>
       </form>
+
+      {configurando && (
+        <ElegirLugarSheet
+          titulo={configurando === 'casa' ? 'Tu casa' : 'Tu trabajo'}
+          actual={configurando === 'casa' ? loTuyo.casa : loTuyo.trabajo}
+          onPick={(lugar) => {
+            if (configurando === 'casa') loTuyo.setCasa(lugar);
+            else loTuyo.setTrabajo(lugar);
+            setConfigurando(null);
+          }}
+          onClose={() => setConfigurando(null)}
+        />
+      )}
 
       {/* ---------- Si el GPS de alguna empresa no está entrando ----------
           El dato existía y sólo lo usaba la portada. Sin esto, cuando un feed
@@ -339,6 +456,28 @@ export default function MoversePage() {
             action={{ label: 'Activar', onClick: request }}
           />
         </div>
+      )}
+
+      {/* ---------- Tus paradas ----------
+          Las que guardaste con la estrella, con sus llegadas en vivo. Van
+          antes que "los que te pasan ahora" porque son una respuesta a una
+          pregunta que la persona ya hizo; lo que hay cerca es una respuesta a
+          una que capaz no hizo. */}
+      {loTuyo.paradas.length > 0 && (
+        <section className="mt-6" aria-labelledby="tus-paradas">
+          <h2 id="tus-paradas" className="section-label">
+            Tus paradas
+          </h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {loTuyo.paradas.map((parada) => (
+              <ParadaGuardadaCard
+                key={parada.id}
+                parada={parada}
+                distanceM={distanciaA(parada.lat, parada.lng)}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ---------- Los que te pasan ahora ---------- */}
@@ -444,6 +583,57 @@ export default function MoversePage() {
           </button>
         )}
       </section>
+
+      {/* ---------- Tus líneas ----------
+          Las que guardaste. Cada una abre el mapa con sus recorridos, como
+          las de abajo; si el catálogo la tiene se muestra con sus puntas, y si
+          hoy no figura se dice, que es distinto de esconderla. */}
+      {loTuyo.lineas.length > 0 && (
+        <section className="mt-7" aria-labelledby="tus-lineas">
+          <h2 id="tus-lineas" className="section-label">
+            Tus líneas
+          </h2>
+          <div className="mt-3 flex flex-col gap-2">
+            {loTuyo.lineas.map((guardada) => {
+              const line = lines.find(
+                (candidate) =>
+                  candidate.operator === guardada.operator &&
+                  candidate.line_code === guardada.code,
+              );
+
+              return (
+                <Link
+                  key={`${guardada.operator}-${guardada.code}`}
+                  to={`/moverse/bondis?linea=${encodeURIComponent(guardada.code)}`}
+                  className="card flex items-center gap-3 py-3"
+                >
+                  <LineTag code={guardada.label} color={lineColor(guardada.operator)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-data font-bold text-ink-900">
+                      {line ? lineEndpoints(line) : operatorName(guardada.operator)}
+                    </span>
+                    <span className="block truncate text-xs text-ink-400">
+                      {line
+                        ? `${line.itineraries.length} ${
+                            line.itineraries.length === 1 ? 'recorrido' : 'recorridos'
+                          } · ${line.stops_count} paradas`
+                        : lines.length > 0
+                          ? 'Hoy no figura en el catálogo de recorridos'
+                          : operatorName(guardada.operator)}
+                    </span>
+                  </span>
+                  <Estrella
+                    activa
+                    que={`la línea ${guardada.label}`}
+                    onToggle={() => loTuyo.toggleLinea(guardada)}
+                    className="-my-2 -mr-2"
+                  />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ---------- Las líneas ----------
           La pregunta que la gente hace no es "¿qué paradas hay?" sino "¿por

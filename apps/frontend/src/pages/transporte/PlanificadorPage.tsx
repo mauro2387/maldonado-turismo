@@ -10,6 +10,7 @@ import {
   MapPin,
   MapPinned,
   RouteOff,
+  Star,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
@@ -20,6 +21,8 @@ import { ABordo } from '@components/transporte/ABordo';
 import { BondiSprite } from '@components/transporte/BondiSprite';
 import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
+import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet';
+import { estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
@@ -51,6 +54,12 @@ import { formatStopName } from '@lib/stopNames';
  * así que no hay punto verde de "en vivo", no hay ómnibus dibujado y no hay
  * "ya me subí". Y deja de hablarse en relativo: "salí en 13 min" no significa
  * nada para un viaje de mañana. Ver `clockIn`.
+ *
+ * **Y el destino puede venir ya resuelto.** `?destino=<texto>` se busca y se
+ * elige el primer resultado, que sirve desde una ficha con nombre y no sirve
+ * para "casa": eso no está en ningún catálogo. `?lat=&lng=&nombre=` va directo
+ * con la coordenada; es lo que usan los chips de lo tuyo y lo que va a usar
+ * compartir un viaje.
  */
 
 /** Lo que se espera después de la última tecla antes de salir a buscar. */
@@ -66,18 +75,74 @@ const SEARCH_DEBOUNCE_MS = 250;
  * punto para poder mandarlo. Ver `DestinoEnMapa`.
  */
 interface Destino {
+  /**
+   * El id del catálogo si lo tiene. Es lo que permite reconocer el mismo
+   * lugar al guardarlo; sin id se usa la coordenada, ver `idDePunto`.
+   */
+  id?: string;
   name: string;
   lat: number;
   lng: number;
 }
 
+/**
+ * Un resultado del buscador, como destino.
+ *
+ * El nombre de una parada llega como lo escribe la empresa ("TNAL MALDONADO")
+ * y así iba a parar al renglón del destino, a la lista de recientes y al chip
+ * de Moverse. Se escribe como se lee, igual que en la lista de sugerencias.
+ */
+function destinoDeSugerencia(suggestion: Destination): Destino {
+  return {
+    id: suggestion.id,
+    name: suggestion.source === 'parada' ? formatStopName(suggestion.name) : suggestion.name,
+    lat: suggestion.lat,
+    lng: suggestion.lng,
+  };
+}
+
+/** El id con el que este destino se guarda y se reconoce entre lo tuyo. */
+function idDeDestino(destino: Destino): string {
+  return destino.id ?? idDePunto(destino.lat, destino.lng);
+}
+
+/**
+ * Un destino que llega por la URL con su coordenada.
+ *
+ * Sólo si los dos números son números y caen en un lugar del mundo: una URL
+ * se escribe a mano, se pega cortada, se manda por WhatsApp. Con la coordenada
+ * rota se ignora y la pantalla arranca vacía, que es lo que haría sin ella.
+ */
+function destinoDeLaUrl(params: URLSearchParams): Destino | null {
+  const lat = Number(params.get('lat'));
+  const lng = Number(params.get('lng'));
+  if (!params.has('lat') || !params.has('lng')) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+
+  const nombre = params.get('nombre')?.trim();
+  // El id viaja para que la estrella reconozca un lugar guardado desde el
+  // buscador: sin él, el mismo hospital llegaría como un punto sin nombre en
+  // el catálogo y se vería como no guardado.
+  const id = params.get('id')?.trim();
+  return { id: id || undefined, name: nombre || 'Punto en el mapa', lat, lng };
+}
+
 export default function PlanificadorPage() {
   const [searchParams] = useSearchParams();
   const { coords, granted } = useGeolocation();
+  const loTuyo = useLoTuyoStore();
+  const agregarReciente = loTuyo.agregarReciente;
 
-  const [query, setQuery] = useState(searchParams.get('destino') ?? '');
+  const [query, setQuery] = useState(
+    () => destinoDeLaUrl(searchParams)?.name ?? searchParams.get('destino') ?? '',
+  );
   const [suggestions, setSuggestions] = useState<Destination[]>([]);
-  const [destination, setDestination] = useState<Destino | null>(null);
+  const [destination, setDestination] = useState<Destino | null>(() =>
+    destinoDeLaUrl(searchParams),
+  );
+  /** El sheet de "guardar este destino", abierto. */
+  const [saving, setSaving] = useState(false);
   /** El selector de punto en el mapa, abierto. */
   const [pickingOnMap, setPickingOnMap] = useState(false);
   /**
@@ -138,8 +203,9 @@ export default function PlanificadorPage() {
           // llegar" en una ficha ya dijo a dónde va.
           if (!resolvedFromUrl.current && searchParams.get('destino') && results.length > 0) {
             resolvedFromUrl.current = true;
-            setDestination(results[0]);
-            setQuery(results[0].name);
+            const elegido = destinoDeSugerencia(results[0]);
+            setDestination(elegido);
+            setQuery(elegido.name);
           }
         })
         .catch(() => {
@@ -177,6 +243,12 @@ export default function PlanificadorPage() {
         setReady(result.ready);
         setReturnTrip(result.return_trip ?? null);
         setPlannedFor(result.planned_for ? new Date(result.planned_for).getTime() : null);
+        // A dónde fuiste últimamente. Se anota cuando el viaje se pudo
+        // calcular y no al elegir el destino: un lugar al que no se llega en
+        // ómnibus no es un viaje reciente, es una búsqueda fallida.
+        if (result.options.length > 0) {
+          agregarReciente({ ...destination, id: idDeDestino(destination) });
+        }
       })
       .catch((err: any) => {
         if (!cancelled) setError(err?.message || 'No pudimos calcular el viaje');
@@ -190,9 +262,14 @@ export default function PlanificadorPage() {
     return () => {
       cancelled = true;
     };
+    // `agregarReciente` no va en las dependencias: zustand no lo recrea, y
+    // ponerlo sólo sugeriría que un cambio en él vuelve a planificar.
   }, [destination, coords.lat, coords.lng, granted, departAt]);
 
   const current = options[selected];
+
+  /** Si el destino elegido ya está entre lo tuyo, para pintar la estrella. */
+  const destinoGuardado = destination ? estaGuardado(loTuyo, idDeDestino(destination)) : false;
 
   /**
    * El viaje que se está mostrando es de más tarde.
@@ -257,6 +334,25 @@ export default function PlanificadorPage() {
             aria-label="Destino"
             className="w-full bg-transparent text-sm font-bold text-white placeholder:font-semibold placeholder:text-ink-300 focus:outline-none"
           />
+          {/* Guardar el destino: como casa, como trabajo o en tus lugares.
+              Sólo con un destino elegido; guardar lo que se está escribiendo
+              no significa nada. */}
+          {destination && (
+            <button
+              type="button"
+              onClick={() => setSaving(true)}
+              aria-pressed={destinoGuardado}
+              aria-label={destinoGuardado ? 'Destino guardado' : 'Guardar este destino'}
+              className="-my-2 -mr-2 flex h-10 w-10 flex-none items-center justify-center rounded-full active:bg-white/10"
+            >
+              <Star
+                className={`h-5 w-5 ${
+                  destinoGuardado ? 'fill-coral-500 text-coral-500' : 'text-ink-300'
+                }`}
+                strokeWidth={2}
+              />
+            </button>
+          )}
         </div>
 
         {/*
@@ -321,6 +417,14 @@ export default function PlanificadorPage() {
         )}
       </div>
 
+      {/* ---------- Guardar el destino ---------- */}
+      {saving && destination && (
+        <GuardarDestinoSheet
+          lugar={{ ...destination, id: idDeDestino(destination) }}
+          onClose={() => setSaving(false)}
+        />
+      )}
+
       {/* ---------- El destino, marcado con el dedo ---------- */}
       {pickingOnMap && (
         <DestinoEnMapa
@@ -344,8 +448,9 @@ export default function PlanificadorPage() {
             <li key={suggestion.id}>
               <button
                 onClick={() => {
-                  setDestination(suggestion);
-                  setQuery(suggestion.name);
+                  const elegido = destinoDeSugerencia(suggestion);
+                  setDestination(elegido);
+                  setQuery(elegido.name);
                   setSuggestions([]);
                 }}
                 className="flex w-full items-center gap-3 px-4 py-3 text-left"

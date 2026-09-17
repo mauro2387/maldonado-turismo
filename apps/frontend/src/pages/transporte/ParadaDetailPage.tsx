@@ -20,6 +20,8 @@ import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/ui/States';
 import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
+import { Estrella } from '@components/ui/Estrella';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 import { operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
@@ -53,6 +55,16 @@ export default function ParadaDetailPage() {
   const [scheduleLine, setScheduleLine] = useState<string | null>(null);
 
   const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
+
+  /**
+   * Si esta parada está guardada. La estrella va en el encabezado, al lado
+   * del nombre: es la parada de la esquina de casa, y quien la escanea todas
+   * las mañanas tiene que poder dejar de escanearla.
+   */
+  const guardada = useLoTuyoStore((estado) =>
+    estado.paradas.some((parada) => parada.id === Number(id)),
+  );
+  const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
 
   /**
    * El horario publicado de esta parada.
@@ -172,11 +184,26 @@ export default function ParadaDetailPage() {
       <header>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-display text-ink-900">{formatStopName(stop.name)}</h1>
-          {stop.code && (
-            <span className="mt-1 flex-none rounded-chip bg-sand-100 px-2 py-1 text-xs font-bold text-ink-600">
-              {stop.code}
-            </span>
-          )}
+          <div className="flex flex-none items-center gap-1">
+            {stop.code && (
+              <span className="rounded-chip bg-sand-100 px-2 py-1 text-xs font-bold text-ink-600">
+                {stop.code}
+              </span>
+            )}
+            <Estrella
+              activa={guardada}
+              que="esta parada"
+              onToggle={() =>
+                toggleParada({
+                  id: stop.id,
+                  name: formatStopName(stop.name),
+                  lat: Number(stop.lat),
+                  lng: Number(stop.lng),
+                })
+              }
+              className="-my-2 -mr-2"
+            />
+          </div>
         </div>
         <p className="mt-1 flex items-center gap-1.5 text-data text-ink-400">
           <MapPin className="h-3.5 w-3.5" strokeWidth={1.9} />
