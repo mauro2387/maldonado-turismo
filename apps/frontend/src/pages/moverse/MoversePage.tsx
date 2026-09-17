@@ -34,6 +34,8 @@ import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
 import { operatorName } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { enlaceParaIr, estaGuardado, useLoTuyoStore } from '@store/loTuyoStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
+import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
 
 /**
  * Moverse.
@@ -113,6 +115,8 @@ export default function MoversePage() {
   const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
 
   const loTuyo = useLoTuyoStore();
+  /** Sólo ómnibus con rampa. Es la preferencia de toda la app, ver el store. */
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
 
   const { stops, ready, loading, error, refetch } = useNearbyDepartures(
     coords,
@@ -175,6 +179,9 @@ export default function MoversePage() {
     for (const stop of stops) {
       for (const arrival of stop.arrivals) {
         if (!catchable(arrival, stop)) continue;
+        // Con "sólo con rampa", un coche sin rampa o del que no se sabe no
+        // es una opción: ni siquiera como "y otro en N min".
+        if (soloAccesibles && arrival.accessible !== true) continue;
         const known = byVehicle.get(arrival.vehicle_id);
         if (!known || arrival.eta_minutes < known.arrival.eta_minutes) {
           byVehicle.set(arrival.vehicle_id, { arrival, stop });
@@ -199,7 +206,7 @@ export default function MoversePage() {
     }
 
     return [...byLine.values()].sort((a, b) => a.arrival.eta_minutes - b.arrival.eta_minutes);
-  }, [stops]);
+  }, [stops, soloAccesibles]);
 
   /**
    * Las mismas líneas, juntadas por la parada donde se las toma.
@@ -504,6 +511,10 @@ export default function MoversePage() {
           )}
         </div>
 
+        <div className="mt-2.5">
+          <SoloAccesiblesChip />
+        </div>
+
         {error && <ErrorState message={error} onRetry={refetch} className="mt-3" />}
 
         {loading && !error && <SkeletonList rows={3} className="mt-3" />}
@@ -515,14 +526,18 @@ export default function MoversePage() {
               stops.length === 0
                 ? 'No hay paradas a esta distancia'
                 : ready
-                  ? 'Ningún ómnibus que llegues a tomar'
+                  ? soloAccesibles
+                    ? 'Ningún ómnibus con rampa que llegues a tomar'
+                    : 'Ningún ómnibus que llegues a tomar'
                   : 'Todavía no podemos calcular llegadas'
             }
             description={
               stops.length === 0
                 ? `Buscamos en ${formatDistance(RADIUS_OPTIONS[radiusIndex])} a la redonda.`
                 : ready
-                  ? 'O no viene ninguno, o el que viene pasa antes de que llegues caminando. En el mapa podés ver dónde anda cada línea.'
+                  ? soloAccesibles
+                    ? 'De los que vienen, ninguno reporta tener rampa. Sacá el filtro para verlos igual.'
+                    : 'O no viene ninguno, o el que viene pasa antes de que llegues caminando. En el mapa podés ver dónde anda cada línea.'
                   : 'Estamos cargando los recorridos de las empresas.'
             }
             action={

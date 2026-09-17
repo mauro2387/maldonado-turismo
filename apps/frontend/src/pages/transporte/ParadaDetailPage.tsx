@@ -23,6 +23,8 @@ import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/
 import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
 import { Estrella } from '@components/ui/Estrella';
 import { useLoTuyoStore } from '@store/loTuyoStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
+import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
 import { operatorName, operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
@@ -55,7 +57,14 @@ export default function ParadaDetailPage() {
   /** La línea cuyo horario completo está abierto. */
   const [scheduleLine, setScheduleLine] = useState<string | null>(null);
 
-  const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
+  const { arrivals: todasLasLlegadas, loading: loadingArrivals } = useStopArrivals(id);
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
+
+  /** Con "sólo con rampa", las que no la tienen o no se sabe quedan afuera. */
+  const arrivals = soloAccesibles
+    ? todasLasLlegadas.filter((arrival) => arrival.accessible === true)
+    : todasLasLlegadas;
+  const llegadasOcultas = todasLasLlegadas.length - arrivals.length;
 
   /**
    * Si alguna de las empresas que pasan por acá no está reportando.
@@ -268,6 +277,15 @@ export default function ParadaDetailPage() {
           {arrivals.length > 0 && <LiveIndicator fixAgeSeconds={arrivals[0].fix_age_seconds} />}
         </div>
 
+        <div className="mt-2.5 flex items-center gap-2">
+          <SoloAccesiblesChip />
+          {llegadasOcultas > 0 && (
+            <span className="text-xs text-ink-400">
+              {llegadasOcultas === 1 ? '1 sin rampa oculto' : `${llegadasOcultas} sin rampa ocultos`}
+            </span>
+          )}
+        </div>
+
         {/* La empresa no está reportando: se dice antes que cualquier lista,
             vacía o no. Si hay dos empresas y una anda, sus coches se ven
             igual abajo; lo que no se ve es la otra, y eso hay que decirlo. */}
@@ -290,6 +308,16 @@ export default function ParadaDetailPage() {
               <ArrivalRow key={arrival.vehicle_id} arrival={arrival} />
             ))}
           </div>
+        ) : llegadasOcultas > 0 ? (
+          <EmptyState
+            icon={Bus}
+            title="Ninguno con rampa en camino"
+            description={
+              llegadasOcultas === 1
+                ? 'Viene uno, pero no reporta tener rampa. Sacá el filtro para verlo.'
+                : `Vienen ${llegadasOcultas}, pero ninguno reporta tener rampa. Sacá el filtro para verlos.`
+            }
+          />
         ) : schedule?.finished ? (
           /* Se terminó el servicio por hoy. Es la respuesta que faltaba: hasta
              ahora esto decía "ningún ómnibus en camino", que no distingue

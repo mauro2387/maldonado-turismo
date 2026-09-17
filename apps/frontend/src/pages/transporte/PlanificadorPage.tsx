@@ -14,6 +14,7 @@ import {
   Bell,
   BellRing,
   Share2,
+  Accessibility,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useTransportHealth } from '@hooks/useTransportHealth';
@@ -29,6 +30,8 @@ import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet'
 import { enlaceParaIr, estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
 import { compartir, mensajeDeCompartir } from '@lib/compartir';
 import { useRecordatorioStore } from '@store/recordatorioStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
+import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
@@ -171,6 +174,8 @@ export default function PlanificadorPage() {
    * capricho y no una empresa caída.
    */
   const { empresasCaidas } = useTransportHealth();
+  /** Sólo ómnibus con rampa. Es la preferencia de toda la app, ver el store. */
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
   const agregarReciente = loTuyo.agregarReciente;
   const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
   const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
@@ -287,6 +292,7 @@ export default function PlanificadorPage() {
         { lat: destination.lat, lng: destination.lng, label: destination.name },
         departAt ?? undefined,
         arriveBy ?? undefined,
+        soloAccesibles,
       )
       .then((result) => {
         if (cancelled) return;
@@ -316,7 +322,7 @@ export default function PlanificadorPage() {
     };
     // `agregarReciente` no va en las dependencias: zustand no lo recrea, y
     // ponerlo sólo sugeriría que un cambio en él vuelve a planificar.
-  }, [destination, coords.lat, coords.lng, granted, departAt, arriveBy]);
+  }, [destination, coords.lat, coords.lng, granted, departAt, arriveBy, soloAccesibles]);
 
   const current = options[selected];
 
@@ -566,6 +572,10 @@ export default function PlanificadorPage() {
           Llegar a las
         </button>
 
+        {/* Sólo con rampa, al lado de cuándo: son las dos cosas que cambian
+            qué ómnibus se ofrece. */}
+        <SoloAccesiblesChip />
+
         {(departAt !== null || arriveBy !== null) && (
           <input
             type="datetime-local"
@@ -757,6 +767,19 @@ export default function PlanificadorPage() {
 
         {!searching && options.length > 0 && (
           <>
+            {/* Con el filtro puesto se dice qué se puede prometer y qué no:
+                de un coche en la calle se sabe si tiene rampa; de un viaje
+                por horario no se sabe qué coche va a venir. */}
+            {soloAccesibles && (
+              <div className="mb-3 flex items-start gap-2 rounded-card bg-sea-50 px-3 py-2.5 text-xs text-sea-600">
+                <Accessibility className="mt-0.5 h-3.5 w-3.5 flex-none" strokeWidth={2.25} />
+                <span>
+                  Sólo ómnibus con rampa. De los viajes que salen del horario publicado no
+                  sabemos qué coche va a venir: van marcados como "rampa sin confirmar".
+                </span>
+              </div>
+            )}
+
             {/* La vuelta, antes que las opciones de ida: es lo que decide si
                 el viaje se hace o no, y verlo después de elegir cómo ir es
                 verlo tarde. */}
@@ -822,6 +845,7 @@ export default function PlanificadorPage() {
                   }}
                   recordada={recordada(option)}
                   onRecordar={() => (recordada(option) ? cancelarRecordatorio() : recordar(option))}
+                  soloAccesibles={soloAccesibles}
                 />
               ))}
             </div>
@@ -932,6 +956,7 @@ function TripCard({
   paraLlegar,
   recordada,
   onRecordar,
+  soloAccesibles,
 }: {
   option: TripOption;
   selected: boolean;
@@ -949,6 +974,8 @@ function TripCard({
   recordada: boolean;
   /** Poner o sacar el recordatorio de salida de esta opción. */
   onRecordar: () => void;
+  /** Se pidieron sólo coches con rampa: se dice de cuáles no se sabe. */
+  soloAccesibles: boolean;
 }) {
   const busLegs = option.legs.filter((leg) => leg.type === 'bus');
   const firstWait = option.legs.find((leg) => leg.type === 'wait');
@@ -1081,6 +1108,22 @@ function TripCard({
             {option.walk_minutes} min caminando
           </span>
         </div>
+
+        {/* Qué se sabe de la rampa. Con un coche concreto en la calle se
+            sabe; con un viaje por horario, no, y con el filtro puesto eso
+            hay que decirlo en la tarjeta y no sólo en el aviso de arriba. */}
+        {busLegs.length > 0 && (soloAccesibles || busLegs.every((leg) => leg.accessible === true)) && (
+          <p
+            className={`mt-2 inline-flex items-center gap-1 text-xs font-semibold ${
+              busLegs.every((leg) => leg.accessible === true) ? 'text-sea-600' : 'text-ink-400'
+            }`}
+          >
+            <Accessibility className="h-3.5 w-3.5" strokeWidth={2.25} />
+            {busLegs.every((leg) => leg.accessible === true)
+              ? 'Con rampa'
+              : 'Rampa sin confirmar: el coche sale del horario'}
+          </p>
+        )}
       </button>
 
       {/*

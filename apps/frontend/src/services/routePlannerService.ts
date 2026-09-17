@@ -154,12 +154,15 @@ export const routePlannerService = {
     destination: PlannerPoint,
     departAt?: Date,
     arriveBy?: Date,
+    /** Sólo ómnibus con rampa. El backend elige el siguiente coche que la tenga. */
+    accessibleOnly = false,
   ): Promise<PlanResult> => {
     return api.post<PlanResult>('/transport/plan', {
       origin,
       destination,
       depart_at: departAt ? departAt.toISOString() : undefined,
       arrive_by: arriveBy ? arriveBy.toISOString() : undefined,
+      accessible_only: accessibleOnly || undefined,
     });
   },
 };

@@ -7,6 +7,7 @@ import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { Estrella } from '@components/ui/Estrella';
 import { ParadaGuardada, useLoTuyoStore } from '@store/loTuyoStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
 import { formatDistance, walkingMinutes } from '@lib/geo';
 
 /**
@@ -43,8 +44,13 @@ export function ParadaGuardadaCard({
   /** Cuánto hay hasta ahí desde donde está la persona, si se sabe. */
   distanceM: number | null;
 }) {
-  const { arrivals, loading } = useStopArrivals(parada.id);
+  const { arrivals: todas, loading } = useStopArrivals(parada.id);
   const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
+
+  /** Con "sólo con rampa", las que no la tienen o no se sabe quedan afuera. */
+  const arrivals = soloAccesibles ? todas.filter((arrival) => arrival.accessible === true) : todas;
+  const ocultas = todas.length - arrivals.length;
 
   const [schedule, setSchedule] = useState<StopScheduleToday | null>(null);
   const sinLlegadas = !loading && arrivals.length === 0;
@@ -121,6 +127,12 @@ export function ParadaGuardadaCard({
             </Link>
           ))}
         </div>
+      ) : ocultas > 0 ? (
+        // Vienen, pero ninguno con rampa. No es lo mismo que "no viene
+        // ninguno" y no se mezcla con el horario.
+        <p className="mt-2.5 text-xs text-ink-400">
+          {ocultas === 1 ? 'Viene uno sin rampa' : `Vienen ${ocultas} sin rampa`}, ninguno con.
+        </p>
       ) : schedule?.finished ? (
         // Se terminó por hoy. Es lo que hay que saber antes de salir a la
         // parada, y no se sabe con la lista vacía.

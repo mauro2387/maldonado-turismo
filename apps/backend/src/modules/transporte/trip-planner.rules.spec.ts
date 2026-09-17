@@ -16,6 +16,8 @@ import { SchedulesService } from './schedules.service';
  *   2. Se muestran al menos cinco líneas aunque alguna pase mucho después.
  *   3. Una opción por línea: doce variantes de la misma línea no son opciones.
  *   4. Para una hora futura, la única fuente es el horario publicado.
+ *   5. Con "sólo accesibles", un coche sin rampa o sin el dato no se ofrece:
+ *      se espera al siguiente con rampa.
  *
  * Y una advertencia para el que venga: **no se testea contra la API en vivo.**
  * El ómnibus se mueve entre una llamada y la siguiente, así que una tabla de
@@ -455,5 +457,52 @@ describe('el horizonte de tres horas se mueve con la hora pedida', () => {
     expect(reload).not.toHaveBeenCalled();
 
     jest.useRealTimers();
+  });
+});
+
+describe('regla: con "sólo accesibles" se espera al siguiente coche con rampa', () => {
+  /** Una llegada en vivo, con lo que mira el filtro. */
+  const llegada = (vehicle_id: string, eta_minutes: number, accessible: boolean | null) =>
+    ({
+      operator: 'codesa',
+      line_code: '24',
+      line_name: 'PUNTA DEL ESTE',
+      vehicle_id,
+      eta_minutes,
+      accessible,
+      live: true,
+    }) as never;
+
+  const agrupar = (arrivals: unknown[], soloAccesibles: boolean) => {
+    const servicio = planificador() as unknown as {
+      etasByItinerary(a: unknown[], s: boolean): Map<string, Array<{ vehicle_id: string }>>;
+    };
+    return [...servicio.etasByItinerary(arrivals, soloAccesibles).values()].flat().map(
+      (arrival) => arrival.vehicle_id,
+    );
+  };
+
+  it('sin el filtro se ofrecen todos, del más cercano al más lejano', () => {
+    expect(
+      agrupar([llegada('sin-rampa', 3, false), llegada('con-rampa', 12, true)], false),
+    ).toEqual(['sin-rampa', 'con-rampa']);
+  });
+
+  it('con el filtro el coche sin rampa desaparece y queda el que viene atrás', () => {
+    // El próximo 24 no tiene rampa y el de atrás sí: la respuesta es el de
+    // atrás, no "no hay 24". Por eso el filtro está acá y no sobre la
+    // respuesta.
+    expect(
+      agrupar([llegada('sin-rampa', 3, false), llegada('con-rampa', 12, true)], true),
+    ).toEqual(['con-rampa']);
+  });
+
+  it('un coche del que no se sabe tampoco se ofrece', () => {
+    // Prometerle una rampa a alguien en silla de ruedas con un "capaz" es
+    // peor que no ofrecerle ese coche. Lo que sale del horario sí se ofrece,
+    // marcado como desconocido: eso es otra fuente y la pantalla lo dice.
+    expect(agrupar([llegada('sin-dato', 5, null), llegada('con-rampa', 9, true)], true)).toEqual([
+      'con-rampa',
+    ]);
   });
 });

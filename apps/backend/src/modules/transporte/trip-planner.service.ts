@@ -464,11 +464,19 @@ export class TripPlannerService {
    * `departAt` es cuándo se sale, si no es ahora. No es un parámetro más: una
    * hora futura apaga las dos fuentes que sólo saben del presente y deja sólo
    * el horario publicado. Ver el encabezado.
+   *
+   * `soloAccesibles` deja sólo los coches con rampa entre los que están en la
+   * calle. Va acá y no como un filtro sobre la respuesta porque cambia qué
+   * ómnibus se elige: si el próximo 24 no tiene rampa y el que viene atrás
+   * sí, la respuesta es el de atrás, no "no hay 24". Lo que sale del horario
+   * publicado no sabe qué coche va a venir y se ofrece igual, marcado como
+   * desconocido: la pantalla lo dice.
    */
   async plan(
     origin: PlannerPoint,
     destination: PlannerPoint,
     departAt?: Date,
+    soloAccesibles = false,
   ): Promise<TripOption[]> {
     if (!this.stopSequences.isReady()) return [];
 
@@ -520,7 +528,7 @@ export class TripPlannerService {
         originStops.map(async (from) => {
           etasByStop.set(
             from.stop.id,
-            this.etasByItinerary(await this.arrivals.getForStop(from.stop.id)),
+            this.etasByItinerary(await this.arrivals.getForStop(from.stop.id), soloAccesibles),
           );
         }),
       );
@@ -559,7 +567,9 @@ export class TripPlannerService {
     // opciones que se van a mostrar y no para las decenas que se probaron.
     const options: TripOption[] = [];
     for (const option of best) {
-      options.push(await this.materialize(option, origin, destination, byVehicle, reloj));
+      options.push(
+        await this.materialize(option, origin, destination, byVehicle, reloj, soloAccesibles),
+      );
     }
 
     const onFoot = await this.walkOnlyOption(origin, destination);
@@ -587,6 +597,7 @@ export class TripPlannerService {
     destination: PlannerPoint,
     arriveBy: Date,
     now = new Date(),
+    soloAccesibles = false,
   ): Promise<{ options: TripOption[]; desde: Date | null }> {
     if (!this.stopSequences.isReady()) return { options: [], desde: null };
 
@@ -596,7 +607,12 @@ export class TripPlannerService {
     for (const prueba of momentosDePrueba(arriveBy, now)) {
       if (elegidas.size >= OPCIONES_SUFICIENTES) break;
 
-      const options = await this.plan(origin, destination, prueba.ahora ? undefined : prueba.at);
+      const options = await this.plan(
+        origin,
+        destination,
+        prueba.ahora ? undefined : prueba.at,
+        soloAccesibles,
+      );
 
       for (const option of options) {
         if (option.id === 'a-pie') {
@@ -622,9 +638,9 @@ export class TripPlannerService {
           const siguienteAt = new Date(mejor.at.getTime() + (salida + 1) * 60_000);
           if (siguienteAt.getTime() >= arriveBy.getTime()) break;
 
-          const siguiente = (await this.plan(origin, destination, siguienteAt)).find(
-            (candidata) => candidata.id === option.id,
-          );
+          const siguiente = (
+            await this.plan(origin, destination, siguienteAt, soloAccesibles)
+          ).find((candidata) => candidata.id === option.id);
           if (!siguiente || !llegaATiempo(siguiente, siguienteAt, arriveBy)) break;
 
           mejor = { option: siguiente, at: siguienteAt };
@@ -1045,10 +1061,14 @@ export class TripPlannerService {
   }
 
   /** Las llegadas de una parada, agrupadas por recorrido y en orden. */
-  private etasByItinerary(arrivals: Arrival[]): Map<string, Arrival[]> {
+  private etasByItinerary(arrivals: Arrival[], soloAccesibles = false): Map<string, Arrival[]> {
     const byItinerary = new Map<string, Arrival[]>();
 
     for (const arrival of arrivals) {
+      // Con el filtro puesto, un coche del que no se sabe si tiene rampa
+      // tampoco sirve: prometerle una rampa a alguien en silla de ruedas con
+      // un "capaz" es peor que no ofrecerle ese coche.
+      if (soloAccesibles && arrival.accessible !== true) continue;
       const key = `${arrival.operator}|${arrival.line_code}|${itineraryKey(arrival.line_name)}`;
       byItinerary.set(key, [...(byItinerary.get(key) ?? []), arrival]);
     }
@@ -1201,6 +1221,7 @@ export class TripPlannerService {
     /** Dónde está cada coche ahora, para dibujar por dónde viene el tuyo. */
     byVehicle: PositionsByVehicle,
     reloj: Reloj,
+    soloAccesibles = false,
   ): Promise<TripOption> {
     const originLabel = origin.label ?? 'Tu ubicación';
     const destinationLabel = destination.label ?? 'Tu destino';
@@ -1252,7 +1273,7 @@ export class TripPlannerService {
       const refinada =
         index === 0 || reloj.futuro
           ? null
-          : await this.refineDeparture(ride.sequence, ride.boarding, clock);
+          : await this.refineDeparture(ride.sequence, ride.boarding, clock, soloAccesibles);
 
       const departure =
         index === 0
@@ -1368,9 +1389,10 @@ export class TripPlannerService {
     sequence: RouteStopSequence,
     boarding: StopOnRoute,
     readyAtMinute: number,
+    soloAccesibles = false,
   ): Promise<Departure | null> {
     const arrivals = await this.arrivals.getForStop(boarding.stopId);
-    const etas = this.etasByItinerary(arrivals);
+    const etas = this.etasByItinerary(arrivals, soloAccesibles);
 
     const catchable = (etas.get(this.itineraryId(sequence)) ?? []).find(
       (arrival) => arrival.eta_minutes >= readyAtMinute + BOARD_SLACK_MIN,

@@ -25,6 +25,11 @@ interface PlanRequest {
    * va junto con `depart_at`: las dos a la vez no significan nada.
    */
   arrive_by?: string;
+  /**
+   * Sólo ómnibus con rampa. Cambia qué coche se elige, no sólo qué se
+   * muestra: ver `TripPlannerService.plan`.
+   */
+  accessible_only?: boolean;
 }
 
 function isValidPoint(point: any): boolean {
@@ -165,6 +170,7 @@ export class TripPlannerController {
 
     const departAt = parseDepartAt(body?.depart_at);
     const arriveBy = parseArriveBy(body?.arrive_by);
+    const soloAccesibles = body?.accessible_only === true;
 
     const origin = {
       lat: Number(body.origin.lat),
@@ -181,7 +187,7 @@ export class TripPlannerController {
       // Hacia atrás desde la hora de llegada. La vuelta se mira desde esa
       // hora, que es cuando uno está allá.
       const [ida, returnTrip] = await Promise.all([
-        this.planner.planArriveBy(origin, destination, arriveBy),
+        this.planner.planArriveBy(origin, destination, arriveBy, new Date(), soloAccesibles),
         this.planner.lastReturn(origin, destination, arriveBy),
       ]);
 
@@ -198,7 +204,7 @@ export class TripPlannerController {
     // "¿y cómo vuelvo?" hay que contestarla **antes** de que la persona salga,
     // no cuando se le ocurra buscarla.
     const [options, returnTrip] = await Promise.all([
-      this.planner.plan(origin, destination, departAt),
+      this.planner.plan(origin, destination, departAt, soloAccesibles),
       // La vuelta también se mira desde la hora pedida: "la última vuelta ya
       // salió" es una respuesta sobre el momento en que uno está allá, no
       // sobre el momento en que lo está planificando.

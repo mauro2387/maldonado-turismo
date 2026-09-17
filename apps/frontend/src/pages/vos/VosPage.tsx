@@ -15,6 +15,7 @@ import { useGeolocation } from '@hooks/useGeolocation';
 import { InlineNotice } from '@components/ui/States';
 import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
 import { useLoTuyoStore } from '@store/loTuyoStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
 
 /**
  * Vos.
@@ -59,6 +60,8 @@ export default function VosPage() {
   const { granted, status, message, request } = useGeolocation(false);
 
   const loTuyo = useLoTuyoStore();
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
+  const setSoloAccesibles = usePreferenciasStore((estado) => estado.setSoloAccesibles);
   /** Cuál de los dos se está cambiando en el sheet, si alguno. */
   const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
 
@@ -217,10 +220,31 @@ export default function VosPage() {
 
           <div className="card flex items-start gap-3">
             <Accessibility className="mt-0.5 h-4 w-4 flex-none text-sea-500" strokeWidth={1.9} />
-            <p className="text-data text-ink-600">
-              La app usa el tamaño de texto que tengas configurado en el teléfono, y las unidades
-              con rampa aparecen marcadas en cada llegada.
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-data text-ink-600">
+                La app usa el tamaño de texto que tengas configurado en el teléfono, y las unidades
+                con rampa aparecen marcadas en cada llegada.
+              </p>
+              {/* La preferencia de toda la app: vale en el planificador, en
+                  Moverse y en las paradas. Ver `preferenciasStore`. */}
+              <label className="mt-3 flex cursor-pointer items-center justify-between gap-3">
+                <span className="text-data font-bold text-ink-900">
+                  Mostrar sólo ómnibus con rampa
+                </span>
+                <input
+                  type="checkbox"
+                  checked={soloAccesibles}
+                  onChange={(event) => setSoloAccesibles(event.target.checked)}
+                  className="h-5 w-5 flex-none accent-ink-900"
+                />
+              </label>
+              {soloAccesibles && (
+                <p className="mt-1.5 text-xs text-ink-400">
+                  De los viajes que salen del horario publicado no sabemos qué coche va a venir:
+                  van marcados como "rampa sin confirmar".
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </section>
