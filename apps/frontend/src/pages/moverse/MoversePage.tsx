@@ -12,6 +12,7 @@ import {
   Star,
   History,
   Plus,
+  Ticket,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useNearbyDepartures, useVehiclePositions } from '@hooks/useDepartures';
@@ -713,6 +714,15 @@ export default function MoversePage() {
           <Link to="/moverse/lineas" className="btn btn-secondary mt-3 w-full gap-1.5">
             <Clock className="h-4 w-4" strokeWidth={2} />
             Ver las {lines.length} líneas y sus horarios
+          </Link>
+
+          {/* Cuánto sale: la tabla oficial de la Intendencia. Está acá y no
+              en cada opción del planificador porque qué tramo es un viaje
+              sólo lo publica CODESA, y decir un precio sin saber el tramo
+              sería inventarlo. */}
+          <Link to="/moverse/tarifas" className="btn btn-secondary mt-2 w-full gap-1.5">
+            <Ticket className="h-4 w-4" strokeWidth={2} />
+            Cuánto sale el boleto
           </Link>
         </section>
       )}

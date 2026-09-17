@@ -12,6 +12,7 @@ import {
   Briefcase,
   Download,
   Share,
+  Ticket,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { InlineNotice } from '@components/ui/States';
@@ -49,6 +50,12 @@ const TOOLS = [
     icon: QrCode,
     title: 'Escanear QR de parada',
     description: 'Los horarios de la parada donde estás parado',
+  },
+  {
+    to: '/moverse/tarifas',
+    icon: Ticket,
+    title: 'Cuánto sale el boleto',
+    description: 'La tarifa oficial de la Intendencia, por tramo',
   },
   {
     to: '/noticias',

@@ -15,6 +15,7 @@ import {
   BellRing,
   Share2,
   Accessibility,
+  Ticket,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useTransportHealth } from '@hooks/useTransportHealth';
@@ -1214,6 +1215,16 @@ function TripCard({
             </li>
           ))}
         </ol>
+        {/* Cuánto sale no se dice acá: depende del tramo, y qué tramo es un
+            viaje sólo lo publica CODESA. Se manda a la tabla oficial en vez
+            de poner un número que no se puede citar. */}
+        <Link
+          to="/moverse/tarifas"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-coral-500"
+        >
+          <Ticket className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Cuánto sale el boleto
+        </Link>
       </details>
     </article>
   );
