@@ -32,6 +32,7 @@ import { enlaceParaIr, estaGuardado, idDePunto, useLoTuyoStore } from '@store/lo
 import { compartir, mensajeDeCompartir } from '@lib/compartir';
 import { useRecordatorioStore } from '@store/recordatorioStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
+import { useHistorialStore } from '@store/historialStore';
 import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
@@ -179,6 +180,7 @@ export default function PlanificadorPage() {
   const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
   const agregarReciente = loTuyo.agregarReciente;
   const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
+  const anotarViaje = useHistorialStore((estado) => estado.anotar);
   const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
   const cancelarRecordatorio = useRecordatorioStore((estado) => estado.cancelar);
 
@@ -710,6 +712,18 @@ export default function PlanificadorPage() {
                 // gesto de la persona no arranca.
                 prepararAvisos();
                 setBoarded(true);
+                // El viaje pasó de plan a hecho: es el único momento en que
+                // la app lo sabe, y lo que después permite repetirlo.
+                if (destination) {
+                  anotarViaje({
+                    linea: legLine(boardable),
+                    operator: boardable.operator ?? '',
+                    desde: formatStopName(boardable.from),
+                    hasta: formatStopName(boardable.to),
+                    destino: { ...destination, id: idDeDestino(destination) },
+                    minutos: current.total_minutes - current.leave_in_minutes,
+                  });
+                }
               }}
               className="flex w-full items-center justify-center gap-2 bg-ink-900 py-2.5 text-sm font-bold text-white active:bg-ink-800"
             >

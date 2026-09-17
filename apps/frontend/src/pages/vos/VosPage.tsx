@@ -13,6 +13,8 @@ import {
   Download,
   Share,
   Ticket,
+  Bus,
+  Trash2,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { InlineNotice } from '@components/ui/States';
@@ -20,6 +22,11 @@ import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
 import { useLoTuyoStore } from '@store/loTuyoStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
 import { alCambiarInstalacion, comoInstalar, instalar } from '@lib/instalar';
+import { useHistorialStore } from '@store/historialStore';
+import { enlaceParaIr } from '@store/loTuyoStore';
+import { LineTag } from '@components/ui/LineTag';
+import { lineColor } from '@components/transporte/ArrivalRow';
+import { horaDeReloj } from '@lib/hora';
 
 /**
  * Vos.
@@ -65,6 +72,18 @@ const TOOLS = [
   },
 ];
 
+/** Cuántos viajes se listan en Vos. Diez es lo que entra sin scroll de más. */
+const MAX_VIAJES_EN_VOS = 10;
+
+/** "jue 17/9", como se anota en un papel. */
+function diaCorto(instante: number): string {
+  return new Date(instante).toLocaleDateString('es-UY', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'numeric',
+  });
+}
+
 export default function VosPage() {
   const { i18n } = useTranslation();
   const { granted, status, message, request } = useGeolocation(false);
@@ -72,6 +91,8 @@ export default function VosPage() {
   const loTuyo = useLoTuyoStore();
   const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
   const setSoloAccesibles = usePreferenciasStore((estado) => estado.setSoloAccesibles);
+  const viajes = useHistorialStore((estado) => estado.viajes);
+  const borrarViaje = useHistorialStore((estado) => estado.borrar);
   /** Cuál de los dos se está cambiando en el sheet, si alguno. */
   const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
 
@@ -209,6 +230,44 @@ export default function VosPage() {
               </p>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* ---------- Tus viajes ----------
+          Los que se hicieron -se anotan al tocar "ya me subí"-, no los que
+          se buscaron. Cada uno se repite con un toque. */}
+      {viajes.length > 0 && (
+        <section className="mt-6" aria-labelledby="tus-viajes">
+          <h2 id="tus-viajes" className="section-label">
+            Tus viajes
+          </h2>
+          <div className="mt-2.5 flex flex-col gap-2">
+            {viajes.slice(0, MAX_VIAJES_EN_VOS).map((viaje) => (
+              <div key={viaje.id} className="card flex items-center gap-3 py-3">
+                <LineTag code={viaje.linea || '?'} color={lineColor(viaje.operator)} />
+                <Link to={enlaceParaIr(viaje.destino)} className="min-w-0 flex-1">
+                  <span className="block truncate text-data font-bold text-ink-900">
+                    {viaje.destino.name}
+                  </span>
+                  <span className="block truncate text-xs text-ink-400">
+                    {diaCorto(viaje.cuando)} {horaDeReloj(viaje.cuando)} · desde {viaje.desde} ·{' '}
+                    {viaje.minutos} min
+                  </span>
+                </Link>
+                <button
+                  onClick={() => borrarViaje(viaje.id)}
+                  aria-label="Borrar este viaje"
+                  className="touch-target flex flex-none items-center justify-center rounded-full text-ink-300 active:bg-sand-100"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 px-1 text-xs text-ink-400">
+            <Bus className="mr-1 inline h-3.5 w-3.5 align-text-bottom" strokeWidth={2} />
+            Se anotan cuando tocás "ya me subí". Tocá uno para volver a ir.
+          </p>
         </section>
       )}
 
