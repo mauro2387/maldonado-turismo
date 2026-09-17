@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,12 +10,15 @@ import {
   Accessibility,
   Home,
   Briefcase,
+  Download,
+  Share,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { InlineNotice } from '@components/ui/States';
 import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
 import { useLoTuyoStore } from '@store/loTuyoStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
+import { alCambiarInstalacion, comoInstalar, instalar } from '@lib/instalar';
 
 /**
  * Vos.
@@ -64,6 +67,13 @@ export default function VosPage() {
   const setSoloAccesibles = usePreferenciasStore((estado) => estado.setSoloAccesibles);
   /** Cuál de los dos se está cambiando en el sheet, si alguno. */
   const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
+
+  /**
+   * Cómo se instala en este teléfono. Se vuelve a preguntar cuando Chrome
+   * dispara o consume el pedido, que puede pasar con esta pantalla abierta.
+   */
+  const [instalacion, setInstalacion] = useState(() => comoInstalar());
+  useEffect(() => alCambiarInstalacion(() => setInstalacion(comoInstalar())), []);
 
   const LUGARES_FIJOS = [
     { key: 'casa' as const, icon: Home, titulo: 'Tu casa', lugar: loTuyo.casa },
@@ -142,6 +152,57 @@ export default function VosPage() {
           }}
           onClose={() => setConfigurando(null)}
         />
+      )}
+
+      {/* ---------- Instalar ----------
+          Sólo cuando hay algo que hacer: un botón si Chrome dio el pedido, o
+          las instrucciones en iPhone, donde se instala a mano y Safari no
+          avisa. Instalada, o sin forma de saberlo, no se muestra nada: un
+          "instalá la app" que no lleva a ningún lado es ruido. */}
+      {instalacion === 'boton' && (
+        <section className="mt-5" aria-labelledby="instalar">
+          <h2 id="instalar" className="section-label">
+            En tu teléfono
+          </h2>
+          <button
+            onClick={async () => {
+              await instalar();
+              setInstalacion(comoInstalar());
+            }}
+            className="card mt-2.5 flex w-full items-center gap-3.5 py-3.5 text-left"
+          >
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-ink-900 text-white">
+              <Download className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-data font-bold text-ink-900">Agregar a la pantalla de inicio</p>
+              <p className="text-xs text-ink-400">
+                Abre como una app, a pantalla completa y con su ícono. No ocupa casi nada.
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+          </button>
+        </section>
+      )}
+
+      {instalacion === 'ios' && (
+        <section className="mt-5" aria-labelledby="instalar">
+          <h2 id="instalar" className="section-label">
+            En tu teléfono
+          </h2>
+          <div className="card mt-2.5 flex items-start gap-3.5 py-3.5">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-sand-100">
+              <Share className="h-4 w-4 text-ink-600" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-data font-bold text-ink-900">Agregala a la pantalla de inicio</p>
+              <p className="text-xs text-ink-400">
+                En Safari, tocá Compartir y después "Agregar a inicio". Abre como una app, con su
+                ícono.
+              </p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ---------- Herramientas ---------- */}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- El mismo ómnibus que los PNG de scripts/iconos.py: coral sobre tinta. -->
+  <rect width="512" height="512" rx="113" fill="#0B1F33"/>
+  <rect x="69" y="133" width="374" height="224" rx="45" fill="#DC4227"/>
+  <rect x="103" y="169" width="90" height="81" rx="13" fill="#FAF7F2"/>
+  <rect x="211" y="169" width="90" height="81" rx="13" fill="#FAF7F2"/>
+  <rect x="320" y="169" width="90" height="81" rx="13" fill="#FAF7F2"/>
+  <circle cx="170" cy="357" r="50" fill="#0B1F33"/>
+  <circle cx="170" cy="357" r="27" fill="#FAF7F2"/>
+  <circle cx="342" cy="357" r="50" fill="#0B1F33"/>
+  <circle cx="342" cy="357" r="27" fill="#FAF7F2"/>
+</svg>

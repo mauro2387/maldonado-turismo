@@ -1,0 +1,41 @@
+{
+  "name": "Maldonado",
+  "short_name": "Maldonado",
+  "description": "Los ómnibus de Maldonado en vivo, cómo llegar, qué hacer y los lugares del departamento. Intendencia de Maldonado.",
+  "lang": "es",
+  "start_url": "/?desde=inicio",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#0B1F33",
+  "categories": ["travel", "navigation", "transportation"],
+  "icons": [
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Moverse",
+      "short_name": "Moverse",
+      "description": "Los ómnibus que te pasan cerca y tus paradas",
+      "url": "/moverse?desde=atajo",
+      "icons": [{ "src": "/icono-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Planificar un viaje",
+      "short_name": "Planificar",
+      "description": "Cómo llegar en ómnibus",
+      "url": "/transporte/planificador?desde=atajo",
+      "icons": [{ "src": "/icono-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Escanear QR de parada",
+      "short_name": "Escanear",
+      "description": "Los ómnibus de la parada donde estás parado",
+      "url": "/transporte/escaner?desde=atajo",
+      "icons": [{ "src": "/icono-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
