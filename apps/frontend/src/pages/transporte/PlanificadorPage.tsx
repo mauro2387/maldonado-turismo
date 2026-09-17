@@ -11,6 +11,8 @@ import {
   MapPinned,
   RouteOff,
   Star,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
@@ -23,6 +25,7 @@ import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
 import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet';
 import { estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
+import { useRecordatorioStore } from '@store/recordatorioStore';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
@@ -139,6 +142,9 @@ export default function PlanificadorPage() {
   const { coords, granted } = useGeolocation();
   const loTuyo = useLoTuyoStore();
   const agregarReciente = loTuyo.agregarReciente;
+  const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
+  const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
+  const cancelarRecordatorio = useRecordatorioStore((estado) => estado.cancelar);
 
   const [query, setQuery] = useState(
     () => destinoDeLaUrl(searchParams)?.name ?? searchParams.get('destino') ?? '',
@@ -298,6 +304,43 @@ export default function PlanificadorPage() {
 
   /** La respuesta en pantalla contesta "a qué hora salir para llegar a las". */
   const paraLlegar = arrivePlanned !== null;
+
+  /**
+   * "Avisame cuando salir" para una opción.
+   *
+   * El toque es lo que habilita el sonido y lo que pide el permiso de
+   * notificaciones, por lo mismo que en "ya me subí": pedido con contexto,
+   * después de tocar una campana, se explica solo. La hora de salir se
+   * calcula sobre `desde`, que es el reloj de la respuesta y no el del
+   * teléfono: para un viaje planificado a las 18:30 los minutos cuentan
+   * desde las 18:30.
+   */
+  const recordar = (option: TripOption) => {
+    const desde = plannedFor ?? Date.now();
+    const espera = option.legs.find((leg) => leg.type === 'wait');
+    const omnibus = option.legs.find((leg) => leg.type === 'bus');
+
+    prepararAvisos();
+    ponerRecordatorio({
+      salirA: desde + option.leave_in_minutes * 60_000,
+      pasaA: espera?.departs_in_minutes != null ? desde + espera.departs_in_minutes * 60_000 : null,
+      linea: omnibus ? legLine(omnibus) : '',
+      parada: omnibus ? formatStopName(omnibus.from) : '',
+      destino: destination?.name ?? '',
+      enlace: `${window.location.pathname}${window.location.search}`,
+    });
+  };
+
+  /** Si el recordatorio pendiente es de esta opción: misma salida, misma línea. */
+  const recordada = (option: TripOption) => {
+    if (!recordatorio) return false;
+    const desde = plannedFor ?? Date.now();
+    const omnibus = option.legs.find((leg) => leg.type === 'bus');
+    return (
+      Math.abs(recordatorio.salirA - (desde + option.leave_in_minutes * 60_000)) < 60_000 &&
+      recordatorio.linea === (omnibus ? legLine(omnibus) : '')
+    );
+  };
 
   /**
    * El tramo en ómnibus que se puede seguir en vivo.
@@ -672,6 +715,8 @@ export default function PlanificadorPage() {
                     // sería seguirle el rastro a un ómnibus que no se tomó.
                     setBoarded(false);
                   }}
+                  recordada={recordada(option)}
+                  onRecordar={() => (recordada(option) ? cancelarRecordatorio() : recordar(option))}
                 />
               ))}
             </div>
@@ -780,6 +825,8 @@ function TripCard({
   desde,
   futuro,
   paraLlegar,
+  recordada,
+  onRecordar,
 }: {
   option: TripOption;
   selected: boolean;
@@ -793,6 +840,10 @@ function TripCard({
    * hora de salida y no cuánto dura, y la duración es de puerta a puerta.
    */
   paraLlegar: boolean;
+  /** Hay un recordatorio puesto para salir a tomar esta opción. */
+  recordada: boolean;
+  /** Poner o sacar el recordatorio de salida de esta opción. */
+  onRecordar: () => void;
 }) {
   const busLegs = option.legs.filter((leg) => leg.type === 'bus');
   const firstWait = option.legs.find((leg) => leg.type === 'wait');
@@ -926,6 +977,36 @@ function TripCard({
           </span>
         </div>
       </button>
+
+      {/*
+        Avisame cuando salir.
+
+        Sólo en la opción elegida, y sólo si hay algo que esperar: para "salí
+        ahora" el aviso sería el toque mismo. Un recordatorio ya puesto se
+        muestra y se saca desde acá; el banner de abajo lo repite en todas las
+        pantallas.
+      */}
+      {selected && (option.leave_in_minutes >= 2 || recordada) && (
+        <button
+          onClick={onRecordar}
+          aria-pressed={recordada}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold ${
+            recordada ? 'bg-sea-50 text-sea-600' : 'bg-sand-100 text-ink-900 active:bg-sand-200'
+          }`}
+        >
+          {recordada ? (
+            <>
+              <BellRing className="h-4 w-4" strokeWidth={2.25} />
+              Te avisamos {clockIn(option.leave_in_minutes, desde)} · Cancelar
+            </>
+          ) : (
+            <>
+              <Bell className="h-4 w-4" strokeWidth={2.25} />
+              Avisame cuando salir
+            </>
+          )}
+        </button>
+      )}
 
       {/* Detalle paso a paso: se lee solo si a alguien le interesa el detalle. */}
       <details className="mt-3 border-t border-sand-200 pt-3">
