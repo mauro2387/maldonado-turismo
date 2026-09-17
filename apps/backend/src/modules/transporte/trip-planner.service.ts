@@ -11,6 +11,15 @@ import { SchedulesService, StopServiceToday } from './schedules.service';
 import { isElectricVehicle, isInService } from './fleet.util';
 import { cumulativeDistances, distanceAlongPolyline, distanceMeters, LngLat } from './geo.util';
 import { slicePolyline } from './route-match.util';
+import {
+  llegaATiempo,
+  MAX_AVANCES,
+  momentosDePrueba,
+  OpcionConSalida,
+  OPCIONES_SUFICIENTES,
+  ordenadasParaLlegar,
+  salidaDelPrimerOmnibus,
+} from './arrive-by.rules';
 
 /**
  * Planificador de viajes.
@@ -557,6 +566,84 @@ export class TripPlannerService {
     if (onFoot) options.push(onFoot);
 
     return this.label(options);
+  }
+
+  /**
+   * Llegar a las.
+   *
+   * Es `plan` llamado hacia atrás: se prueban horas de salida cada vez más
+   * tempranas hasta encontrar las más tarde que todavía llegan antes de la
+   * hora pedida, y desde cada una se avanza al ómnibus siguiente de la misma
+   * opción mientras siga llegando. Las decisiones -a qué horas se prueba, qué
+   * es llegar a tiempo, cómo se juntan y ordenan- están en `arrive-by.rules`.
+   *
+   * Devuelve las opciones contadas desde `desde`, que es la hora de salida
+   * más temprana de las que quedaron y pasa a ser el `planned_for` de la
+   * respuesta. La opción a pie se cuenta desde su propia hora: se camina
+   * saliendo justo para llegar, no desde la primera prueba.
+   */
+  async planArriveBy(
+    origin: PlannerPoint,
+    destination: PlannerPoint,
+    arriveBy: Date,
+    now = new Date(),
+  ): Promise<{ options: TripOption[]; desde: Date | null }> {
+    if (!this.stopSequences.isReady()) return { options: [], desde: null };
+
+    const elegidas = new Map<string, OpcionConSalida>();
+    let aPie: TripOption | null = null;
+
+    for (const prueba of momentosDePrueba(arriveBy, now)) {
+      if (elegidas.size >= OPCIONES_SUFICIENTES) break;
+
+      const options = await this.plan(origin, destination, prueba.ahora ? undefined : prueba.at);
+
+      for (const option of options) {
+        if (option.id === 'a-pie') {
+          aPie = aPie ?? option;
+          continue;
+        }
+        // De esta opción ya hay una salida más tarde: las pruebas van de la
+        // más tarde a la más temprana.
+        if (elegidas.has(option.id)) continue;
+        if (!llegaATiempo(option, prueba.at, arriveBy)) continue;
+
+        let mejor: OpcionConSalida = { option, at: prueba.at };
+
+        // Entre esta prueba y la anterior pudo pasar otro ómnibus de la misma
+        // línea que también llegue: se pregunta por el siguiente al
+        // encontrado, y otra vez, hasta que uno ya no llegue. Sobre el
+        // presente no se avanza: el vivo ya dice cuál es el próximo, y lo que
+        // venga después de ese es papel mezclado con GPS.
+        for (let avance = 0; avance < MAX_AVANCES && !prueba.ahora; avance++) {
+          const salida = salidaDelPrimerOmnibus(mejor.option);
+          if (salida === null) break;
+
+          const siguienteAt = new Date(mejor.at.getTime() + (salida + 1) * 60_000);
+          if (siguienteAt.getTime() >= arriveBy.getTime()) break;
+
+          const siguiente = (await this.plan(origin, destination, siguienteAt)).find(
+            (candidata) => candidata.id === option.id,
+          );
+          if (!siguiente || !llegaATiempo(siguiente, siguienteAt, arriveBy)) break;
+
+          mejor = { option: siguiente, at: siguienteAt };
+        }
+
+        elegidas.set(option.id, mejor);
+      }
+    }
+
+    const conSalida = [...elegidas.values()];
+
+    if (aPie) {
+      // Caminando se sale justo para llegar. Si eso ya es pasado, a pie no
+      // se llega y no se ofrece.
+      const at = new Date(arriveBy.getTime() - aPie.total_minutes * 60_000);
+      if (at.getTime() >= now.getTime()) conSalida.push({ option: aPie, at });
+    }
+
+    return ordenadasParaLlegar(conSalida);
   }
 
   /**

@@ -123,6 +123,12 @@ export interface PlanResult {
    * para mañana a las 18:30 mostraría horas corridas veinticuatro horas.
    */
   planned_for?: string | null;
+  /**
+   * La hora a la que se pidió llegar, cuando la pregunta fue esa. Con esto
+   * puesto las opciones vienen por hora de salida -la más tarde primero- y
+   * `planned_for` es la salida más temprana de las que quedaron.
+   */
+  arrive_by?: string | null;
 }
 
 export interface PlannerPoint {
@@ -139,16 +145,21 @@ export const routePlannerService = {
    * `departAt` es cuándo se sale, si no es ahora. El backend contesta esas con
    * el horario publicado y nada más: a una hora que todavía no llegó no hay
    * ningún coche en la calle del que hablar.
+   *
+   * `arriveBy` es a qué hora hay que estar: el backend busca hacia atrás. Van
+   * una o la otra, nunca las dos.
    */
   plan: async (
     origin: PlannerPoint,
     destination: PlannerPoint,
     departAt?: Date,
+    arriveBy?: Date,
   ): Promise<PlanResult> => {
     return api.post<PlanResult>('/transport/plan', {
       origin,
       destination,
       depart_at: departAt ? departAt.toISOString() : undefined,
+      arrive_by: arriveBy ? arriveBy.toISOString() : undefined,
     });
   },
 };

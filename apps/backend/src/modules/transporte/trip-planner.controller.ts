@@ -17,12 +17,14 @@ interface PlanRequest {
   /**
    * Cuándo se sale, en ISO 8601. Ausente es "ahora", que es el 95% de los
    * pedidos.
-   *
-   * Es "salir a las" y no "llegar a las". Llegar a las es la otra pregunta y
-   * es otro problema: hay que buscar hacia atrás desde la hora de llegada, no
-   * alcanza con mover el reloj.
    */
   depart_at?: string;
+  /**
+   * A qué hora hay que estar, en ISO 8601. Es la otra pregunta: se busca
+   * hacia atrás desde esta hora, ver `TripPlannerService.planArriveBy`. No
+   * va junto con `depart_at`: las dos a la vez no significan nada.
+   */
+  arrive_by?: string;
 }
 
 function isValidPoint(point: any): boolean {
@@ -61,26 +63,22 @@ const TOLERANCIA_PASADO_MIN = 2;
 const MAX_DIAS_ADELANTE = 7;
 
 /**
- * La hora de salida pedida, ya validada.
+ * Una hora pedida, validada: parseable, no pasada, no más allá de una semana.
  *
- * Devuelve `undefined` cuando el viaje es ahora, que es lo que el planificador
- * espera para usar las tres fuentes. Una hora que ya pasó **no** se contesta
- * como si fuera ahora: sería contestar otra pregunta que la que se hizo, y
- * quien pidió "ayer a las 18:30" leería el viaje de este momento creyendo que
- * es el de ayer.
+ * Una hora que ya pasó **no** se contesta como si fuera ahora: sería contestar
+ * otra pregunta que la que se hizo, y quien pidió "ayer a las 18:30" leería el
+ * viaje de este momento creyendo que es el de ayer.
  */
-function parseDepartAt(raw: string | undefined): Date | undefined {
-  if (raw === undefined || raw === null || raw === '') return undefined;
-
+function parseHora(raw: string, campo: string, yaPaso: string): Date {
   const at = new Date(raw);
   if (!Number.isFinite(at.getTime())) {
-    throw new BadRequestException('depart_at no es una fecha válida: se espera ISO 8601');
+    throw new BadRequestException(`${campo} no es una fecha válida: se espera ISO 8601`);
   }
 
   const minutosDesdeAhora = (at.getTime() - Date.now()) / 60_000;
 
   if (minutosDesdeAhora < -TOLERANCIA_PASADO_MIN) {
-    throw new BadRequestException('La hora de salida ya pasó');
+    throw new BadRequestException(yaPaso);
   }
 
   if (minutosDesdeAhora > MAX_DIAS_ADELANTE * 24 * 60) {
@@ -89,9 +87,42 @@ function parseDepartAt(raw: string | undefined): Date | undefined {
     );
   }
 
+  return at;
+}
+
+/**
+ * La hora de salida pedida, ya validada.
+ *
+ * Devuelve `undefined` cuando el viaje es ahora, que es lo que el planificador
+ * espera para usar las tres fuentes.
+ */
+function parseDepartAt(raw: string | undefined): Date | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+
+  const at = parseHora(raw, 'depart_at', 'La hora de salida ya pasó');
+
   // Dentro de la tolerancia es ahora, y ahora se contesta con todo lo que hay:
   // el coche en la calle además del papel.
-  return minutosDesdeAhora <= 0 ? undefined : at;
+  return at.getTime() <= Date.now() ? undefined : at;
+}
+
+/**
+ * La hora de llegada pedida, ya validada.
+ *
+ * A diferencia de la salida, no tiene un "ahora": llegar ya no es una
+ * pregunta. Y no se puede llegar en menos que nada, así que dentro de la
+ * tolerancia también se rechaza.
+ */
+function parseArriveBy(raw: string | undefined): Date | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+
+  const at = parseHora(raw, 'arrive_by', 'La hora de llegada ya pasó');
+
+  if (at.getTime() <= Date.now()) {
+    throw new BadRequestException('La hora de llegada ya pasó');
+  }
+
+  return at;
 }
 
 @Controller('transport/plan')
@@ -117,12 +148,23 @@ export class TripPlannerController {
      * la diferencia entre los dos.
      */
     planned_for: string | null;
+    /**
+     * La hora a la que se pidió llegar, cuando la pregunta fue esa. Con esto
+     * puesto, las opciones vienen ordenadas por salida -la más tarde
+     * primero- y `planned_for` es la salida más temprana de las que quedaron.
+     */
+    arrive_by: string | null;
   }> {
     if (!isValidPoint(body?.origin) || !isValidPoint(body?.destination)) {
       throw new BadRequestException('Faltan las coordenadas de origen o destino');
     }
 
+    if (body?.depart_at && body?.arrive_by) {
+      throw new BadRequestException('Elegí salir a las o llegar a las, no las dos');
+    }
+
     const departAt = parseDepartAt(body?.depart_at);
+    const arriveBy = parseArriveBy(body?.arrive_by);
 
     const origin = {
       lat: Number(body.origin.lat),
@@ -134,6 +176,23 @@ export class TripPlannerController {
       lng: Number(body.destination.lng),
       label: body.destination.label,
     };
+
+    if (arriveBy) {
+      // Hacia atrás desde la hora de llegada. La vuelta se mira desde esa
+      // hora, que es cuando uno está allá.
+      const [ida, returnTrip] = await Promise.all([
+        this.planner.planArriveBy(origin, destination, arriveBy),
+        this.planner.lastReturn(origin, destination, arriveBy),
+      ]);
+
+      return {
+        options: ida.options,
+        return_trip: returnTrip,
+        planned_for: ida.desde ? ida.desde.toISOString() : null,
+        arrive_by: arriveBy.toISOString(),
+        ready: this.stopSequences.isReady(),
+      };
+    }
 
     // La vuelta se calcula junto con la ida y no en otro pedido: la pregunta
     // "¿y cómo vuelvo?" hay que contestarla **antes** de que la persona salga,
@@ -150,6 +209,7 @@ export class TripPlannerController {
       options,
       return_trip: returnTrip,
       planned_for: departAt ? departAt.toISOString() : null,
+      arrive_by: null,
       // Sin recorridos reconstruidos no hay orden de paradas y no se puede
       // planificar nada. La interfaz necesita distinguirlo de "no encontramos
       // ninguna combinación".
