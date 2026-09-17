@@ -16,6 +16,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
 import { destinationsService, Destination } from '@services/destinationsService';
 import { TripMap, TripLegend, rideColor, legLine } from '@components/transporte/TripMap';
@@ -31,6 +32,7 @@ import { useRecordatorioStore } from '@store/recordatorioStore';
 import { prepararAvisos } from '@lib/avisos';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
+import { operatorName } from '@lib/operators';
 
 /**
  * Elegí tu viaje.
@@ -162,6 +164,13 @@ export default function PlanificadorPage() {
   const [searchParams] = useSearchParams();
   const { coords, granted } = useGeolocation();
   const loTuyo = useLoTuyoStore();
+  /**
+   * Si alguna empresa no está reportando. Cambia lo que valen las esperas:
+   * para sus líneas salen del horario y no de un coche en la calle, y sin
+   * decirlo "según el horario" en una opción y "en vivo" en otra parece un
+   * capricho y no una empresa caída.
+   */
+  const { empresasCaidas } = useTransportHealth();
   const agregarReciente = loTuyo.agregarReciente;
   const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
   const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
@@ -579,6 +588,20 @@ export default function PlanificadorPage() {
       {shareNotice && (
         <div className="px-4 pt-3">
           <InlineNotice tone="info" message={shareNotice} />
+        </div>
+      )}
+
+      {/* ---------- Si el GPS de alguna empresa no está entrando ----------
+          Sólo con un viaje de ahora: para uno de más tarde el GPS no se
+          usa y el aviso confundiría. */}
+      {destination && !futuro && !paraLlegar && empresasCaidas.length > 0 && (
+        <div className="px-4 pt-3">
+          <InlineNotice
+            tone="warn"
+            message={`No estamos recibiendo el GPS de ${empresasCaidas
+              .map(operatorName)
+              .join(' y ')}. Las esperas de sus líneas salen del horario publicado, no de un coche en la calle.`}
+          />
         </div>
       )}
 

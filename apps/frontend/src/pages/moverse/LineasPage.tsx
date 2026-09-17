@@ -2,10 +2,17 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Clock, Map as MapIcon, Search } from 'lucide-react';
 import { useLines } from '@hooks/useTransport';
+import { useVehiclePositions } from '@hooks/useDepartures';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { TransportLine } from '@services/transportService';
 import { LineTag } from '@components/ui/LineTag';
 import { lineColor } from '@components/transporte/ArrivalRow';
 import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
+import {
+  cochesPorLinea,
+  estadoDeLinea,
+  EstadoDeLineaChip,
+} from '@components/transporte/EstadoDeLinea';
 import { EmptyState, ErrorState, SkeletonList } from '@components/ui/States';
 import { Estrella } from '@components/ui/Estrella';
 import { useLoTuyoStore } from '@store/loTuyoStore';
@@ -77,6 +84,15 @@ export default function LineasPage() {
 
   const guardadas = useLoTuyoStore((estado) => estado.lineas);
   const toggleLinea = useLoTuyoStore((estado) => estado.toggleLinea);
+
+  /**
+   * Lo que está pasando ahora con cada línea: cuántos coches, o que la
+   * empresa no reporta. Es lo que faltaba al lado del número: "24 · 2
+   * recorridos" no dice si vale la pena ir a la parada.
+   */
+  const { vehicles } = useVehiclePositions(true);
+  const { empresasCaidas } = useTransportHealth();
+  const porLinea = useMemo(() => cochesPorLinea(vehicles), [vehicles]);
 
   const estaGuardada = (line: TransportLine) =>
     guardadas.some(
@@ -168,6 +184,11 @@ export default function LineasPage() {
                       {line.itineraries.length}{' '}
                       {line.itineraries.length === 1 ? 'recorrido' : 'recorridos'} ·{' '}
                       {line.stops_count} paradas
+                    </p>
+                    <p className="mt-1.5">
+                      <EstadoDeLineaChip
+                        estado={estadoDeLinea(porLinea, empresasCaidas, line.operator, line.line_code)}
+                      />
                     </p>
                   </div>
                   <Estrella

@@ -23,6 +23,11 @@ import { ArrivalRow, lineColor } from '@components/transporte/ArrivalRow';
 import { ParadaGuardadaCard } from '@components/transporte/ParadaGuardadaCard';
 import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
 import { Estrella } from '@components/ui/Estrella';
+import {
+  cochesPorLinea,
+  estadoDeLinea,
+  EstadoDeLineaChip,
+} from '@components/transporte/EstadoDeLinea';
 import { LiveIndicator, freshestFixAge } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
@@ -231,6 +236,9 @@ export default function MoversePage() {
    * reciente es ocupar un lugar con nada.
    */
   const recientes = loTuyo.recientes.filter((lugar) => !estaGuardado(loTuyo, lugar.id));
+
+  /** Cuántos coches hace cada línea ahora, para las líneas guardadas. */
+  const porLinea = useMemo(() => cochesPorLinea(vehicles), [vehicles]);
 
   /**
    * Cuánto hay hasta cada parada guardada. Sólo con la ubicación real: desde
@@ -620,6 +628,18 @@ export default function MoversePage() {
                         : lines.length > 0
                           ? 'Hoy no figura en el catálogo de recorridos'
                           : operatorName(guardada.operator)}
+                    </span>
+                    {/* Lo que decide si ir a la parada: si hay coches, o si
+                        la empresa no está reportando. */}
+                    <span className="mt-1 block">
+                      <EstadoDeLineaChip
+                        estado={estadoDeLinea(
+                          porLinea,
+                          empresasCaidas,
+                          guardada.operator,
+                          guardada.code,
+                        )}
+                      />
                     </span>
                   </span>
                   <Estrella

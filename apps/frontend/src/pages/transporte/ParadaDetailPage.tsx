@@ -16,13 +16,14 @@ import {
 import { transportService, BusStop, StopScheduleToday } from '@services/transportService';
 import { useStopArrivals } from '@hooks/useDepartures';
 import { useGeolocation } from '@hooks/useGeolocation';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/ui/States';
 import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
 import { Estrella } from '@components/ui/Estrella';
 import { useLoTuyoStore } from '@store/loTuyoStore';
-import { operatorNames } from '@lib/operators';
+import { operatorName, operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
 
@@ -55,6 +56,15 @@ export default function ParadaDetailPage() {
   const [scheduleLine, setScheduleLine] = useState<string | null>(null);
 
   const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
+
+  /**
+   * Si alguna de las empresas que pasan por acá no está reportando.
+   *
+   * Con el feed caído, "ningún ómnibus en camino" suena a dato y es
+   * ignorancia: no se sabe si viene alguno. Se dice cuál empresa, porque las
+   * demás pueden estar andando perfecto.
+   */
+  const { empresasCaidas } = useTransportHealth();
 
   /**
    * Si esta parada está guardada. La estrella va en el encabezado, al lado
@@ -171,6 +181,10 @@ export default function ParadaDetailPage() {
 
   const services = SERVICES.filter((service) => stop[service.key]);
 
+  const empresasSinGps = (stop.operators ?? []).filter((operator) =>
+    empresasCaidas.includes(operator),
+  );
+
   return (
     <div className="mx-auto max-w-2xl px-4 pb-8 pt-4 md:px-6 md:pt-8">
       <button
@@ -254,6 +268,20 @@ export default function ParadaDetailPage() {
           {arrivals.length > 0 && <LiveIndicator fixAgeSeconds={arrivals[0].fix_age_seconds} />}
         </div>
 
+        {/* La empresa no está reportando: se dice antes que cualquier lista,
+            vacía o no. Si hay dos empresas y una anda, sus coches se ven
+            igual abajo; lo que no se ve es la otra, y eso hay que decirlo. */}
+        {empresasSinGps.length > 0 && !loadingArrivals && (
+          <div className="mt-3">
+            <InlineNotice
+              tone="warn"
+              message={`No estamos recibiendo el GPS de ${empresasSinGps
+                .map(operatorName)
+                .join(' y ')}. No podemos decir si viene alguno de sus ómnibus; el horario de abajo sigue valiendo.`}
+            />
+          </div>
+        )}
+
         {loadingArrivals ? (
           <SkeletonList rows={2} className="mt-3" />
         ) : arrivals.length > 0 ? (
@@ -280,6 +308,12 @@ export default function ParadaDetailPage() {
             title="Ninguno reportando ahora"
             description={`Por horario, el próximo es la línea ${schedule.lines[0].line_label} a las ${schedule.lines[0].next_at}.`}
           />
+        ) : empresasSinGps.length > 0 && empresasSinGps.length === (stop.operators ?? []).length ? (
+          // Sin ninguna empresa reportando no hay lista vacía que mostrar: el
+          // aviso de arriba ya lo dijo, y "ninguno en camino" sería mentira.
+          // Lo que dice el horario -que terminó, o a qué hora viene- sí se
+          // muestra, arriba de esto: es justamente lo que sigue valiendo.
+          null
         ) : (
           <EmptyState
             icon={Bus}

@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useStopArrivals } from '@hooks/useDepartures';
-import { Arrival } from '@services/transportService';
+import { Arrival, StopScheduleToday, transportService } from '@services/transportService';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { Estrella } from '@components/ui/Estrella';
@@ -20,7 +21,16 @@ import { formatDistance, walkingMinutes } from '@lib/geo';
  * Cada tarjeta pide sus llegadas por su cuenta, con el mismo hook que la
  * ficha de la parada. Son un pedido cada quince segundos por parada guardada;
  * con las dos o tres que guarda cualquiera es nada.
+ *
+ * Cuando no viene ninguno se mira el horario publicado, porque "ninguno
+ * reportando" no distingue *falta un rato* de *ya no hay más*, y a la noche
+ * esa diferencia es la que decide si ir a la parada. Se pide una vez y se
+ * vuelve a pedir cada cinco minutos: el papel no cambia, lo que cambia es la
+ * hora.
  */
+
+/** Cada cuánto se vuelve a mirar el horario mientras no viene ninguno. */
+const HORARIO_CADA_MS = 5 * 60_000;
 
 /** Cuántas llegadas se muestran antes de mandar a la ficha, que las tiene todas. */
 const MAX_LLEGADAS = 3;
@@ -35,6 +45,34 @@ export function ParadaGuardadaCard({
 }) {
   const { arrivals, loading } = useStopArrivals(parada.id);
   const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+
+  const [schedule, setSchedule] = useState<StopScheduleToday | null>(null);
+  const sinLlegadas = !loading && arrivals.length === 0;
+
+  useEffect(() => {
+    if (!sinLlegadas) return;
+    let cancelled = false;
+
+    const pedir = () =>
+      transportService
+        .getStopSchedule(parada.id)
+        .then((data) => {
+          if (!cancelled) setSchedule(data);
+        })
+        .catch(() => {
+          if (!cancelled) setSchedule(null);
+        });
+
+    pedir();
+    const timer = setInterval(pedir, HORARIO_CADA_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [parada.id, sinLlegadas]);
+
+  /** La próxima por horario: la primera línea que todavía no terminó por hoy. */
+  const proxima = schedule?.lines.find((linea) => !linea.finished && linea.next_at) ?? null;
 
   const busLink = (arrival: Arrival) =>
     `/moverse/bondis?coche=${encodeURIComponent(arrival.vehicle_id)}` +
@@ -83,6 +121,22 @@ export function ParadaGuardadaCard({
             </Link>
           ))}
         </div>
+      ) : schedule?.finished ? (
+        // Se terminó por hoy. Es lo que hay que saber antes de salir a la
+        // parada, y no se sabe con la lista vacía.
+        <p className="mt-2.5 text-xs text-ink-500">
+          <span className="font-bold text-ink-900">Hoy ya no pasa más por acá.</span> El último
+          salió a las {schedule.last_at}.
+        </p>
+      ) : proxima ? (
+        // Ninguno reportando, pero el papel dice que viene. Se dice de dónde
+        // sale el dato: no es el GPS.
+        <p className="mt-2.5 text-xs text-ink-500">
+          Ninguno reportando. Por horario, el próximo es la{' '}
+          <span className="font-bold text-ink-900">{proxima.line_label}</span> a las{' '}
+          <span className="font-bold text-ink-900">{proxima.next_at}</span>
+          {proxima.is_last ? ', y es el último' : ''}.
+        </p>
       ) : (
         // No es "no viene ninguno": es que ninguno está reportando cerca. La
         // ficha de la parada tiene el horario publicado para lo demás.
