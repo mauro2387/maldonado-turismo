@@ -18,7 +18,8 @@ import { distanceMeters, formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import { stopMarker } from '@components/map/stopMarker';
 import { firstImage, photoMarker } from '@components/map/photoMarker';
-import { useLoTuyoStore } from '@store/loTuyoStore';
+import { enlaceParaIr, useLoTuyoStore } from '@store/loTuyoStore';
+import { Estrella } from '@components/ui/Estrella';
 
 /**
  * El mapa de la app: dónde queda cada cosa en Maldonado.
@@ -111,8 +112,24 @@ type Selection =
       lat: number;
       lng: number;
     }
-  | { kind: 'place'; id: string; name: string; description?: string; category?: string }
-  | { kind: 'event'; id: string; name: string; location?: string; date?: string };
+  | {
+      kind: 'place';
+      id: string;
+      name: string;
+      description?: string;
+      category?: string;
+      lat: number;
+      lng: number;
+    }
+  | {
+      kind: 'event';
+      id: string;
+      name: string;
+      location?: string;
+      date?: string;
+      lat: number;
+      lng: number;
+    };
 
 export default function MapaPage() {
   const [searchParams] = useSearchParams();
@@ -283,6 +300,8 @@ export default function MapaPage() {
                     kind: 'place',
                     id: place.id,
                     name: place.name,
+                    lat: Number(place.lat ?? place.latitude),
+                    lng: Number(place.lng ?? place.longitude),
                     description: place.description,
                     category: place.category,
                   }),
@@ -307,6 +326,8 @@ export default function MapaPage() {
                     kind: 'event',
                     id: event.id,
                     name: event.title,
+                    lat: Number(event.lat ?? event.latitude),
+                    lng: Number(event.lng ?? event.longitude),
                     location: event.location,
                     date: event.date,
                   }),
@@ -418,6 +439,19 @@ function SelectionSheet({
 }) {
   const { arrivals } = useStopArrivals(selection.kind === 'stop' ? selection.id : undefined);
 
+  /**
+   * Guardar la parada desde el mapa.
+   *
+   * La estrella estaba en la ficha de la parada y no acá, así que la forma
+   * de guardar la parada que uno acaba de encontrar en el mapa era entrar a
+   * su ficha, guardarla y volver. Es el mismo gesto que en la ficha y el
+   * mismo componente.
+   */
+  const guardadas = useLoTuyoStore((estado) => estado.paradas);
+  const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+  const guardada =
+    selection.kind === 'stop' && guardadas.some((parada) => parada.id === selection.id);
+
   const distance =
     selection.kind === 'stop' && userCoords
       ? distanceMeters(userCoords.lat, userCoords.lng, selection.lat, selection.lng)
@@ -439,9 +473,26 @@ function SelectionSheet({
             {distance !== null && ` · a ${formatDistance(distance)}`}
           </p>
         </div>
-        <button onClick={onClose} aria-label="Cerrar" className="flex-none p-1">
-          <X className="h-4 w-4 text-ink-400" strokeWidth={2} />
-        </button>
+        <div className="flex flex-none items-center">
+          {selection.kind === 'stop' && (
+            <Estrella
+              activa={guardada}
+              que="esta parada"
+              onToggle={() =>
+                toggleParada({
+                  id: selection.id,
+                  name: formatStopName(selection.name),
+                  lat: selection.lat,
+                  lng: selection.lng,
+                })
+              }
+              className="-my-2"
+            />
+          )}
+          <button onClick={onClose} aria-label="Cerrar" className="p-1">
+            <X className="h-4 w-4 text-ink-400" strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       {selection.kind === 'stop' && (
@@ -486,8 +537,17 @@ function SelectionSheet({
           <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
         </Link>
         {selection.kind !== 'stop' && (
+          // Con la coordenada del punto y no con su nombre: el planificador
+          // buscaba "Plaza San Fernando" en el catálogo y podía no encontrarla
+          // -o encontrar otra- cuando el lugar ya estaba ahí, marcado en el
+          // mapa que la persona está mirando.
           <Link
-            to={`/transporte/planificador?destino=${encodeURIComponent(selection.name)}`}
+            to={enlaceParaIr({
+              id: `mapa:${selection.kind}:${selection.id}`,
+              name: selection.name,
+              lat: selection.lat,
+              lng: selection.lng,
+            })}
             className="btn btn-secondary flex-none px-4"
             aria-label="Cómo llegar en ómnibus"
           >
