@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Bus, MapPin, MapPinned, Search, Trash2, X } from 'lucide-react';
+import { Briefcase, Bus, Home, LocateFixed, MapPin, MapPinned, Search, Star, Trash2, X } from 'lucide-react';
 import { destinationsService, Destination } from '@services/destinationsService';
 import { DestinoEnMapa } from '@components/transporte/DestinoEnMapa';
 import { SheetGrab } from '@components/ui/SheetGrab';
 import { useGeolocation } from '@hooks/useGeolocation';
-import { Lugar, idDePunto } from '@store/loTuyoStore';
+import { Lugar, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
 import { formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 
@@ -21,6 +21,11 @@ import { formatStopName } from '@lib/stopNames';
  * elegir un destino dispara una búsqueda de viaje desde donde uno está, y
  * quien está configurando su casa desde el sillón de su casa recibiría un
  * viaje de cero minutos. Acá elegir guarda y cierra.
+ *
+ * También sirve para elegir **desde dónde** en el planificador: ahí se
+ * ofrece volver a "tu ubicación" (`alternativa`) y los atajos de lo tuyo
+ * (`conAtajos`), porque "desde casa" es el origen más pedido después de
+ * donde uno está.
  */
 
 /** Lo que se espera después de la última tecla antes de salir a buscar. */
@@ -32,6 +37,8 @@ export function ElegirLugarSheet({
   onPick,
   onRemove,
   onClose,
+  alternativa,
+  conAtajos = false,
 }: {
   /** "Tu casa", "Tu trabajo". */
   titulo: string;
@@ -40,8 +47,20 @@ export function ElegirLugarSheet({
   onPick: (lugar: Lugar) => void;
   onRemove?: () => void;
   onClose: () => void;
+  /** Una opción que no es un lugar: "usar tu ubicación". */
+  alternativa?: { label: string; onPick: () => void };
+  /** Ofrecer casa, trabajo y tus lugares como atajos. */
+  conAtajos?: boolean;
 }) {
   const { coords } = useGeolocation(false);
+  const loTuyo = useLoTuyoStore();
+  const atajos = conAtajos
+    ? [
+        ...(loTuyo.casa ? [{ icon: Home, label: 'Casa', lugar: loTuyo.casa }] : []),
+        ...(loTuyo.trabajo ? [{ icon: Briefcase, label: 'Trabajo', lugar: loTuyo.trabajo }] : []),
+        ...loTuyo.lugares.map((lugar) => ({ icon: Star, label: lugar.name, lugar })),
+      ]
+    : [];
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Destination[]>([]);
   const [pickingOnMap, setPickingOnMap] = useState(false);
@@ -137,6 +156,24 @@ export function ElegirLugarSheet({
           Marcalo en el mapa
         </button>
 
+        {alternativa && (
+          <button onClick={alternativa.onPick} className="btn btn-secondary mt-2 w-full gap-1.5">
+            <LocateFixed className="h-4 w-4" strokeWidth={2} />
+            {alternativa.label}
+          </button>
+        )}
+
+        {atajos.length > 0 && (
+          <div className="chip-row mt-3">
+            {atajos.map(({ icon: Icon, label, lugar }) => (
+              <button key={lugar.id} onClick={() => onPick(lugar)} className="chip">
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {suggestions.length > 0 && (
           <ul className="mt-2 divide-y divide-sand-200">
             {suggestions.map((suggestion) => (
@@ -190,7 +227,11 @@ export function ElegirLugarSheet({
           </button>
         )}
 
-        <p className="mt-4 text-xs text-ink-300">Se guarda en este teléfono, no en una cuenta.</p>
+        {/* Sólo cuando lo elegido se guarda (casa, trabajo): un origen de un
+            viaje no se guarda en ningún lado. */}
+        {!alternativa && (
+          <p className="mt-4 text-xs text-ink-300">Se guarda en este teléfono, no en una cuenta.</p>
+        )}
       </div>
     </>
   );

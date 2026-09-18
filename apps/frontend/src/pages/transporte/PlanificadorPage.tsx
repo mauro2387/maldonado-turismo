@@ -28,6 +28,7 @@ import { BondiSprite } from '@components/transporte/BondiSprite';
 import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet';
+import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
 import { enlaceParaIr, estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
 import { compartir, mensajeDeCompartir } from '@lib/compartir';
 import { useRecordatorioStore } from '@store/recordatorioStore';
@@ -72,6 +73,14 @@ import { operatorName } from '@lib/operators';
  * que se muestra grande: quien pregunta a qué hora salir quiere ver la hora
  * de salida, no cuánto dura el viaje; y las opciones vienen por salida, la
  * más tarde primero. Ver `TripCard` con `paraLlegar`.
+ *
+ * **Y el origen se puede elegir.** Siempre fue donde está la persona, y la
+ * flecha de intercambiar no hacía nada. "¿Cómo llega mi hijo del liceo a
+ * casa?" o "¿cómo vuelvo de ahí?" no se podían preguntar. El origen es un
+ * lugar como el destino -se busca, se marca en el mapa, o es casa o trabajo-
+ * y la flecha da vuelta el viaje: con el origen en "tu ubicación", da vuelta
+ * hacia donde estás, que es la pregunta "¿y cómo vuelvo?". Ver `origen` y
+ * `MI_UBICACION`.
  *
  * **Y el destino puede venir ya resuelto.** `?destino=<texto>` se busca y se
  * elige el primer resultado, que sirve desde una ficha con nombre y no sirve
@@ -128,6 +137,15 @@ function idDeDestino(destino: Destino): string {
 }
 
 /**
+ * "Tu ubicación" como destino, después de dar vuelta el viaje.
+ *
+ * No es un lugar: no se guarda con la estrella, no entra en recientes y no
+ * se comparte, porque mañana la persona va a estar en otro lado. El id
+ * fijo es lo que permite reconocerlo para esconder esas tres cosas.
+ */
+const MI_UBICACION = 'mi-ubicacion';
+
+/**
  * Un destino que llega por la URL con su coordenada.
  *
  * Sólo si los dos números son números y caen en un lugar del mundo: una URL
@@ -147,6 +165,17 @@ function destinoDeLaUrl(params: URLSearchParams): Destino | null {
   // el catálogo y se vería como no guardado.
   const id = params.get('id')?.trim();
   return { id: id || undefined, name: nombre || 'Punto en el mapa', lat, lng };
+}
+
+/** El origen que llega por la URL (`desde_lat`, `desde_lng`, `desde`), si es válido. */
+function origenDeLaUrl(params: URLSearchParams): Destino | null {
+  const lat = Number(params.get('desde_lat'));
+  const lng = Number(params.get('desde_lng'));
+  if (!params.has('desde_lat') || !params.has('desde_lng')) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const nombre = params.get('desde')?.trim();
+  return { name: nombre || 'Punto en el mapa', lat, lng };
 }
 
 /**
@@ -191,6 +220,10 @@ export default function PlanificadorPage() {
   const [destination, setDestination] = useState<Destino | null>(() =>
     destinoDeLaUrl(searchParams),
   );
+  /** Desde dónde. `null` es donde está la persona, que es casi siempre. */
+  const [origen, setOrigen] = useState<Destino | null>(() => origenDeLaUrl(searchParams));
+  /** El sheet de "desde dónde", abierto. */
+  const [eligiendoOrigen, setEligiendoOrigen] = useState(false);
   /** El sheet de "guardar este destino", abierto. */
   const [saving, setSaving] = useState(false);
   /** El selector de punto en el mapa, abierto. */
@@ -277,6 +310,19 @@ export default function PlanificadorPage() {
     };
   }, [query, destination, coords.lat, coords.lng, searchParams]);
 
+  /**
+   * El origen que se manda: el elegido, o donde está la persona. Sin permiso
+   * de ubicación es el centro de Maldonado, y se dice así.
+   */
+  const origenEfectivo: Destino = origen ?? {
+    name: granted ? 'Tu ubicación' : 'Centro de Maldonado',
+    lat: coords.lat,
+    lng: coords.lng,
+  };
+
+  /** El destino es "tu ubicación" después de dar vuelta el viaje. */
+  const destinoEsMiUbicacion = destination?.id === MI_UBICACION;
+
   // --- El viaje ---
   useEffect(() => {
     if (!destination) return;
@@ -291,7 +337,7 @@ export default function PlanificadorPage() {
 
     routePlannerService
       .plan(
-        { ...coords, label: granted ? 'Tu ubicación' : 'Centro de Maldonado' },
+        { lat: origenEfectivo.lat, lng: origenEfectivo.lng, label: origenEfectivo.name },
         { lat: destination.lat, lng: destination.lng, label: destination.name },
         departAt ?? undefined,
         arriveBy ?? undefined,
@@ -307,7 +353,7 @@ export default function PlanificadorPage() {
         // A dónde fuiste últimamente. Se anota cuando el viaje se pudo
         // calcular y no al elegir el destino: un lugar al que no se llega en
         // ómnibus no es un viaje reciente, es una búsqueda fallida.
-        if (result.options.length > 0) {
+        if (result.options.length > 0 && destination.id !== MI_UBICACION) {
           agregarReciente({ ...destination, id: idDeDestino(destination) });
         }
       })
@@ -325,7 +371,9 @@ export default function PlanificadorPage() {
     };
     // `agregarReciente` no va en las dependencias: zustand no lo recrea, y
     // ponerlo sólo sugeriría que un cambio en él vuelve a planificar.
-  }, [destination, coords.lat, coords.lng, granted, departAt, arriveBy, soloAccesibles]);
+    // `origenEfectivo` se recompone en cada render; lo que cambia de verdad
+    // es el origen elegido o las coordenadas, que son las dependencias.
+  }, [destination, origen, coords.lat, coords.lng, granted, departAt, arriveBy, soloAccesibles]);
 
   const current = options[selected];
 
@@ -345,8 +393,14 @@ export default function PlanificadorPage() {
 
     const lugar = { ...destination, id: idDeDestino(destination) };
     const hora = arriveBy ?? departAt;
+    // El origen viaja sólo si se eligió a mano: el de la ubicación es dónde
+    // está la persona, y eso no se manda.
+    const desde = origen
+      ? `&desde_lat=${origen.lat.toFixed(5)}&desde_lng=${origen.lng.toFixed(5)}` +
+        `&desde=${encodeURIComponent(origen.name)}`
+      : '';
     const url =
-      `${window.location.origin}${enlaceParaIr(lugar)}` +
+      `${window.location.origin}${enlaceParaIr(lugar)}${desde}` +
       (arriveBy
         ? `&llegar=${encodeURIComponent(arriveBy.toISOString())}`
         : departAt
@@ -363,7 +417,7 @@ export default function PlanificadorPage() {
 
     const resultado = await compartir({
       titulo: `Cómo llegar a ${destination.name}`,
-      texto: `Cómo llegar a ${destination.name} en ómnibus${enQue}${cuando}:`,
+      texto: `Cómo llegar${origen ? ` desde ${origen.name}` : ''} a ${destination.name} en ómnibus${enQue}${cuando}:`,
       url,
     });
 
@@ -459,10 +513,42 @@ export default function PlanificadorPage() {
 
         <div className="flex items-center gap-2.5">
           <span className="h-2 w-2 flex-none rounded-full border-[2.5px] border-sea-200" />
-          <span className="flex-1 truncate text-sm font-semibold">
-            {granted ? 'Tu ubicación' : 'Centro de Maldonado'}
-          </span>
-          <ArrowUpDown className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
+          {/* Desde dónde. Es un botón: se cambia tocándolo, como el destino. */}
+          <button
+            type="button"
+            onClick={() => setEligiendoOrigen(true)}
+            className={`min-w-0 flex-1 truncate text-left text-sm font-semibold ${
+              origen ? 'text-white' : 'text-ink-100'
+            }`}
+          >
+            {origenEfectivo.name}
+          </button>
+          {/* Dar vuelta el viaje. Con el origen en "tu ubicación" el destino
+              pasa a ser donde estás: es la pregunta "¿y cómo vuelvo?". */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!destination) return;
+              const nuevoOrigen: Destino = destinoEsMiUbicacion ? { ...origenEfectivo } : destination;
+              const nuevoDestino: Destino = origen ?? {
+                id: MI_UBICACION,
+                name: granted ? 'Tu ubicación' : 'Centro de Maldonado',
+                lat: coords.lat,
+                lng: coords.lng,
+              };
+              setOrigen(destinoEsMiUbicacion ? null : nuevoOrigen);
+              setDestination(nuevoDestino);
+              setQuery(nuevoDestino.name);
+              setSuggestions([]);
+              setSearched(false);
+              setOptions([]);
+            }}
+            disabled={!destination}
+            aria-label="Dar vuelta el viaje"
+            className="-my-2 flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-300 active:bg-white/10 disabled:opacity-40"
+          >
+            <ArrowUpDown className="h-4 w-4" strokeWidth={2} />
+          </button>
         </div>
 
         <div className="ml-[0.3rem] h-px bg-white/15" />
@@ -484,7 +570,7 @@ export default function PlanificadorPage() {
           />
           {/* Compartir y guardar el destino. Sólo con un destino elegido;
               guardar o mandar lo que se está escribiendo no significa nada. */}
-          {destination && (
+          {destination && !destinoEsMiUbicacion && (
             <button
               type="button"
               onClick={compartirViaje}
@@ -494,7 +580,7 @@ export default function PlanificadorPage() {
               <Share2 className="h-[1.15rem] w-[1.15rem] text-ink-300" strokeWidth={2} />
             </button>
           )}
-          {destination && (
+          {destination && !destinoEsMiUbicacion && (
             <button
               type="button"
               onClick={() => setSaving(true)}
@@ -616,6 +702,27 @@ export default function PlanificadorPage() {
               .join(' y ')}. Las esperas de sus líneas salen del horario publicado, no de un coche en la calle.`}
           />
         </div>
+      )}
+
+      {/* ---------- Desde dónde ---------- */}
+      {eligiendoOrigen && (
+        <ElegirLugarSheet
+          titulo="Desde dónde"
+          actual={origen ? { ...origen, id: idDeDestino(origen) } : null}
+          conAtajos
+          alternativa={{
+            label: granted ? 'Desde tu ubicación' : 'Desde el centro de Maldonado',
+            onPick: () => {
+              setOrigen(null);
+              setEligiendoOrigen(false);
+            },
+          }}
+          onPick={(lugar) => {
+            setOrigen(lugar);
+            setEligiendoOrigen(false);
+          }}
+          onClose={() => setEligiendoOrigen(false)}
+        />
       )}
 
       {/* ---------- Guardar el destino ---------- */}
