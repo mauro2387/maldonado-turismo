@@ -16,6 +16,9 @@ import {
   Share2,
   Accessibility,
   Ticket,
+  Home,
+  Briefcase,
+  History,
 } from 'lucide-react';
 import { useGeolocation } from '@hooks/useGeolocation';
 import { useTransportHealth } from '@hooks/useTransportHealth';
@@ -29,7 +32,7 @@ import { LineTag } from '@components/ui/LineTag';
 import { EmptyState, ErrorState, InlineNotice, SkeletonList } from '@components/ui/States';
 import { GuardarDestinoSheet } from '@components/transporte/GuardarDestinoSheet';
 import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
-import { enlaceParaIr, estaGuardado, idDePunto, useLoTuyoStore } from '@store/loTuyoStore';
+import { enlaceParaIr, estaGuardado, idDePunto, Lugar, useLoTuyoStore } from '@store/loTuyoStore';
 import { compartir, mensajeDeCompartir } from '@lib/compartir';
 import { useRecordatorioStore } from '@store/recordatorioStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
@@ -322,6 +325,29 @@ export default function PlanificadorPage() {
 
   /** El destino es "tu ubicación" después de dar vuelta el viaje. */
   const destinoEsMiUbicacion = destination?.id === MI_UBICACION;
+
+  /**
+   * Lo tuyo, para elegir sin escribir.
+   *
+   * Con el destino vacío la pantalla decía "escribí a dónde querés ir" y
+   * nada más, y el viaje de todos los días es a casa, al trabajo o a uno de
+   * los tres lugares de siempre: esos van primero, y después a dónde se fue
+   * últimamente. Sin nada guardado sigue el texto de antes.
+   */
+  const sugerenciasTuyas: Array<{ icon: typeof Home; etiqueta: string; lugar: Lugar }> = [
+    ...(loTuyo.casa ? [{ icon: Home, etiqueta: 'Casa', lugar: loTuyo.casa }] : []),
+    ...(loTuyo.trabajo ? [{ icon: Briefcase, etiqueta: 'Trabajo', lugar: loTuyo.trabajo }] : []),
+    ...loTuyo.lugares.map((lugar) => ({ icon: Star, etiqueta: lugar.name, lugar })),
+    ...loTuyo.recientes
+      .filter((lugar) => !estaGuardado(loTuyo, lugar.id))
+      .map((lugar) => ({ icon: History, etiqueta: lugar.name, lugar })),
+  ];
+
+  const elegirLugar = (lugar: Lugar) => {
+    setDestination({ id: lugar.id, name: lugar.name, lat: lugar.lat, lng: lugar.lng });
+    setQuery(lugar.name);
+    setSuggestions([]);
+  };
 
   // --- El viaje ---
   useEffect(() => {
@@ -848,11 +874,41 @@ export default function PlanificadorPage() {
       {/* ---------- Opciones ---------- */}
       <div className="px-4 pb-8 pt-4">
         {!destination && suggestions.length === 0 && query.trim().length < 2 && (
-          <p className="px-1 text-sm text-ink-400">
-            Escribí a dónde querés ir: una parada, una playa, el shopping, el hospital o el
-            liceo. Si no tiene nombre —una casa, una obra, un punto de la ruta— marcalo en el
-            mapa.
-          </p>
+          <>
+            {sugerenciasTuyas.length > 0 && (
+              <ul className="-mt-1 mb-4 divide-y divide-sand-200 rounded-card border border-sand-300 bg-white">
+                {sugerenciasTuyas.map(({ icon: Icon, etiqueta, lugar }) => (
+                  <li key={lugar.id}>
+                    <button
+                      onClick={() => elegirLugar(lugar)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                    >
+                      <Icon
+                        className={`h-4 w-4 flex-none ${
+                          Icon === History ? 'text-ink-300' : 'text-coral-500'
+                        }`}
+                        strokeWidth={2}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-data font-bold text-ink-900">
+                          {etiqueta}
+                        </span>
+                        {etiqueta !== lugar.name && (
+                          <span className="block truncate text-xs text-ink-400">{lugar.name}</span>
+                        )}
+                      </span>
+                      <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="px-1 text-sm text-ink-400">
+              Escribí a dónde querés ir: una parada, una playa, el shopping, el hospital o el
+              liceo. Si no tiene nombre —una casa, una obra, un punto de la ruta— marcalo en el
+              mapa.
+            </p>
+          </>
         )}
 
         {error && <ErrorState message={error} onRetry={() => setDestination({ ...destination! })} />}
