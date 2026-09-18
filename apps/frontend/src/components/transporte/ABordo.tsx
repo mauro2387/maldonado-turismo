@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Footprints, MapPin, Share2, SignalZero, X } from 'lucide-react';
+import { Bell, Footprints, MapPin, Share2, SignalZero, X, ChevronDown } from 'lucide-react';
 import { rideService, RideStatus } from '@services/rideService';
 import { BondiSprite } from '@components/transporte/BondiSprite';
 import { Llegaste } from '@components/transporte/Llegaste';
 import { useWakeLock } from '@hooks/useWakeLock';
+import { SheetGrab } from '@components/ui/SheetGrab';
 import { avisar } from '@lib/avisos';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
@@ -122,6 +123,7 @@ export function ABordo({
   vehicleId,
   destination,
   stopId,
+  stops,
   onClose,
 }: {
   /** El coche al que se subió. Del planificador o de tocarlo en el mapa. */
@@ -135,10 +137,29 @@ export function ABordo({
    * que cambie sola, aunque el backend encuentre una parada mejor.
    */
   stopId?: number;
+  /**
+   * Las paradas del tramo en ómnibus, en orden, si el viaje viene del
+   * planificador. Es lo que permite bajarse en otra: sin esto la app sabe
+   * dónde **conviene** bajarse y no qué otras opciones hay.
+   */
+  stops?: Array<{ id: number; name: string; lat: number; lng: number }>;
   onClose: () => void;
 }) {
   const [status, setStatus] = useState<RideStatus | null>(null);
   const [failed, setFailed] = useState(false);
+  /**
+   * La bajada elegida a mano, si se cambió.
+   *
+   * Arriba del ómnibus la pregunta cambia: la app eligió la parada que deja
+   * más cerca del destino, y quien va sentado sabe cosas que la app no -que
+   * baja con una valija, que va a lo de alguien que vive dos cuadras antes,
+   * que en esa esquina no hay vereda-. Cambiarla es el único dato del viaje
+   * que la persona conoce mejor que el backend.
+   */
+  const [bajadaElegida, setBajadaElegida] = useState<number | null>(null);
+  /** La lista de paradas para elegir, abierta. */
+  const [eligiendoBajada, setEligiendoBajada] = useState(false);
+  const bajadaId = bajadaElegida ?? stopId;
   /** Lo que pasó al mandar "voy en camino", para decirlo acá y no en un alert. */
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
@@ -193,7 +214,7 @@ export function ABordo({
 
     const ask = () => {
       rideService
-        .follow(vehicleId, { lat: destination.lat, lng: destination.lng }, stopId)
+        .follow(vehicleId, { lat: destination.lat, lng: destination.lng }, bajadaId)
         .then((result) => {
           if (cancelled) return;
           setStatus(result);
@@ -214,7 +235,9 @@ export function ABordo({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [vehicleId, destination.lat, destination.lng, stopId, llegada]);
+    // Cambiar la bajada vuelve a preguntar en el acto: el aviso, las cuadras
+    // y la caminata de después son otros.
+  }, [vehicleId, destination.lat, destination.lng, bajadaId, llegada]);
 
   const alert = status?.alert ?? null;
   const perdido = status?.reason === 'sin_coche' || status?.reason === 'sin_senal';
@@ -393,11 +416,22 @@ export function ABordo({
             )}
 
             {status?.stop && (
-              <p
-                className={`mt-3 border-t pt-3 text-sm font-bold ${DIVISOR[alert ?? 'viaja']}`}
-              >
-                {formatStopName(status.stop.name)}
-              </p>
+              <div className={`mt-3 border-t pt-3 ${DIVISOR[alert ?? 'viaja']}`}>
+                <p className="text-sm font-bold">{formatStopName(status.stop.name)}</p>
+                {/* Cambiar dónde bajarse. Sólo con las paradas del tramo a
+                    mano: las manda el planificador. Este bloque ya vive en la
+                    rama donde el viaje sigue corriendo -con "te pasaste" la
+                    pantalla es otra-, así que no hace falta pedirlo de nuevo. */}
+                {stops && stops.length > 1 && (
+                  <button
+                    onClick={() => setEligiendoBajada(true)}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-bold underline underline-offset-2 opacity-80"
+                  >
+                    Me bajo en otra parada
+                    <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -474,6 +508,65 @@ export function ABordo({
           </p>
         )}
       </div>
+
+      {/* ---------- Elegir otra bajada ---------- */}
+      {eligiendoBajada && stops && (
+        <>
+          <button
+            aria-label="Cerrar"
+            onClick={() => setEligiendoBajada(false)}
+            className="absolute inset-0 z-[2010] animate-fade-in bg-ink-950/40"
+          />
+          <div className="sheet absolute inset-x-0 bottom-0 z-[2020] max-h-[70%] animate-sheet-up overflow-y-auto px-4 pb-6 pt-2">
+            <SheetGrab onDismiss={() => setEligiendoBajada(false)} />
+
+            <h2 className="text-base font-extrabold tracking-tight text-ink-900">
+              ¿Dónde te bajás?
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-400">
+              Las paradas de este ómnibus, en orden. Cambiarla cambia el aviso y la caminata de
+              después.
+            </p>
+
+            <ul className="mt-3 divide-y divide-sand-200">
+              {stops.map((parada, i) => {
+                const esLaActual = parada.id === status?.stop?.id;
+                return (
+                  <li key={`${parada.id}-${i}`}>
+                    <button
+                      onClick={() => {
+                        setBajadaElegida(parada.id);
+                        setEligiendoBajada(false);
+                        // El viaje cambia: los avisos de este tramo se dan de
+                        // nuevo para la parada nueva.
+                        avisado.current = { preparate: false, bajate: false, cierre: false };
+                      }}
+                      aria-pressed={esLaActual}
+                      className="flex w-full items-center gap-3 py-3 text-left"
+                    >
+                      <span
+                        className={`h-2 w-2 flex-none rounded-full ${
+                          esLaActual ? 'bg-coral-500' : 'bg-sand-400'
+                        }`}
+                      />
+                      <span
+                        className={`min-w-0 flex-1 truncate text-data ${
+                          esLaActual ? 'font-bold text-ink-900' : 'text-ink-600'
+                        }`}
+                      >
+                        {formatStopName(parada.name)}
+                      </span>
+                      {esLaActual && (
+                        <span className="flex-none text-xs font-bold text-coral-500">Ahí bajás</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

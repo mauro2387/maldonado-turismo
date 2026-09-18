@@ -855,6 +855,8 @@ export default function PlanificadorPage() {
           vehicleId={onBoard.vehicle_id!}
           destination={{ ...destination, label: destination.name }}
           stopId={onBoard.alighting_stop_id}
+          // Las paradas del tramo, para poder bajarse en otra.
+          stops={onBoard.stops}
           onClose={() => setBoarded(false)}
         />
       )}
