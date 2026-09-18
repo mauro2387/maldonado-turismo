@@ -20,7 +20,7 @@ import {
   Briefcase,
   History,
 } from 'lucide-react';
-import { useGeolocation } from '@hooks/useGeolocation';
+import { useDondeEstoy } from '@hooks/useDondeEstoy';
 import { useTransportHealth } from '@hooks/useTransportHealth';
 import { routePlannerService, LastReturn, TripOption, TripLeg } from '@services/routePlannerService';
 import { destinationsService, Destination } from '@services/destinationsService';
@@ -199,7 +199,10 @@ function horaDeLaUrl(params: URLSearchParams, clave: string): Date | null {
 
 export default function PlanificadorPage() {
   const [searchParams] = useSearchParams();
-  const { coords, granted } = useGeolocation();
+  // El mismo punto que Moverse y la portada: si la persona dijo dónde está
+  // -porque el permiso está negado, o porque quiere mirar desde su casa-, el
+  // viaje sale de ahí. Ver `useDondeEstoy`.
+  const { coords, nombre: nombreDeDondeEstoy } = useDondeEstoy();
   const loTuyo = useLoTuyoStore();
   /**
    * Si alguna empresa no está reportando. Cambia lo que valen las esperas:
@@ -318,7 +321,7 @@ export default function PlanificadorPage() {
    * de ubicación es el centro de Maldonado, y se dice así.
    */
   const origenEfectivo: Destino = origen ?? {
-    name: granted ? 'Tu ubicación' : 'Centro de Maldonado',
+    name: nombreDeDondeEstoy,
     lat: coords.lat,
     lng: coords.lng,
   };
@@ -399,7 +402,18 @@ export default function PlanificadorPage() {
     // ponerlo sólo sugeriría que un cambio en él vuelve a planificar.
     // `origenEfectivo` se recompone en cada render; lo que cambia de verdad
     // es el origen elegido o las coordenadas, que son las dependencias.
-  }, [destination, origen, coords.lat, coords.lng, granted, departAt, arriveBy, soloAccesibles]);
+    // El nombre del punto entra en las dependencias porque también cambia el
+    // origen: pasar de "tu ubicación" a "Terminal San Carlos" es otro viaje.
+  }, [
+    destination,
+    origen,
+    coords.lat,
+    coords.lng,
+    nombreDeDondeEstoy,
+    departAt,
+    arriveBy,
+    soloAccesibles,
+  ]);
 
   const current = options[selected];
 
@@ -558,7 +572,7 @@ export default function PlanificadorPage() {
               const nuevoOrigen: Destino = destinoEsMiUbicacion ? { ...origenEfectivo } : destination;
               const nuevoDestino: Destino = origen ?? {
                 id: MI_UBICACION,
-                name: granted ? 'Tu ubicación' : 'Centro de Maldonado',
+                name: nombreDeDondeEstoy,
                 lat: coords.lat,
                 lng: coords.lng,
               };
@@ -753,7 +767,7 @@ export default function PlanificadorPage() {
           actual={origen ? { ...origen, id: idDeDestino(origen) } : null}
           conAtajos
           alternativa={{
-            label: granted ? 'Desde tu ubicación' : 'Desde el centro de Maldonado',
+            label: `Desde ${nombreDeDondeEstoy.toLowerCase()}`,
             onPick: () => {
               setOrigen(null);
               setEligiendoOrigen(false);
