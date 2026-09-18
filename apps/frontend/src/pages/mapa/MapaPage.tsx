@@ -18,6 +18,7 @@ import { distanceMeters, formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import { stopMarker } from '@components/map/stopMarker';
 import { firstImage, photoMarker } from '@components/map/photoMarker';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 
 /**
  * El mapa de la app: dónde queda cada cosa en Maldonado.
@@ -187,11 +188,24 @@ export default function MapaPage() {
   );
 
   /** Las paradas que entran en pantalla, y sólo de cerca. */
+  /**
+   * Las paradas guardadas se ven siempre que la capa esté prendida, a
+   * cualquier zoom: son dos o tres, son las que la persona busca, y
+   * esconderlas junto con las mil de relleno cuando el mapa está lejos es
+   * esconder justo las que importan.
+   */
+  const guardadas = useLoTuyoStore((estado) => estado.paradas);
+  const idsGuardadas = useMemo(() => new Set(guardadas.map((parada) => parada.id)), [guardadas]);
+
   const visibleStops = useMemo(() => {
-    if (!active.paradas || zoom < STOPS_MIN_ZOOM) return [];
-    if (!bounds) return stops;
-    return stops.filter((stop) => bounds.contains([stop.lat, stop.lng]));
-  }, [stops, bounds, zoom, active.paradas]);
+    if (!active.paradas) return [];
+    const enPantalla = (stop: { lat: number; lng: number }) =>
+      !bounds || bounds.contains([stop.lat, stop.lng]);
+    if (zoom < STOPS_MIN_ZOOM) {
+      return stops.filter((stop) => idsGuardadas.has(stop.id) && enPantalla(stop));
+    }
+    return stops.filter(enPantalla);
+  }, [stops, bounds, zoom, active.paradas, idsGuardadas]);
 
   const visibleEvents = useMemo(
     () => events.filter((event) => (event.lat ?? event.latitude) && (event.lng ?? event.longitude)),
@@ -231,7 +245,11 @@ export default function MapaPage() {
           <Marker
             key={`stop-${stop.id}`}
             position={[stop.lat, stop.lng]}
-            icon={stopMarker({ zoom, accuracyM: stop.accuracy_m ?? null })}
+            icon={stopMarker({
+              zoom,
+              accuracyM: stop.accuracy_m ?? null,
+              guardada: idsGuardadas.has(stop.id),
+            })}
             eventHandlers={{
               click: () =>
                 setSelection({
