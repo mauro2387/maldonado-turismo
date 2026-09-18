@@ -17,6 +17,22 @@ import {
   Loader2
 } from 'lucide-react';
 import { useEvent } from '@hooks/useEvents';
+import { enlaceParaIr } from '@store/loTuyoStore';
+import type { Event } from '@services/eventsService';
+
+/**
+ * Dónde es el evento, si se sabe.
+ *
+ * La API devuelve las dos parejas de nombres -`lat/lng` de la base y
+ * `latitude/longitude`- y hay eventos sin ubicar: se devuelve null y el
+ * botón de "cómo llegar" cae al nombre del lugar, que es lo único que hay.
+ */
+function coordenadaDelEvento(event: Event): { lat: number; lng: number } | null {
+  const lat = Number(event.lat ?? event.latitude);
+  const lng = Number(event.lng ?? event.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+  return { lat, lng };
+}
 
 export default function EventoDetailPage() {
   const { id } = useParams();
@@ -290,8 +306,23 @@ export default function EventoDetailPage() {
 
         {/* Cómo llegar: el dato que ninguna app genérica de eventos puede dar,
             porque hace falta conocer las paradas y las líneas de la ciudad. */}
+        {/* Con la coordenada del evento cuando la hay: mandado por el
+            nombre del lugar -"Plaza de los Artesanos"- el planificador lo
+            tiene que buscar de nuevo, y en un evento el lugar suele ser
+            justamente lo que no está en ningún catálogo. Sin coordenada se
+            sigue mandando el texto, que es lo único que hay. */}
         <Link
-          to={`/transporte/planificador?destino=${encodeURIComponent(event.location || event.title)}`}
+          to={
+            coordenadaDelEvento(event)
+              ? enlaceParaIr({
+                  id: `evento:${event.id}`,
+                  name: event.location || event.title,
+                  ...coordenadaDelEvento(event)!,
+                })
+              : `/transporte/planificador?destino=${encodeURIComponent(
+                  event.location || event.title,
+                )}`
+          }
           className="btn btn-primary mb-6 w-full"
         >
           <Bus size={18} />

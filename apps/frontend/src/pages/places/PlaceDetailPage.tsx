@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { usePlace } from '@hooks/usePlaces';
-import { useLoTuyoStore } from '@store/loTuyoStore';
+import { enlaceParaIr, useLoTuyoStore } from '@store/loTuyoStore';
 
 export default function PlaceDetailPage() {
   const { id } = useParams();
@@ -258,8 +258,18 @@ export default function PlaceDetailPage() {
               tiene las paradas, las líneas y las unidades en vivo, así que
               "cómo llegar" no tiene por qué mandarte afuera. */}
           {((place.latitude && place.longitude) || (place.lat && place.lng)) && (
+            // Con la coordenada de la ficha y no con el nombre: mandado por
+            // nombre, el planificador lo buscaba de nuevo en el catálogo y
+            // podía no encontrarlo -o encontrar otro "Museo"- teniendo el
+            // punto exacto acá. El id es el mismo con el que lo guarda el
+            // corazón, así que el destino se reconoce como guardado.
             <Link
-              to={`/transporte/planificador?destino=${encodeURIComponent(place.name)}`}
+              to={enlaceParaIr({
+                id: lugarId,
+                name: place.name,
+                lat: Number(place.lat ?? place.latitude),
+                lng: Number(place.lng ?? place.longitude),
+              })}
               className="btn btn-primary flex flex-col items-center justify-center gap-1 py-3 text-xs sm:text-sm"
             >
               <Bus size={20} />
