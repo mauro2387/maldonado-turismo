@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
-import { RecordatorioDeSalida } from '@components/transporte/RecordatorioDeSalida';
+import { AvisosFlotantes } from '@components/transporte/AvisosFlotantes';
 
 /**
  * En el teléfono la única barra fija es la de abajo; el encabezado aparece
@@ -15,9 +15,10 @@ export function Layout() {
       <main className="flex-1 pb-[4.25rem] md:pb-0">
         <Outlet />
       </main>
-      {/* El recordatorio de salida vive acá y no en el planificador: tiene
-          que seguir sonando cuando la persona se fue a otra pantalla. */}
-      <RecordatorioDeSalida />
+      {/* El recordatorio de salida y la alarma de llegada viven acá y no en
+          sus pantallas: tienen que seguir sonando cuando la persona se fue a
+          otra. */}
+      <AvisosFlotantes />
       <BottomNav />
     </div>
   );

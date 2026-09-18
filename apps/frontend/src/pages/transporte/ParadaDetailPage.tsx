@@ -12,6 +12,8 @@ import {
   Home as HomeIcon,
   Lightbulb,
   Armchair,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { transportService, BusStop, StopScheduleToday } from '@services/transportService';
 import { useStopArrivals } from '@hooks/useDepartures';
@@ -25,6 +27,9 @@ import { Estrella } from '@components/ui/Estrella';
 import { useLoTuyoStore } from '@store/loTuyoStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
 import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
+import { useAlarmaStore, UMBRAL_MIN } from '@store/alarmaStore';
+import { prepararAvisos } from '@lib/avisos';
+import { arrivalLine } from '@components/transporte/ArrivalRow';
 import { operatorName, operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
@@ -43,6 +48,42 @@ const SERVICES = [
   { key: 'has_lighting' as const, icon: Lightbulb, label: 'Iluminación' },
   { key: 'accessibility' as const, icon: Accessibility, label: 'Accesible' },
 ];
+
+/**
+ * La campana al lado de una llegada: pone o saca la alarma de esa línea en
+ * esta parada. Con el aviso a cinco minutos, es "avisame cuando esté cerca"
+ * para un coche que ya viene, o para el siguiente si éste se pierde.
+ */
+function CampanaDeLinea({
+  activa,
+  linea,
+  onToggle,
+}: {
+  activa: boolean;
+  linea: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={activa}
+      aria-label={
+        activa
+          ? `Cancelar el aviso de la línea ${linea}`
+          : `Avisame cuando la línea ${linea} esté a ${UMBRAL_MIN} minutos`
+      }
+      className={`flex h-9 w-9 flex-none items-center justify-center rounded-full ${
+        activa ? 'bg-ink-900 text-white' : 'text-ink-300 active:bg-sand-100'
+      }`}
+    >
+      {activa ? (
+        <BellRing className="h-4 w-4" strokeWidth={2.25} />
+      ) : (
+        <Bell className="h-4 w-4" strokeWidth={2} />
+      )}
+    </button>
+  );
+}
 
 export default function ParadaDetailPage() {
   const { id } = useParams();
@@ -88,6 +129,27 @@ export default function ParadaDetailPage() {
     estado.paradas.some((parada) => parada.id === Number(id)),
   );
   const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+
+  /**
+   * "Avisame cuando venga la 24": una alarma por línea en esta parada. Se
+   * pone desde cada llegada y desde cada línea del horario, porque se
+   * necesita justamente cuando todavía no viene ninguna.
+   */
+  const alarma = useAlarmaStore((estado) => estado.pendiente);
+  const ponerAlarma = useAlarmaStore((estado) => estado.poner);
+  const cancelarAlarma = useAlarmaStore((estado) => estado.cancelar);
+  const alarmaDe = (linea: string) =>
+    alarma !== null && alarma.stopId === Number(id) && alarma.linea === linea;
+  const alternarAlarma = (linea: string) => {
+    if (alarmaDe(linea)) {
+      cancelarAlarma();
+      return;
+    }
+    // El toque es el gesto que habilita el sonido y pide el permiso de
+    // notificaciones, con contexto: acaba de tocar una campana.
+    prepararAvisos();
+    if (stop) ponerAlarma({ stopId: stop.id, stopName: formatStopName(stop.name), linea });
+  };
 
   /**
    * El horario publicado de esta parada.
@@ -318,7 +380,16 @@ export default function ParadaDetailPage() {
         ) : arrivals.length > 0 ? (
           <div className="card mt-3 flex flex-col gap-3.5">
             {arrivals.map((arrival) => (
-              <ArrivalRow key={arrival.vehicle_id} arrival={arrival} />
+              <div key={arrival.vehicle_id} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <ArrivalRow arrival={arrival} />
+                </div>
+                <CampanaDeLinea
+                  activa={alarmaDe(arrivalLine(arrival))}
+                  linea={arrivalLine(arrival)}
+                  onToggle={() => alternarAlarma(arrivalLine(arrival))}
+                />
+              </div>
             ))}
           </div>
         ) : llegadasOcultas > 0 ? (
@@ -436,6 +507,33 @@ export default function ParadaDetailPage() {
             Tocá una línea para ver su horario completo. Los minutos reales dependen del
             tránsito.
           </p>
+
+          {/* La alarma, desde el horario: es donde se necesita, porque se
+              pone cuando todavía no viene ninguna. Sólo para las líneas que
+              todavía pasan hoy. */}
+          {schedule.lines.some((linea) => !linea.finished) && (
+            <div className="chip-row mt-3">
+              {schedule.lines
+                .filter((linea) => !linea.finished)
+                .map((linea) => (
+                  <button
+                    key={`alarma-${linea.operator}-${linea.line_label}`}
+                    onClick={() => alternarAlarma(linea.line_label)}
+                    aria-pressed={alarmaDe(linea.line_label)}
+                    className={`chip ${alarmaDe(linea.line_label) ? 'chip-active' : ''}`}
+                  >
+                    {alarmaDe(linea.line_label) ? (
+                      <BellRing className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    ) : (
+                      <Bell className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    )}
+                    {alarmaDe(linea.line_label)
+                      ? `Te avisamos cuando venga la ${linea.line_label}`
+                      : `Avisame cuando venga la ${linea.line_label}`}
+                  </button>
+                ))}
+            </div>
+          )}
         </section>
       )}
 

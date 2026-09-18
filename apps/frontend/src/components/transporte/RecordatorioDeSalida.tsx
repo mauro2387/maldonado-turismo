@@ -118,16 +118,15 @@ export function RecordatorioDeSalida() {
   const faltaMin = Math.max(0, Math.round(faltaMs / 60_000));
   const pasadoMin = Math.round(-faltaMs / 60_000);
 
+  // La posición la pone `AvisosFlotantes`, que apila este banner con el de
+  // la alarma de llegada; acá va sólo la tarjeta.
   return (
     <div
       role="status"
-      className={`safe-bottom fixed inset-x-0 bottom-[4.25rem] z-30 px-3 pb-2 md:bottom-4 md:px-4`}
+      className={`flex items-center gap-3 rounded-card px-3.5 py-3 shadow-float ${
+        esHora ? 'bg-coral-500 text-white' : 'bg-ink-900 text-white'
+      }`}
     >
-      <div
-        className={`mx-auto flex max-w-3xl items-center gap-3 rounded-card px-3.5 py-3 shadow-float ${
-          esHora ? 'bg-coral-500 text-white' : 'bg-ink-900 text-white'
-        }`}
-      >
         {esHora ? (
           <BellRing className="h-5 w-5 flex-none animate-pulse" strokeWidth={2.25} />
         ) : (
@@ -160,7 +159,6 @@ export function RecordatorioDeSalida() {
         >
           <X className="h-4 w-4" strokeWidth={2.5} />
         </button>
-      </div>
     </div>
   );
 }
