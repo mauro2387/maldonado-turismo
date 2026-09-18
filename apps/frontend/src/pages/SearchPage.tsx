@@ -1,345 +1,427 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Calendar, Newspaper, X, Filter, Loader2 } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  Calendar,
+  Newspaper,
+  X,
+  Bus,
+  ChevronRight,
+  Clock,
+  Map as MapIcon,
+  ArrowLeft,
+} from 'lucide-react';
 import { usePlaces } from '@hooks/usePlaces';
 import { useEvents } from '@hooks/useEvents';
 import { useNews } from '@hooks/useNews';
+import { useLines } from '@hooks/useTransport';
+import { useGeolocation } from '@hooks/useGeolocation';
+import { destinationsService, Destination } from '@services/destinationsService';
+import { TransportLine } from '@services/transportService';
+import { LineTag } from '@components/ui/LineTag';
+import { Thumb } from '@components/ui/Thumb';
+import { lineColor } from '@components/transporte/ArrivalRow';
+import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
+import { EmptyState, SkeletonList } from '@components/ui/States';
+import { enlaceParaIr } from '@store/loTuyoStore';
+import { formatDistance } from '@lib/geo';
+import { formatStopName, normalizeStopName } from '@lib/stopNames';
 
-type ResultType = 'all' | 'places' | 'events' | 'news';
+/**
+ * Buscar en toda la app.
+ *
+ * **Le faltaba la mitad de la app: el transporte.** Buscaba lugares, eventos
+ * y noticias, y una parada o una línea —que es lo que más se busca en una
+ * app de transporte— no aparecía nunca. Alguien que escribía "Roosevelt" o
+ * "24" acá recibía "no se encontraron resultados", con la parada y la línea
+ * cargadas en la base.
+ *
+ * Ahora lo primero son las líneas que coinciden (por número, empresa o lugar
+ * de paso, el mismo criterio que la lista de líneas) y los destinos que
+ * resuelve el backend —paradas, atractivos y lugares de OpenStreetMap—, con
+ * lo que se puede hacer con cada uno: ver la parada, ir en ómnibus, ver por
+ * dónde va la línea o su horario. Después lo de siempre.
+ *
+ * El orden no es casual: quien busca "hospital" en esta pantalla casi
+ * siempre quiere llegar al hospital, no leer la noticia de la remodelación.
+ */
+
+/** Lo que se espera después de la última tecla antes de salir a buscar. */
+const SEARCH_DEBOUNCE_MS = 250;
+
+/** Cuántas líneas y destinos se listan antes de cortar. */
+const MAX_LINEAS = 4;
+const MAX_DESTINOS = 6;
+
+/**
+ * Si una línea coincide con lo escrito: por número, por empresa o por los
+ * lugares por los que pasa. Es el mismo criterio de la lista de líneas, para
+ * que "hospital" encuentre lo mismo en los dos lados.
+ */
+function lineaCoincide(line: TransportLine, query: string): boolean {
+  const term = normalizeStopName(query);
+  if (!term) return false;
+
+  const haystack = normalizeStopName(
+    [
+      line.line_label ?? line.line_code,
+      ...line.itineraries.flatMap((itinerary) => [
+        itinerary.headsign ?? '',
+        ...itinerary.highlights,
+      ]),
+    ].join(' '),
+  );
+
+  return term.split(' ').every((word) => haystack.includes(word));
+}
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [selectedType, setSelectedType] = useState<ResultType>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  const { coords } = useGeolocation(false);
 
-  // Fetch data from API
-  const { places, loading: loadingPlaces, error: errorPlaces } = usePlaces({ search: query });
-  const { events, loading: loadingEvents, error: errorEvents } = useEvents({ search: query });
-  const { news, loading: loadingNews, error: errorNews } = useNews({ search: query });
+  /** Lo que se está buscando de verdad: la caja, con la espera aplicada. */
+  const [term, setTerm] = useState(query.trim());
 
   useEffect(() => {
-    const q = searchParams.get('q');
-    if (q) {
-      setQuery(q);
+    const timer = setTimeout(() => setTerm(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // La URL se actualiza con lo buscado para que el enlace se pueda compartir
+  // y para que volver atrás traiga la búsqueda anterior.
+  useEffect(() => {
+    setSearchParams(term ? { q: term } : {}, { replace: true });
+  }, [term, setSearchParams]);
+
+  const { places, loading: loadingPlaces } = usePlaces(term ? { search: term } : undefined);
+  const { events, loading: loadingEvents } = useEvents(term ? { search: term } : undefined);
+  const { news, loading: loadingNews } = useNews(term ? { search: term } : undefined);
+  const { lines } = useLines();
+
+  /** Paradas, atractivos y lugares de OpenStreetMap, resueltos por el backend. */
+  const [destinos, setDestinos] = useState<Destination[]>([]);
+  const [buscandoDestinos, setBuscandoDestinos] = useState(false);
+  /** La línea cuyo horario está abierto. */
+  const [horarioDe, setHorarioDe] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (term.length < 2) {
+      setDestinos([]);
+      return;
     }
-  }, [searchParams]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      setSearchParams({ q: query.trim() });
-    }
-  };
+    let cancelled = false;
+    setBuscandoDestinos(true);
 
-  const clearSearch = () => {
-    setQuery('');
-    setSearchParams({});
-  };
+    destinationsService
+      .search(term, coords, MAX_DESTINOS)
+      .then((results) => {
+        if (!cancelled) setDestinos(results);
+      })
+      .catch(() => {
+        if (!cancelled) setDestinos([]);
+      })
+      .finally(() => {
+        if (!cancelled) setBuscandoDestinos(false);
+      });
 
-  // Filtrar resultados según el tipo seleccionado
-  const getFilteredResults = () => {
-    if (!query) {
-      return { places: [], events: [], news: [] };
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [term, coords.lat, coords.lng]);
 
-    switch (selectedType) {
-      case 'places':
-        return { places, events: [], news: [] };
-      case 'events':
-        return { places: [], events, news: [] };
-      case 'news':
-        return { places: [], events: [], news };
-      default:
-        return { places, events, news };
-    }
-  };
+  const lineasQueCoinciden = useMemo(
+    () => (term.length < 1 ? [] : lines.filter((line) => lineaCoincide(line, term)).slice(0, MAX_LINEAS)),
+    [lines, term],
+  );
 
-  const results = getFilteredResults();
-  const totalResults = results.places.length + results.events.length + results.news.length;
-  const loading = loadingPlaces || loadingEvents || loadingNews;
-  const error = errorPlaces || errorEvents || errorNews;
+  const buscando = term.length >= 2 && (buscandoDestinos || loadingPlaces || loadingEvents || loadingNews);
+  const total =
+    lineasQueCoinciden.length + destinos.length + places.length + events.length + news.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Search Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar lugares, eventos, noticias..."
-              className="w-full rounded-full border border-gray-300 pl-10 pr-24 py-3 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              autoFocus
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="absolute right-14 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 btn-ghost rounded-full p-2"
-            >
-              <Filter size={20} />
-            </button>
-          </form>
-        </div>
-      </div>
+    <div className="min-h-[calc(100dvh-4.25rem)] bg-sand-100 pb-8">
+      <header className="bg-ink-900 px-4 pb-4 pt-4 text-white">
+        <Link
+          to="/"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-200"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Inicio
+        </Link>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Filters */}
-        {showFilters && (
-          <div className="mb-6 card animate-fade-in">
-            <h3 className="font-semibold text-gray-900 mb-3">Filtrar por tipo</h3>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: 'all', label: 'Todos' },
-                { value: 'places', label: 'Lugares' },
-                { value: 'events', label: 'Eventos' },
-                { value: 'news', label: 'Noticias' },
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setSelectedType(type.value as ResultType)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedType === type.value
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+        <h1 className="text-display">Buscar</h1>
+        <p className="mt-0.5 text-data text-ink-300">
+          Una parada, una línea, un lugar, un evento o una noticia.
+        </p>
+
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
+          <Search className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+          <label className="sr-only" htmlFor="buscar">
+            Buscar
+          </label>
+          <input
+            id="buscar"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Roosevelt, la 24, el hospital…"
+            autoFocus
+            className="w-full bg-transparent text-sm font-semibold text-white placeholder:font-medium placeholder:text-ink-300 focus:outline-none"
+          />
+          {query && (
+            <button onClick={() => setQuery('')} aria-label="Limpiar" className="flex-none p-1">
+              <X className="h-4 w-4 text-ink-300" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-2xl px-4 pt-4">
+        {term.length < 2 && (
+          <p className="px-1 text-sm text-ink-400">
+            Escribí al menos dos letras. Podés buscar por el número de una línea, por el nombre
+            de una parada o de un lugar, o por un evento.
+          </p>
+        )}
+
+        {buscando && total === 0 && <SkeletonList rows={3} />}
+
+        {term.length >= 2 && !buscando && total === 0 && (
+          <EmptyState
+            icon={Search}
+            title="No encontramos nada"
+            description={`Nada coincide con "${term}". Probá con el número de la línea, con el nombre de la calle o con menos palabras.`}
+          />
+        )}
+
+        {/* ---------- Líneas ---------- */}
+        {lineasQueCoinciden.length > 0 && (
+          <section className="mb-6" aria-labelledby="lineas">
+            <h2 id="lineas" className="section-label">
+              Líneas
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {lineasQueCoinciden.map((line) => {
+                const label = line.line_label ?? line.line_code;
+                return (
+                  <div
+                    key={`${line.operator}-${line.line_code}`}
+                    className="card flex items-center gap-3 py-3"
+                  >
+                    <Link
+                      to={`/moverse/bondis?linea=${encodeURIComponent(line.line_code)}`}
+                      className="flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      <LineTag code={label} color={lineColor(line.operator)} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-data font-bold text-ink-900">
+                          Línea {label} · por dónde va
+                        </span>
+                        <span className="block truncate text-xs text-ink-400">
+                          {line.itineraries
+                            .flatMap((itinerary) => itinerary.highlights)
+                            .slice(0, 4)
+                            .join(' · ') || `${line.stops_count} paradas`}
+                        </span>
+                      </span>
+                      <MapIcon className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
+                    </Link>
+                    <button
+                      onClick={() => setHorarioDe(label)}
+                      aria-label={`Horarios de la línea ${label}`}
+                      className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-sand-100 text-ink-900 active:bg-sand-200"
+                    >
+                      <Clock className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ---------- Paradas y lugares para ir ---------- */}
+        {destinos.length > 0 && (
+          <section className="mb-6" aria-labelledby="destinos">
+            <h2 id="destinos" className="section-label">
+              Paradas y lugares
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {destinos.map((destino) => {
+                const nombre =
+                  destino.source === 'parada' ? formatStopName(destino.name) : destino.name;
+                return (
+                  <div key={destino.id} className="card flex items-center gap-3 py-3">
+                    {/* La parada abre su ficha -llegadas, horario, QR-; un
+                        lugar no tiene ficha propia en el catálogo, así que
+                        para él lo único que se puede hacer es ir. */}
+                    {destino.source === 'parada' ? (
+                      <Link
+                        to={`/transporte/paradas/${destino.id.replace(/^parada:/, '')}`}
+                        className="flex min-w-0 flex-1 items-center gap-3"
+                      >
+                        <Bus className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-data font-bold text-ink-900">
+                            {nombre}
+                          </span>
+                          <span className="block truncate text-xs text-ink-400">
+                            Parada
+                            {destino.lines?.length ? ` · líneas ${destino.lines.join(', ')}` : ''}
+                            {destino.distanceM !== undefined
+                              ? ` · a ${formatDistance(destino.distanceM)}`
+                              : ''}
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                      </Link>
+                    ) : (
+                      <span className="flex min-w-0 flex-1 items-center gap-3">
+                        <MapPin className="h-4 w-4 flex-none text-ink-300" strokeWidth={2} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-data font-bold text-ink-900">
+                            {nombre}
+                          </span>
+                          <span className="block truncate text-xs text-ink-400">
+                            <span className="capitalize">{destino.kind}</span>
+                            {destino.locality ? ` · ${destino.locality}` : ''}
+                            {destino.distanceM !== undefined
+                              ? ` · a ${formatDistance(destino.distanceM)}`
+                              : ''}
+                          </span>
+                        </span>
+                      </span>
+                    )}
+                    {/* Ir en ómnibus, con la coordenada: no se vuelve a
+                        buscar el lugar por su nombre, que es justo lo que
+                        acaba de resolverse acá. */}
+                    <Link
+                      to={enlaceParaIr({
+                        id: destino.id,
+                        name: nombre,
+                        lat: destino.lat,
+                        lng: destino.lng,
+                      })}
+                      aria-label={`Cómo llegar a ${nombre} en ómnibus`}
+                      className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-ink-900 text-white active:bg-ink-800"
+                    >
+                      <Bus className="h-4 w-4" strokeWidth={2} />
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ---------- Lugares del catálogo de turismo ---------- */}
+        {places.length > 0 && (
+          <section className="mb-6" aria-labelledby="lugares">
+            <h2 id="lugares" className="section-label">
+              Lugares
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {places.map((place) => (
+                <Link
+                  key={place.id}
+                  to={`/place/${place.id}`}
+                  className="card flex items-center gap-3 py-3"
                 >
-                  {type.label}
-                </button>
+                  <Thumb
+                    src={place.images?.[0] ?? null}
+                    name={place.name}
+                    className="h-12 w-12 flex-none rounded-xl object-cover"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-data font-bold text-ink-900">
+                      {place.name}
+                    </span>
+                    <span className="block truncate text-xs text-ink-400">
+                      {place.category}
+                      {place.locality ? ` · ${place.locality}` : ''}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                </Link>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Type Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { value: 'all', label: 'Todos', icon: Search },
-            { value: 'places', label: 'Lugares', icon: MapPin },
-            { value: 'events', label: 'Eventos', icon: Calendar },
-            { value: 'news', label: 'Noticias', icon: Newspaper },
-          ].map((type) => {
-            const Icon = type.icon;
-            return (
-              <button
-                key={type.value}
-                onClick={() => setSelectedType(type.value as ResultType)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedType === type.value
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                }`}
-              >
-                <Icon size={16} />
-                {type.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Loading state */}
-        {loading && query && (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="animate-spin text-primary-600" size={48} />
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && !loading && query && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-            <p className="text-red-800 mb-2">Error al realizar la búsqueda: {error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
-
-        {/* Results */}
-        {!loading && !error && !query ? (
-          <div className="text-center py-12">
-            <Search className="mx-auto h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Comienza tu búsqueda
-            </h3>
-            <p className="text-gray-600">
-              Busca lugares turísticos, eventos o noticias
-            </p>
-          </div>
-        ) : !loading && !error && totalResults === 0 ? (
-          <div className="text-center py-12">
-            <Search className="mx-auto h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No se encontraron resultados
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Intenta con otros términos de búsqueda
-            </p>
-            <button onClick={clearSearch} className="btn btn-primary">
-              Limpiar búsqueda
-            </button>
-          </div>
-        ) : !loading && !error ? (
-          <>
-            {/* Results count */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                {totalResults} {totalResults === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-                {query && ` para "${query}"`}
-              </p>
+        {/* ---------- Eventos ---------- */}
+        {events.length > 0 && (
+          <section className="mb-6" aria-labelledby="eventos">
+            <h2 id="eventos" className="section-label">
+              Eventos
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {events.map((event) => (
+                <Link
+                  key={event.id}
+                  to={`/evento/${event.id}`}
+                  className="card flex items-center gap-3 py-3"
+                >
+                  <Thumb
+                    src={event.image ?? null}
+                    name={event.title}
+                    className="h-12 w-12 flex-none rounded-xl object-cover"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-data font-bold text-ink-900">
+                      {event.title}
+                    </span>
+                    <span className="block truncate text-xs text-ink-400">
+                      <Calendar className="mr-1 inline h-3 w-3 align-text-top" strokeWidth={2} />
+                      {event.date}
+                      {event.location ? ` · ${event.location}` : ''}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                </Link>
+              ))}
             </div>
+          </section>
+        )}
 
-            {/* Places */}
-            {results.places.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="text-primary-600" size={24} />
-                  Lugares ({results.places.length})
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {results.places.map((place) => (
-                    <Link
-                      key={place.id}
-                      to={`/place/${place.id}`}
-                      className="card group hover:shadow-lg transition-all"
-                    >
-                      <div className="flex gap-4">
-                        <img
-                          src={place.images?.[0] || 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Monument_to_the_Drowned_%28La_Mano%29.jpg/1280px-Monument_to_the_Drowned_%28La_Mano%29.jpg'}
-                          alt={place.name}
-                          className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors truncate">
-                            {place.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                            {place.description}
-                          </p>
-                          <span className="inline-block mt-2 text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
-                            {place.category}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Events */}
-            {results.events.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Calendar className="text-primary-600" size={24} />
-                  Eventos ({results.events.length})
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {results.events.map((event) => (
-                    <Link
-                      key={event.id}
-                      to={`/evento/${event.id}`}
-                      className="card group hover:shadow-lg transition-all"
-                    >
-                      <div className="flex gap-4">
-                        <img
-                          src={event.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Jazz_concert_outdoor.jpg/1280px-Jazz_concert_outdoor.jpg'}
-                          alt={event.title}
-                          className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors truncate">
-                            {event.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                            {event.description}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                            <MapPin size={12} />
-                            {event.location}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* News */}
-            {results.news.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Newspaper className="text-primary-600" size={24} />
-                  Noticias ({results.news.length})
-                </h2>
-                <div className="space-y-4">
-                  {results.news.map((item) => (
-                    <Link
-                      key={item.id}
-                      to={`/noticia/${item.id}`}
-                      className="card group hover:shadow-lg transition-all flex gap-4"
-                    >
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                          {item.summary}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">{item.date}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : null}
+        {/* ---------- Noticias ---------- */}
+        {news.length > 0 && (
+          <section className="mb-6" aria-labelledby="noticias">
+            <h2 id="noticias" className="section-label">
+              Noticias
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {news.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/noticia/${item.id}`}
+                  className="card flex items-center gap-3 py-3"
+                >
+                  <Thumb
+                    src={item.image ?? null}
+                    name={item.title}
+                    className="h-12 w-12 flex-none rounded-xl object-cover"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-data font-bold text-ink-900">
+                      {item.title}
+                    </span>
+                    <span className="block truncate text-xs text-ink-400">
+                      <Newspaper className="mr-1 inline h-3 w-3 align-text-top" strokeWidth={2} />
+                      {item.date}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
-      <style>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      `}</style>
+      {horarioDe && <LineScheduleSheet label={horarioDe} onClose={() => setHorarioDe(null)} />}
     </div>
   );
 }
