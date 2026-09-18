@@ -29,10 +29,29 @@ export interface TripLeg {
   live?: boolean;
   /** True si la hora sale del horario publicado por la empresa. */
   scheduled?: boolean;
+  /**
+   * De dónde salió la hora de este tramo.
+   *
+   * Cambia lo que la pantalla puede prometer: con `vivo` hay un coche concreto
+   * al que se le puede seguir el rastro —y recién ahí tiene sentido ofrecer
+   * "ya me subí"—; con `horario` hay un papel de la empresa; con `frecuencia`,
+   * una estimación hecha con los coches que están dando la vuelta.
+   *
+   * Para un viaje planificado a una hora futura es siempre `horario`: a esa
+   * hora todavía no hay ningún coche del que hablar.
+   */
+  source?: 'vivo' | 'horario' | 'frecuencia';
   /** Minutos desde ahora en que ese ómnibus pasa por la parada. */
   departs_in_minutes?: number;
   /** El coche concreto que hay que tomarse, cuando la espera es en vivo. */
   vehicle_id?: string;
+  /**
+   * Cómo es el coche que hay que tomarse, para poder dibujarlo con el diseño
+   * de su empresa. Es null mientras la espera salga del horario publicado y no
+   * de una unidad concreta en la calle.
+   */
+  accessible?: boolean | null;
+  electric?: boolean;
   stops_count?: number;
   /**
    * Dónde se sube y dónde se baja, por identificador.
@@ -94,6 +113,22 @@ export interface PlanResult {
   return_trip?: LastReturn;
   /** False mientras el backend no tenga recorridos con los que calcular. */
   ready: boolean;
+  /**
+   * Desde qué momento están contados los minutos de la respuesta. Null es
+   * ahora.
+   *
+   * No es informativo: **todos** los minutos que devuelve el planificador
+   * -`leave_in_minutes`, `departs_in_minutes`, `total_minutes`- se cuentan
+   * desde este instante. Sumándolos al reloj del teléfono, un viaje pedido
+   * para mañana a las 18:30 mostraría horas corridas veinticuatro horas.
+   */
+  planned_for?: string | null;
+  /**
+   * La hora a la que se pidió llegar, cuando la pregunta fue esa. Con esto
+   * puesto las opciones vienen por hora de salida -la más tarde primero- y
+   * `planned_for` es la salida más temprana de las que quedaron.
+   */
+  arrive_by?: string | null;
 }
 
 export interface PlannerPoint {
@@ -106,9 +141,29 @@ export const routePlannerService = {
   /**
    * Va por POST: el cuerpo lleva las coordenadas exactas de la persona, y esos
    * datos no tienen por qué quedar en la barra del navegador ni en los logs.
+   *
+   * `departAt` es cuándo se sale, si no es ahora. El backend contesta esas con
+   * el horario publicado y nada más: a una hora que todavía no llegó no hay
+   * ningún coche en la calle del que hablar.
+   *
+   * `arriveBy` es a qué hora hay que estar: el backend busca hacia atrás. Van
+   * una o la otra, nunca las dos.
    */
-  plan: async (origin: PlannerPoint, destination: PlannerPoint): Promise<PlanResult> => {
-    return api.post<PlanResult>('/transport/plan', { origin, destination });
+  plan: async (
+    origin: PlannerPoint,
+    destination: PlannerPoint,
+    departAt?: Date,
+    arriveBy?: Date,
+    /** Sólo ómnibus con rampa. El backend elige el siguiente coche que la tenga. */
+    accessibleOnly = false,
+  ): Promise<PlanResult> => {
+    return api.post<PlanResult>('/transport/plan', {
+      origin,
+      destination,
+      depart_at: departAt ? departAt.toISOString() : undefined,
+      arrive_by: arriveBy ? arriveBy.toISOString() : undefined,
+      accessible_only: accessibleOnly || undefined,
+    });
   },
 };
 

@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Bell, Footprints, MapPin, SignalZero, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, Footprints, MapPin, Share2, SignalZero, X, ChevronDown } from 'lucide-react';
 import { rideService, RideStatus } from '@services/rideService';
+import { BondiSprite } from '@components/transporte/BondiSprite';
+import { Llegaste } from '@components/transporte/Llegaste';
+import { useWakeLock } from '@hooks/useWakeLock';
+import { SheetGrab } from '@components/ui/SheetGrab';
+import { avisar } from '@lib/avisos';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
+import { compartir, mensajeDeCompartir } from '@lib/compartir';
+import { horaDeReloj } from '@lib/hora';
 
 /**
  * Ya te subiste.
@@ -30,6 +37,12 @@ import { formatDistance } from '@lib/geo';
  * pantalla no sigue contando cuadras con la última posición buena: lo dice. Es
  * la diferencia entre una app que no sabe y una app que miente, y acá mentir
  * es que alguien se pase de parada.
+ *
+ * **Y el aviso sale de la pantalla.** Todo lo de arriba supone que alguien
+ * está mirando, y nadie viaja veinte minutos mirando el teléfono: está en el
+ * bolsillo. Así que en las dos transiciones que importan —preparate y
+ * bajate— el teléfono además vibra, suena y, si la app quedó atrás, notifica.
+ * Ver `avisos.ts` y `useWakeLock`.
  */
 
 /**
@@ -110,6 +123,7 @@ export function ABordo({
   vehicleId,
   destination,
   stopId,
+  stops,
   onClose,
 }: {
   /** El coche al que se subió. Del planificador o de tocarlo en el mapa. */
@@ -123,17 +137,84 @@ export function ABordo({
    * que cambie sola, aunque el backend encuentre una parada mejor.
    */
   stopId?: number;
+  /**
+   * Las paradas del tramo en ómnibus, en orden, si el viaje viene del
+   * planificador. Es lo que permite bajarse en otra: sin esto la app sabe
+   * dónde **conviene** bajarse y no qué otras opciones hay.
+   */
+  stops?: Array<{ id: number; name: string; lat: number; lng: number }>;
   onClose: () => void;
 }) {
   const [status, setStatus] = useState<RideStatus | null>(null);
   const [failed, setFailed] = useState(false);
+  /**
+   * La bajada elegida a mano, si se cambió.
+   *
+   * Arriba del ómnibus la pregunta cambia: la app eligió la parada que deja
+   * más cerca del destino, y quien va sentado sabe cosas que la app no -que
+   * baja con una valija, que va a lo de alguien que vive dos cuadras antes,
+   * que en esa esquina no hay vereda-. Cambiarla es el único dato del viaje
+   * que la persona conoce mejor que el backend.
+   */
+  const [bajadaElegida, setBajadaElegida] = useState<number | null>(null);
+  /** La lista de paradas para elegir, abierta. */
+  const [eligiendoBajada, setEligiendoBajada] = useState(false);
+  const bajadaId = bajadaElegida ?? stopId;
+  /** Lo que pasó al mandar "voy en camino", para decirlo acá y no en un alert. */
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+
+  /**
+   * El viaje terminado, congelado.
+   *
+   * Es una foto del último estado y no el dato vivo: cuando esto tiene valor,
+   * el viaje se dio por cerrado y se deja de preguntar. Seguir al coche
+   * después de bajarse no aporta nada y haría cambiar los números de una
+   * pantalla que ya es un resumen. Volver a `null` es "no me bajé".
+   */
+  const [llegada, setLlegada] = useState<RideStatus | null>(null);
+
+  /**
+   * Qué avisos ya se dieron en este viaje.
+   *
+   * Sin esto el aviso saldría **en cada poll**: el coche pasa varios minutos
+   * dentro de las ocho cuadras de "preparate", así que el teléfono vibraría
+   * cada ocho segundos todo el tramo final. Lo que se avisa es el cambio de
+   * estado, no el estado.
+   *
+   * Y se guarda "ya lo di" en vez de comparar contra el estado anterior
+   * porque el estado anterior no alcanza: el aviso sale de proyectar una
+   * posición de GPS sobre el recorrido, y con el coche justo en el borde de
+   * las ocho cuadras esa proyección va y viene entre `viaja` y `preparate` de
+   * un poll al otro. Comparando contra el anterior, cada ida y vuelta es otra
+   * vibración. Cada aviso se da una sola vez por viaje.
+   *
+   * `cierre` es el mismo problema una vez más: sin él, quien contesta "no me
+   * bajé" en la pantalla de llegada vuelve al seguimiento con el coche todavía
+   * pasado de la parada, y el viaje se da por terminado otra vez en el poll
+   * siguiente. El cierre automático se ofrece una sola vez.
+   *
+   * Va en un `ref` y no en estado porque nada de esto se dibuja: cambiarlo no
+   * tiene por qué volver a pintar la pantalla.
+   */
+  const avisado = useRef({ preparate: false, bajate: false, cierre: false });
+
+  /**
+   * La pantalla prendida mientras dura el viaje.
+   *
+   * No es comodidad: con la pantalla apagada el navegador frena el poll de
+   * abajo y el aviso llega tarde. Ver `useWakeLock`.
+   */
+  useWakeLock(llegada === null);
 
   useEffect(() => {
+    // Viaje cerrado, no hay nada más que preguntar.
+    if (llegada) return;
+
     let cancelled = false;
 
     const ask = () => {
       rideService
-        .follow(vehicleId, { lat: destination.lat, lng: destination.lng }, stopId)
+        .follow(vehicleId, { lat: destination.lat, lng: destination.lng }, bajadaId)
         .then((result) => {
           if (cancelled) return;
           setStatus(result);
@@ -154,10 +235,67 @@ export function ABordo({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [vehicleId, destination.lat, destination.lng, stopId]);
+    // Cambiar la bajada vuelve a preguntar en el acto: el aviso, las cuadras
+    // y la caminata de después son otros.
+  }, [vehicleId, destination.lat, destination.lng, bajadaId, llegada]);
 
   const alert = status?.alert ?? null;
   const perdido = status?.reason === 'sin_coche' || status?.reason === 'sin_senal';
+
+  /**
+   * El aviso que no depende de que alguien esté mirando.
+   *
+   * Los dos momentos en los que hay que hacer algo —juntar las cosas y tocar
+   * el timbre— y el que cierra el viaje. El tercero no se avisa: para cuando
+   * el coche pasó la parada, la persona ya está en la vereda.
+   */
+  useEffect(() => {
+    if (alert === 'preparate' && !avisado.current.preparate) {
+      avisado.current.preparate = true;
+      avisar({
+        titulo: 'Preparate para bajar',
+        cuerpo: status?.stop ? `Bajás en ${formatStopName(status.stop.name)}` : undefined,
+      });
+      return;
+    }
+
+    if (alert === 'bajate' && !avisado.current.bajate) {
+      // También se marca el de preparate: si el coche llegó acá sin pasar por
+      // ahí -o pasó tan rápido que cayó entre dos polls-, no tiene sentido
+      // avisar de "preparate" después de haber dicho que se baje.
+      avisado.current.preparate = true;
+      avisado.current.bajate = true;
+      avisar({
+        titulo: 'Tocá el timbre',
+        cuerpo: status?.stop ? `Bajás en ${formatStopName(status.stop.name)}` : undefined,
+        insistente: true,
+      });
+      return;
+    }
+
+    // El coche pasó la parada después de haber avisado que se bajara: el viaje
+    // terminó. Sin el aviso previo esto es otra cosa -alguien que abrió la
+    // pantalla cuando ya se había pasado- y se dice tal cual, ver abajo.
+    if (alert === 'te_pasaste' && avisado.current.bajate && !avisado.current.cierre && status) {
+      avisado.current.cierre = true;
+      setLlegada(status);
+    }
+  }, [alert, status]);
+
+  if (llegada) {
+    return (
+      <Llegaste
+        status={llegada}
+        destination={destination}
+        onClose={onClose}
+        onSeguir={() => {
+          // Se vuelve a seguir el coche, pero sin volver a avisar: el timbre
+          // ya sonó y la parada ya quedó atrás.
+          setLlegada(null);
+        }}
+      />
+    );
+  }
 
   // Por arriba de Leaflet: sus controles (`leaflet-bottom`, donde va el ⓘ del
   // crédito del mapa) se dibujan en z-index 1000. Con el overlay en el mismo
@@ -170,12 +308,19 @@ export function ABordo({
           cualquiera al abrir esto es confirmar que la app está siguiendo el
           ómnibus en el que está sentado y no otro. */}
       <header className="flex items-center gap-3 bg-ink-900 px-4 py-3 text-white">
+        {/* El coche dibujado, con el color de su empresa. Lo primero que hace
+            cualquiera al abrir esto es confirmar que la app está siguiendo el
+            ómnibus en el que está sentado y no el que va adelante, y a eso se
+            contesta antes con el color que con el número. */}
+        {status && <BondiSprite vehicle={status} width={40} />}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">
             {status?.line_label ? `Línea ${status.line_label}` : 'A bordo'}
           </span>
           {status?.headsign && (
-            <span className="block truncate text-xs text-ink-300">{status.headsign}</span>
+            <span className="block truncate text-xs text-ink-300">
+              {formatStopName(status.headsign)}
+            </span>
           )}
         </span>
         <button
@@ -239,6 +384,22 @@ export function ABordo({
                 <p className="mt-2 text-data font-semibold opacity-90">
                   Bajás {enCuadras(status.blocks_away ?? 0)}
                 </p>
+
+                {/* Bajarse es lo último que se hace mirando el teléfono, así
+                    que el botón no es obligatorio: si nadie lo toca, el viaje
+                    se cierra solo cuando el coche pasa la parada. Está para
+                    quien se bajó antes -en la parada de antes, o porque el
+                    coche paró donde no debía- y no tiene por qué esperar a que
+                    el GPS se entere. */}
+                <button
+                  onClick={() => {
+                    avisado.current.cierre = true;
+                    setLlegada(status);
+                  }}
+                  className="mt-4 w-full rounded-card bg-white/15 py-2.5 text-sm font-bold active:bg-white/25"
+                >
+                  Ya me bajé
+                </button>
               </>
             ) : (
               <>
@@ -255,11 +416,22 @@ export function ABordo({
             )}
 
             {status?.stop && (
-              <p
-                className={`mt-3 border-t pt-3 text-sm font-bold ${DIVISOR[alert ?? 'viaja']}`}
-              >
-                {formatStopName(status.stop.name)}
-              </p>
+              <div className={`mt-3 border-t pt-3 ${DIVISOR[alert ?? 'viaja']}`}>
+                <p className="text-sm font-bold">{formatStopName(status.stop.name)}</p>
+                {/* Cambiar dónde bajarse. Sólo con las paradas del tramo a
+                    mano: las manda el planificador. Este bloque ya vive en la
+                    rama donde el viaje sigue corriendo -con "te pasaste" la
+                    pantalla es otra-, así que no hace falta pedirlo de nuevo. */}
+                {stops && stops.length > 1 && (
+                  <button
+                    onClick={() => setEligiendoBajada(true)}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-bold underline underline-offset-2 opacity-80"
+                  >
+                    Me bajo en otra parada
+                    <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -295,12 +467,106 @@ export function ABordo({
           </div>
         )}
 
+        {/* ---------- Voy en camino ----------
+            Lo que uno manda por WhatsApp arriba del ómnibus: "llego 18:25".
+            Sólo mientras el coche reporta y se sabe cuánto falta, y siempre
+            con "aprox.": son los minutos del GPS más la caminata, y ninguno
+            de los dos es una promesa. */}
+        {status?.active && status.minutes_away !== null && !perdido && (
+          <button
+            onClick={async () => {
+              const minutos = status.minutes_away! + (status.walk_minutes ?? 0);
+              const llegoA = horaDeReloj(Date.now() + minutos * 60_000);
+              const linea = status.line_label ? ` en la línea ${status.line_label}` : ' en ómnibus';
+              const adonde = destination.label
+                ? ` a ${destination.label}`
+                : status.stop
+                  ? ` a ${formatStopName(status.stop.name)}`
+                  : '';
+              const resultado = await compartir({
+                titulo: 'Voy en camino',
+                texto: `Voy en camino${linea}. Llego${adonde} a las ${llegoA} aprox. (${minutos} min).`,
+              });
+              const mensaje = mensajeDeCompartir(resultado);
+              setShareNotice(mensaje);
+              if (mensaje) setTimeout(() => setShareNotice(null), 3000);
+            }}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-card bg-white py-3 text-sm font-bold text-ink-900 active:bg-sand-200"
+          >
+            <Share2 className="h-4 w-4" strokeWidth={2.25} />
+            Avisar que voy en camino
+          </button>
+        )}
+
+        {shareNotice && (
+          <p className="mt-2 text-center text-xs text-ink-500">{shareNotice}</p>
+        )}
+
         {failed && (
           <p className="mt-3 text-center text-xs text-ink-400">
             No pudimos actualizar. Seguimos intentando.
           </p>
         )}
       </div>
+
+      {/* ---------- Elegir otra bajada ---------- */}
+      {eligiendoBajada && stops && (
+        <>
+          <button
+            aria-label="Cerrar"
+            onClick={() => setEligiendoBajada(false)}
+            className="absolute inset-0 z-[2010] animate-fade-in bg-ink-950/40"
+          />
+          <div className="sheet absolute inset-x-0 bottom-0 z-[2020] max-h-[70%] animate-sheet-up overflow-y-auto px-4 pb-6 pt-2">
+            <SheetGrab onDismiss={() => setEligiendoBajada(false)} />
+
+            <h2 className="text-base font-extrabold tracking-tight text-ink-900">
+              ¿Dónde te bajás?
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-400">
+              Las paradas de este ómnibus, en orden. Cambiarla cambia el aviso y la caminata de
+              después.
+            </p>
+
+            <ul className="mt-3 divide-y divide-sand-200">
+              {stops.map((parada, i) => {
+                const esLaActual = parada.id === status?.stop?.id;
+                return (
+                  <li key={`${parada.id}-${i}`}>
+                    <button
+                      onClick={() => {
+                        setBajadaElegida(parada.id);
+                        setEligiendoBajada(false);
+                        // El viaje cambia: los avisos de este tramo se dan de
+                        // nuevo para la parada nueva.
+                        avisado.current = { preparate: false, bajate: false, cierre: false };
+                      }}
+                      aria-pressed={esLaActual}
+                      className="flex w-full items-center gap-3 py-3 text-left"
+                    >
+                      <span
+                        className={`h-2 w-2 flex-none rounded-full ${
+                          esLaActual ? 'bg-coral-500' : 'bg-sand-400'
+                        }`}
+                      />
+                      <span
+                        className={`min-w-0 flex-1 truncate text-data ${
+                          esLaActual ? 'font-bold text-ink-900' : 'text-ink-600'
+                        }`}
+                      >
+                        {formatStopName(parada.name)}
+                      </span>
+                      {esLaActual && (
+                        <span className="flex-none text-xs font-bold text-coral-500">Ahí bajás</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

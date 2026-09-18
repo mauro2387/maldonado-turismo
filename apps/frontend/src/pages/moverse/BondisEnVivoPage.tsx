@@ -15,8 +15,10 @@ import {
   Footprints,
   Crosshair,
   Clock,
+  Star,
 } from 'lucide-react';
 import { useVehiclePositions } from '@hooks/useDepartures';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 import { useGeolocation, MALDONADO_CENTER } from '@hooks/useGeolocation';
 import {
   transportService,
@@ -36,7 +38,8 @@ import {
   SPRITE_NATURAL_HEIGHT,
   SPRITE_NATURAL_WIDTH,
 } from '@components/map/busSprites';
-import { LiveIndicator } from '@components/ui/LiveIndicator';
+import { LiveIndicator, freshestFixAge } from '@components/ui/LiveIndicator';
+import { SheetGrab } from '@components/ui/SheetGrab';
 import { formatStopName } from '@lib/stopNames';
 import { formatDistance } from '@lib/geo';
 import {
@@ -415,6 +418,16 @@ export default function BondisEnVivoPage() {
    * El código es el del feed —con el que se filtra— y la etiqueta es el número
    * del cartel: la 17/19 llega como "179", y ese número no existe en la calle.
    */
+  const misLineas = useLoTuyoStore((estado) => estado.lineas);
+
+  /**
+   * Las tuyas primero.
+   *
+   * La fila de filtros es la lista de las veinte líneas que están en la
+   * calle, ordenada por número: la propia queda en el medio y hay que
+   * buscarla desplazando de costado cada vez. Las guardadas van al principio
+   * y con estrella, que es el mismo criterio que en la lista de líneas.
+   */
   const linesOnStreet = useMemo(() => {
     const byCode = new Map<string, string>();
     for (const vehicle of vehicles) {
@@ -422,10 +435,16 @@ export default function BondisEnVivoPage() {
         byCode.set(vehicle.line_code, vehicle.line_label ?? vehicle.line_code);
       }
     }
+    const guardadas = new Set(misLineas.map((linea) => linea.code));
     return [...byCode.entries()]
-      .map(([code, label]) => ({ code, label }))
-      .sort((a, b) => Number(a.code) - Number(b.code) || a.code.localeCompare(b.code));
-  }, [vehicles]);
+      .map(([code, label]) => ({ code, label, guardada: guardadas.has(code) }))
+      .sort(
+        (a, b) =>
+          Number(b.guardada) - Number(a.guardada) ||
+          Number(a.code) - Number(b.code) ||
+          a.code.localeCompare(b.code),
+      );
+  }, [vehicles, misLineas]);
 
   const visibleVehicles = useMemo(
     () => (lineFilter ? vehicles.filter((vehicle) => vehicle.line_code === lineFilter) : vehicles),
@@ -595,29 +614,64 @@ export default function BondisEnVivoPage() {
               {!selected && !lineFilter && ' · tocá uno para ver su recorrido'}
             </p>
           </div>
-          {vehicles.length > 0 && <LiveIndicator fixAgeSeconds={0} showAge={false} />}
+          {vehicles.length > 0 && (
+            // El fix más fresco de la flota, no un cero clavado: si los feeds
+            // se caen, este punto tiene que apagarse solo.
+            <LiveIndicator
+              fixAgeSeconds={freshestFixAge(
+                vehicles.map((vehicle) => vehicle.fix_time ?? vehicle.recorded_at),
+              )}
+              showAge={false}
+            />
+          )}
         </div>
 
+        {/* ---------- Filtrar por línea ----------
+            Los chips llevan sombra porque están **encima del mapa**: sin ella
+            el callejero se cuela por los huecos entre uno y otro y la fila se
+            lee como texto cortado, no como botones. Es la misma sombra que
+            usan los controles de zoom, que flotan igual que éstos.
+
+            Y la tira se desvanece a la derecha para decir que hay más: son
+            veinte líneas en una fila que se desplaza de costado, y sin borde
+            difuso la última que entra en pantalla parece la última que hay.
+            Se desvanecen **los chips**, con una máscara, y no se pinta un
+            degradado encima: cualquier color sólido sobre el mapa se ve como
+            una mancha, porque abajo hay callejero y no un fondo liso. */}
         {linesOnStreet.length > 0 && (
-          <div className="chip-row pointer-events-auto mx-0 mt-2 px-0">
+          <div
+            className="chip-row pointer-events-auto mx-0 mt-2 px-0"
+            style={{
+              maskImage: 'linear-gradient(to right, #000 88%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, #000 88%, transparent)',
+            }}
+          >
             <button
               onClick={() => {
                 setLineFilter(null);
                 clearSelection();
               }}
-              className={`chip ${lineFilter === null ? 'chip-active' : ''}`}
+              className={`chip shadow-float ${lineFilter === null ? 'chip-active' : ''}`}
             >
               Todas
             </button>
-            {linesOnStreet.map(({ code, label }) => (
+            {linesOnStreet.map(({ code, label, guardada }) => (
               <button
                 key={code}
                 onClick={() => {
                   setLineFilter(code === lineFilter ? null : code);
                   clearSelection();
                 }}
-                className={`chip ${lineFilter === code ? 'chip-active' : ''}`}
+                className={`chip shadow-float ${lineFilter === code ? 'chip-active' : ''}`}
               >
+                {guardada && (
+                  <Star
+                    className={`h-3 w-3 ${
+                      lineFilter === code ? 'fill-white text-white' : 'fill-coral-500 text-coral-500'
+                    }`}
+                    strokeWidth={2}
+                  />
+                )}
                 {label}
               </button>
             ))}
@@ -636,7 +690,9 @@ export default function BondisEnVivoPage() {
             <div className="pointer-events-auto flex items-center gap-3 rounded-card bg-ink-900 px-3.5 py-3 shadow-float">
               <p className="min-w-0 flex-1 text-xs font-semibold text-white">
                 Ese coche ya terminó su viaje.
-                {lineFilter ? ` Estos son los de la línea ${lineFilter} que andan ahora.` : ''}
+                {lineFilter
+                  ? ` Estos son los de la línea ${lineLabelFor(lineFilter, linesOnStreet)} que andan ahora.`
+                  : ''}
               </p>
               <button
                 onClick={() => setSelectedVehicleId(null)}
@@ -691,7 +747,7 @@ export default function BondisEnVivoPage() {
       {selectedStop && (
         <StopSheet
           stop={selectedStop}
-          lineCode={selected?.line_code ?? null}
+          lineLabel={selected?.line_label ?? selected?.line_code ?? null}
           isBoarding={selectedStop.id === boardingStopId}
           onClose={() => setSelectedStopId(null)}
         />
@@ -813,27 +869,32 @@ function Legend({
  */
 function StopSheet({
   stop,
-  lineCode,
+  lineLabel,
   isBoarding,
   onClose,
 }: {
   stop: RouteShapeStop;
-  lineCode: string | null;
+  /** El número del cartel, no el `line_code` del feed: "17/19" y no "179". */
+  lineLabel: string | null;
   isBoarding: boolean;
   onClose: () => void;
 }) {
   return (
     <div className="sheet absolute inset-x-0 bottom-0 z-[540] animate-sheet-up px-4 pb-5 pt-2">
-      <div className="sheet-grab" />
+      <SheetGrab onDismiss={onClose} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-base font-extrabold tracking-tight text-ink-900">
             {formatStopName(stop.name)}
           </h2>
+          {/* El número de orden de la parada dentro del recorrido no está: es
+              contabilidad de la empresa. Que ésta sea la parada 23 de la 17/19
+              no le dice nada a nadie parado en la vereda, y ocupaba el lugar
+              de lo único que sí importa acá, que es si conviene esperarlo. */}
           <p className="truncate text-xs text-ink-400">
             Parada {stop.code}
-            {lineCode ? ` · parada ${stop.sequence} de la línea ${lineCode}` : ''}
+            {lineLabel ? ` · línea ${lineLabel}` : ''}
             {isBoarding ? ' · acá te conviene esperarlo' : ''}
           </p>
         </div>
@@ -904,7 +965,7 @@ function VehicleSheet({
 
   return (
     <div className="sheet absolute inset-x-0 bottom-0 z-[520] max-h-[62%] animate-sheet-up overflow-y-auto px-4 pb-5 pt-2">
-      <div className="sheet-grab" />
+      <SheetGrab onDismiss={onClose} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
@@ -916,7 +977,9 @@ function VehicleSheet({
           </span>
           <div className="min-w-0">
             <h2 className="truncate text-base font-extrabold tracking-tight text-ink-900">
-              {vehicle.line_name ?? 'Línea sin destino publicado'}
+              {vehicle.line_name
+                ? formatStopName(vehicle.line_name)
+                : 'Línea sin destino publicado'}
             </h2>
             <p className="truncate text-xs text-ink-400">
               Coche {vehicle.vehicle_id.split('-').pop()}

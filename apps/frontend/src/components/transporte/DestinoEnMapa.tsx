@@ -67,11 +67,22 @@ export function DestinoEnMapa({
   center,
   onConfirm,
   onCancel,
+  titulo = 'Marcá a dónde vas',
+  etiqueta = 'Destino',
+  confirmar = 'Ir acá',
 }: {
   /** Dónde abre: la ubicación de la persona, o el centro de Maldonado. */
   center: { lat: number; lng: number };
   onConfirm: (point: PuntoElegido) => void;
   onCancel: () => void;
+  /**
+   * Qué se está marcando. La misma pantalla sirve para elegir a dónde ir y
+   * para guardar dónde queda tu casa, y el botón no puede decir "Ir acá"
+   * cuando lo que se está haciendo es guardar.
+   */
+  titulo?: string;
+  etiqueta?: string;
+  confirmar?: string;
 }) {
   const mapRef = useRef<LeafletMap | null>(null);
   const [point, setPoint] = useState(center);
@@ -135,7 +146,7 @@ export function DestinoEnMapa({
         >
           <X className="h-4 w-4" strokeWidth={2.5} />
         </button>
-        <span className="text-sm font-bold">Marcá a dónde vas</span>
+        <span className="text-sm font-bold">{titulo}</span>
       </header>
 
       {/* ---------- El mapa, con el pin quieto en el centro ---------- */}
@@ -176,7 +187,7 @@ export function DestinoEnMapa({
 
       {/* ---------- Confirmar ---------- */}
       <div className="flex-none border-t border-sand-200 bg-white px-4 pb-6 pt-4">
-        <p className="section-label">Destino</p>
+        <p className="section-label">{etiqueta}</p>
         <p
           className={`mt-0.5 truncate text-base font-bold ${
             naming ? 'text-ink-400' : 'text-ink-900'
@@ -190,7 +201,7 @@ export function DestinoEnMapa({
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-card bg-ink-900 py-3 text-sm font-bold text-white active:bg-ink-800"
         >
           <Check className="h-4 w-4" strokeWidth={2.5} />
-          Ir acá
+          {confirmar}
         </button>
       </div>
     </div>

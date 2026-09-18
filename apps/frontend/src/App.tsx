@@ -1,11 +1,13 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Layout } from '@components/layout/Layout';
 
 // Destinos principales
 import HomePage from '@pages/home/HomePage';
 import MoversePage from '@pages/moverse/MoversePage';
+import LineasPage from '@pages/moverse/LineasPage';
+import TarifasPage from '@pages/moverse/TarifasPage';
 
 /**
  * Las dos pantallas con mapa se cargan aparte.
@@ -34,6 +36,19 @@ import SearchPage from '@pages/SearchPage';
 import NotFoundPage from '@pages/NotFoundPage';
 
 /**
+ * El planificador se vuelve a montar cuando cambia lo que trae la URL.
+ *
+ * Lee el destino y la hora una sola vez, al montarse, que es lo correcto para
+ * un enlace que se abre. Pero navegar de un planificador a otro -del banner
+ * del recordatorio a un chip de Moverse y de vuelta- reusa el mismo
+ * componente, y sin esto seguía mostrando el viaje anterior con la URL nueva.
+ */
+function PlanificadorRoute() {
+  const { search } = useLocation();
+  return <PlanificadorPage key={search} />;
+}
+
+/**
  * Cinco destinos y sus fichas.
  *
  * Las rutas viejas siguen funcionando pero redirigen: los QR de las paradas ya
@@ -57,6 +72,8 @@ function App() {
             }
           />
           <Route path="/moverse" element={<MoversePage />} />
+          <Route path="/moverse/lineas" element={<LineasPage />} />
+          <Route path="/moverse/tarifas" element={<TarifasPage />} />
           <Route
             path="/moverse/bondis"
             element={
@@ -75,7 +92,7 @@ function App() {
           <Route path="/transporte/paradas/:id/qr" element={<ParadaQRPage />} />
 
           {/* Herramientas */}
-          <Route path="/transporte/planificador" element={<PlanificadorPage />} />
+          <Route path="/transporte/planificador" element={<PlanificadorRoute />} />
           <Route path="/transporte/escaner" element={<EscanerQRPage />} />
           <Route path="/noticias" element={<NoticiasPage />} />
           <Route path="/noticia/:id" element={<NoticiaDetailPage />} />

@@ -2,9 +2,21 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icono.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0B1F33" />
+
+    <!--
+      Instalable. El manifiesto es lo que hace que Android ofrezca "agregar a
+      la pantalla de inicio" y que la app abra a pantalla completa, con su
+      ícono y sin la barra del navegador. Los dos meta de Apple son lo mismo
+      para iPhone, que no lee el manifiesto para eso.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Maldonado" />
     <meta name="description" content="Eventos, transporte en vivo y lugares de Maldonado. Intendencia de Maldonado." />
 
     <!-- Open Graph -->

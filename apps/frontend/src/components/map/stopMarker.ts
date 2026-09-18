@@ -66,11 +66,19 @@ export interface StopMarkerOptions {
   accuracyM?: number | null;
   /** Forzar el estado firme/aproximado sin pasar el error. */
   reliable?: boolean;
+  /**
+   * Es una de las paradas guardadas. Lleva una estrella coral encima y se
+   * dibuja al tamaño de una parada cercana aunque el mapa esté lejos: es la
+   * parada de tu casa, y tiene que encontrarse de un vistazo entre las mil.
+   */
+  guardada?: boolean;
 }
 
 /** Tamaño del marcador según el zoom. */
-function sizeFor(zoom: number, boarding: boolean): number {
+function sizeFor(zoom: number, boarding: boolean, guardada = false): number {
   if (boarding) return 30;
+  // La guardada nunca baja del cartel legible: es la que se está buscando.
+  if (guardada) return zoom >= 16 ? 24 : 20;
   if (zoom >= 17) return 24;
   if (zoom >= 16) return 20;
   if (zoom >= 15) return 16;
@@ -110,9 +118,10 @@ export function stopMarker({
   boarding = false,
   accuracyM = null,
   reliable,
+  guardada = false,
 }: StopMarkerOptions = {}): DivIcon {
   const firme = reliable ?? (accuracyM === null || accuracyM <= PRECISE_ENOUGH_M);
-  const size = sizeFor(zoom, boarding);
+  const size = sizeFor(zoom, boarding, guardada);
   const color = boarding ? STOP_BOARDING : STOP_ACCENT;
 
   // El glifo necesita píxeles para leerse. Abajo de 16 el cartel es una mancha
@@ -142,13 +151,25 @@ export function stopMarker({
          border:${grosor}px ${firme ? 'solid' : 'dashed'} ${color};
          opacity:${firme ? 1 : 0.8};"></span>`;
 
+  // La estrella de "guardada", en coral -el acento de la app, el mismo de la
+  // estrella de la ficha-, apoyada en la esquina de arriba a la derecha del
+  // cartel. Es un distintivo, no otro marcador: el cartel sigue siendo el
+  // mismo y el toque abre la misma ficha.
+  const estrella = guardada
+    ? `<svg width="${Math.round(size * 0.55)}" height="${Math.round(size * 0.55)}" viewBox="0 0 24 24"
+            style="position:absolute;top:-${Math.round(size * 0.18)}px;right:-${Math.round(size * 0.18)}px">
+         <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"
+               fill="#DC4227" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+       </svg>`
+    : '';
+
   return new DivIcon({
     className: '',
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     html:
-      `<div style="width:${size}px;height:${size}px;` +
-      `filter:drop-shadow(0 1px 2px rgba(11,31,51,.35));">${cuerpo}</div>`,
+      `<div style="position:relative;width:${size}px;height:${size}px;` +
+      `filter:drop-shadow(0 1px 2px rgba(11,31,51,.35));">${cuerpo}${estrella}</div>`,
   });
 }
 

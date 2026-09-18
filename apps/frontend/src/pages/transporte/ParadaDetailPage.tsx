@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Bus,
+  ChevronRight,
   MapPin,
   QrCode,
   Share2,
@@ -11,13 +12,27 @@ import {
   Home as HomeIcon,
   Lightbulb,
   Armchair,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { transportService, BusStop, StopScheduleToday } from '@services/transportService';
 import { useStopArrivals } from '@hooks/useDepartures';
 import { useGeolocation } from '@hooks/useGeolocation';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { EmptyState, ErrorState, SkeletonList, InlineNotice } from '@components/ui/States';
+import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
+import { Estrella } from '@components/ui/Estrella';
+import { useLoTuyoStore } from '@store/loTuyoStore';
+import { usePreferenciasStore } from '@store/preferenciasStore';
+import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
+import { useAlarmaStore, UMBRAL_MIN } from '@store/alarmaStore';
+import { useRecordatorioStore } from '@store/recordatorioStore';
+import { instanteDeHoy } from '@lib/hora';
+import { prepararAvisos } from '@lib/avisos';
+import { arrivalLine } from '@components/transporte/ArrivalRow';
+import { operatorName, operatorNames } from '@lib/operators';
 import { formatStopName } from '@lib/stopNames';
 import { distanceMeters, formatDistance, walkingMinutes } from '@lib/geo';
 
@@ -36,15 +51,40 @@ const SERVICES = [
   { key: 'accessibility' as const, icon: Accessibility, label: 'Accesible' },
 ];
 
-/** Los identificadores del feed, escritos como se conoce a cada empresa. */
-const OPERATOR_LABELS: Record<string, string> = {
-  codesa: 'CODESA',
-  'maldonado-turismo': 'Maldonado Turismo',
-  micro: 'Micro',
-};
-
-function operatorNames(operators: string[]): string {
-  return operators.map((operator) => OPERATOR_LABELS[operator] ?? operator).join(' · ');
+/**
+ * La campana al lado de una llegada: pone o saca la alarma de esa línea en
+ * esta parada. Con el aviso a cinco minutos, es "avisame cuando esté cerca"
+ * para un coche que ya viene, o para el siguiente si éste se pierde.
+ */
+function CampanaDeLinea({
+  activa,
+  linea,
+  onToggle,
+}: {
+  activa: boolean;
+  linea: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={activa}
+      aria-label={
+        activa
+          ? `Cancelar el aviso de la línea ${linea}`
+          : `Avisame cuando la línea ${linea} esté a ${UMBRAL_MIN} minutos`
+      }
+      className={`flex h-9 w-9 flex-none items-center justify-center rounded-full ${
+        activa ? 'bg-ink-900 text-white' : 'text-ink-300 active:bg-sand-100'
+      }`}
+    >
+      {activa ? (
+        <BellRing className="h-4 w-4" strokeWidth={2.25} />
+      ) : (
+        <Bell className="h-4 w-4" strokeWidth={2} />
+      )}
+    </button>
+  );
 }
 
 export default function ParadaDetailPage() {
@@ -57,7 +97,105 @@ export default function ParadaDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
-  const { arrivals, loading: loadingArrivals } = useStopArrivals(id);
+  /** La línea cuyo horario completo está abierto. */
+  const [scheduleLine, setScheduleLine] = useState<string | null>(null);
+
+  const {
+    arrivals: todasLasLlegadas,
+    loading: loadingArrivals,
+    error: errorArrivals,
+  } = useStopArrivals(id);
+  const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
+
+  /** Con "sólo con rampa", las que no la tienen o no se sabe quedan afuera. */
+  const arrivals = soloAccesibles
+    ? todasLasLlegadas.filter((arrival) => arrival.accessible === true)
+    : todasLasLlegadas;
+  const llegadasOcultas = todasLasLlegadas.length - arrivals.length;
+
+  /**
+   * Si alguna de las empresas que pasan por acá no está reportando.
+   *
+   * Con el feed caído, "ningún ómnibus en camino" suena a dato y es
+   * ignorancia: no se sabe si viene alguno. Se dice cuál empresa, porque las
+   * demás pueden estar andando perfecto.
+   */
+  const { empresasCaidas } = useTransportHealth();
+
+  /**
+   * Si esta parada está guardada. La estrella va en el encabezado, al lado
+   * del nombre: es la parada de la esquina de casa, y quien la escanea todas
+   * las mañanas tiene que poder dejar de escanearla.
+   */
+  const guardada = useLoTuyoStore((estado) =>
+    estado.paradas.some((parada) => parada.id === Number(id)),
+  );
+  const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+
+  /**
+   * "Avisame cuando venga la 24": una alarma por línea en esta parada. Se
+   * pone desde cada llegada y desde cada línea del horario, porque se
+   * necesita justamente cuando todavía no viene ninguna.
+   */
+  const alarma = useAlarmaStore((estado) => estado.pendiente);
+  const ponerAlarma = useAlarmaStore((estado) => estado.poner);
+  const cancelarAlarma = useAlarmaStore((estado) => estado.cancelar);
+  const alarmaDe = (linea: string) =>
+    alarma !== null && alarma.stopId === Number(id) && alarma.linea === linea;
+  const alternarAlarma = (linea: string) => {
+    if (alarmaDe(linea)) {
+      cancelarAlarma();
+      return;
+    }
+    // El toque es el gesto que habilita el sonido y pide el permiso de
+    // notificaciones, con contexto: acaba de tocar una campana.
+    prepararAvisos();
+    if (stop) ponerAlarma({ stopId: stop.id, stopName: formatStopName(stop.name), linea });
+  };
+
+  /**
+   * "Avisame antes del último."
+   *
+   * Es el recordatorio de salida puesto a la hora del último servicio de la
+   * línea en esta parada, según el horario publicado, diez minutos antes.
+   * Es la pregunta de la noche -"¿a qué hora pasa el último?"- convertida en
+   * un aviso, para no tener que acordarse. Diez minutos porque el horario es
+   * el papel y no el GPS: el coche puede pasar unos minutos antes, y llegar
+   * a la parada con el último ya ido no tiene arreglo.
+   */
+  const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
+  const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
+  const cancelarRecordatorio = useRecordatorioStore((estado) => estado.cancelar);
+  const ANTES_DEL_ULTIMO_MS = 10 * 60_000;
+  const salidaParaElUltimo = (lastAt: string): number | null => {
+    const pasa = instanteDeHoy(lastAt);
+    if (pasa === null) return null;
+    const salir = pasa - ANTES_DEL_ULTIMO_MS;
+    return salir > Date.now() ? salir : null;
+  };
+  const recordatorioDelUltimo = (linea: string, lastAt: string) =>
+    recordatorio !== null &&
+    recordatorio.linea === linea &&
+    recordatorio.pasaA !== null &&
+    recordatorio.pasaA === instanteDeHoy(lastAt) &&
+    recordatorio.enlace === `/transporte/paradas/${id}`;
+  const alternarRecordatorioDelUltimo = (linea: string, lastAt: string) => {
+    if (recordatorioDelUltimo(linea, lastAt)) {
+      cancelarRecordatorio();
+      return;
+    }
+    const salirA = salidaParaElUltimo(lastAt);
+    if (salirA === null || !stop) return;
+    prepararAvisos();
+    ponerRecordatorio({
+      salirA,
+      pasaA: instanteDeHoy(lastAt),
+      linea,
+      parada: formatStopName(stop.name),
+      destino: '',
+      enlace: `/transporte/paradas/${id}`,
+    });
+  };
 
   /**
    * El horario publicado de esta parada.
@@ -152,6 +290,7 @@ export default function ParadaDetailPage() {
           title="No encontramos esta parada"
           message={error ?? 'Puede que el código del QR ya no esté en servicio.'}
           onRetry={() => navigate('/moverse')}
+          retryLabel="Ver los ómnibus que andan ahora"
         />
       </div>
     );
@@ -162,6 +301,10 @@ export default function ParadaDetailPage() {
     : null;
 
   const services = SERVICES.filter((service) => stop[service.key]);
+
+  const empresasSinGps = (stop.operators ?? []).filter((operator) =>
+    empresasCaidas.includes(operator),
+  );
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-8 pt-4 md:px-6 md:pt-8">
@@ -176,11 +319,26 @@ export default function ParadaDetailPage() {
       <header>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-display text-ink-900">{formatStopName(stop.name)}</h1>
-          {stop.code && (
-            <span className="mt-1 flex-none rounded-chip bg-sand-100 px-2 py-1 text-xs font-bold text-ink-600">
-              {stop.code}
-            </span>
-          )}
+          <div className="flex flex-none items-center gap-1">
+            {stop.code && (
+              <span className="rounded-chip bg-sand-100 px-2 py-1 text-xs font-bold text-ink-600">
+                {stop.code}
+              </span>
+            )}
+            <Estrella
+              activa={guardada}
+              que="esta parada"
+              onToggle={() =>
+                toggleParada({
+                  id: stop.id,
+                  name: formatStopName(stop.name),
+                  lat: Number(stop.lat),
+                  lng: Number(stop.lng),
+                })
+              }
+              className="-my-2 -mr-2"
+            />
+          </div>
         </div>
         <p className="mt-1 flex items-center gap-1.5 text-data text-ink-400">
           <MapPin className="h-3.5 w-3.5" strokeWidth={1.9} />
@@ -231,14 +389,65 @@ export default function ParadaDetailPage() {
           {arrivals.length > 0 && <LiveIndicator fixAgeSeconds={arrivals[0].fix_age_seconds} />}
         </div>
 
+        <div className="mt-2.5 flex items-center gap-2">
+          <SoloAccesiblesChip />
+          {llegadasOcultas > 0 && (
+            <span className="text-xs text-ink-400">
+              {llegadasOcultas === 1 ? '1 sin rampa oculto' : `${llegadasOcultas} sin rampa ocultos`}
+            </span>
+          )}
+        </div>
+
+        {/* La empresa no está reportando: se dice antes que cualquier lista,
+            vacía o no. Si hay dos empresas y una anda, sus coches se ven
+            igual abajo; lo que no se ve es la otra, y eso hay que decirlo. */}
+        {empresasSinGps.length > 0 && !loadingArrivals && (
+          <div className="mt-3">
+            <InlineNotice
+              tone="warn"
+              message={`No estamos recibiendo el GPS de ${empresasSinGps
+                .map(operatorName)
+                .join(' y ')}. No podemos decir si viene alguno de sus ómnibus; el horario de abajo sigue valiendo.`}
+            />
+          </div>
+        )}
+
         {loadingArrivals ? (
           <SkeletonList rows={2} className="mt-3" />
+        ) : errorArrivals && arrivals.length === 0 ? (
+          // No se pudo preguntar: no es lo mismo que "ninguno en camino", y
+          // el horario de abajo -que se pidió aparte- sigue valiendo.
+          <div className="mt-3">
+            <InlineNotice
+              tone="warn"
+              message="No pudimos traer las llegadas en vivo. Seguimos intentando; el horario de abajo sigue valiendo."
+            />
+          </div>
         ) : arrivals.length > 0 ? (
           <div className="card mt-3 flex flex-col gap-3.5">
             {arrivals.map((arrival) => (
-              <ArrivalRow key={arrival.vehicle_id} arrival={arrival} />
+              <div key={arrival.vehicle_id} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <ArrivalRow arrival={arrival} />
+                </div>
+                <CampanaDeLinea
+                  activa={alarmaDe(arrivalLine(arrival))}
+                  linea={arrivalLine(arrival)}
+                  onToggle={() => alternarAlarma(arrivalLine(arrival))}
+                />
+              </div>
             ))}
           </div>
+        ) : llegadasOcultas > 0 ? (
+          <EmptyState
+            icon={Bus}
+            title="Ninguno con rampa en camino"
+            description={
+              llegadasOcultas === 1
+                ? 'Viene uno, pero no reporta tener rampa. Sacá el filtro para verlo.'
+                : `Vienen ${llegadasOcultas}, pero ninguno reporta tener rampa. Sacá el filtro para verlos.`
+            }
+          />
         ) : schedule?.finished ? (
           /* Se terminó el servicio por hoy. Es la respuesta que faltaba: hasta
              ahora esto decía "ningún ómnibus en camino", que no distingue
@@ -257,6 +466,12 @@ export default function ParadaDetailPage() {
             title="Ninguno reportando ahora"
             description={`Por horario, el próximo es la línea ${schedule.lines[0].line_label} a las ${schedule.lines[0].next_at}.`}
           />
+        ) : empresasSinGps.length > 0 && empresasSinGps.length === (stop.operators ?? []).length ? (
+          // Sin ninguna empresa reportando no hay lista vacía que mostrar: el
+          // aviso de arriba ya lo dijo, y "ninguno en camino" sería mentira.
+          // Lo que dice el horario -que terminó, o a qué hora viene- sí se
+          // muestra, arriba de esto: es justamente lo que sigue valiendo.
+          null
         ) : (
           <EmptyState
             icon={Bus}
@@ -284,10 +499,16 @@ export default function ParadaDetailPage() {
           </div>
 
           <div className="card mt-3 flex flex-col gap-3">
+            {/* Cada renglón abre la tabla completa de esa línea.
+                Estaba escrita y sólo se podía abrir desde el mapa en vivo con
+                una línea ya filtrada: quien está parado en la parada mirando
+                que el próximo pasa a las 12:06 es exactamente quien quiere ver
+                a qué hora pasan los demás. */}
             {schedule.lines.map((linea) => (
-              <div
+              <button
                 key={`${linea.operator}-${linea.line_label}-${linea.headsign ?? ''}`}
-                className="flex items-baseline gap-2.5"
+                onClick={() => setScheduleLine(linea.line_label)}
+                className="flex w-full items-baseline gap-2.5 text-left"
               >
                 <span className="flex h-6 min-w-6 flex-none items-center justify-center rounded-chip bg-sand-100 px-1.5 text-xs font-extrabold text-ink-900">
                   {linea.line_label}
@@ -322,14 +543,70 @@ export default function ParadaDetailPage() {
                     </>
                   )}
                 </p>
-              </div>
+
+                <ChevronRight className="h-4 w-4 flex-none self-center text-ink-300" strokeWidth={2.5} />
+              </button>
             ))}
           </div>
 
           <p className="mt-2 px-1 text-xs text-ink-400">
-            Horario publicado por las empresas. Los minutos reales dependen del
+            Tocá una línea para ver su horario completo. Los minutos reales dependen del
             tránsito.
           </p>
+
+          {/* La alarma, desde el horario: es donde se necesita, porque se
+              pone cuando todavía no viene ninguna. Sólo para las líneas que
+              todavía pasan hoy. */}
+          {schedule.lines.some((linea) => !linea.finished) && (
+            <div className="chip-row mt-3">
+              {schedule.lines
+                .filter((linea) => !linea.finished)
+                .map((linea) => (
+                  <button
+                    key={`alarma-${linea.operator}-${linea.line_label}`}
+                    onClick={() => alternarAlarma(linea.line_label)}
+                    aria-pressed={alarmaDe(linea.line_label)}
+                    className={`chip ${alarmaDe(linea.line_label) ? 'chip-active' : ''}`}
+                  >
+                    {alarmaDe(linea.line_label) ? (
+                      <BellRing className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    ) : (
+                      <Bell className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    )}
+                    {alarmaDe(linea.line_label)
+                      ? `Te avisamos cuando venga la ${linea.line_label}`
+                      : `Avisame cuando venga la ${linea.line_label}`}
+                  </button>
+                ))}
+            </div>
+          )}
+
+          {/* Y antes del último: un recordatorio a la hora del último
+              servicio publicado, diez minutos antes. Sólo si todavía no
+              pasó esa hora. */}
+          {schedule.lines.some(
+            (linea) => !linea.finished && salidaParaElUltimo(linea.last_at) !== null,
+          ) && (
+            <div className="chip-row mt-2">
+              {schedule.lines
+                .filter((linea) => !linea.finished && salidaParaElUltimo(linea.last_at) !== null)
+                .map((linea) => (
+                  <button
+                    key={`ultimo-${linea.operator}-${linea.line_label}`}
+                    onClick={() => alternarRecordatorioDelUltimo(linea.line_label, linea.last_at)}
+                    aria-pressed={recordatorioDelUltimo(linea.line_label, linea.last_at)}
+                    className={`chip ${
+                      recordatorioDelUltimo(linea.line_label, linea.last_at) ? 'chip-active' : ''
+                    }`}
+                  >
+                    <Bell className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    {recordatorioDelUltimo(linea.line_label, linea.last_at)
+                      ? `Te avisamos antes del último de la ${linea.line_label} (${linea.last_at})`
+                      : `Avisame antes del último de la ${linea.line_label} (${linea.last_at})`}
+                  </button>
+                ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -376,6 +653,10 @@ export default function ParadaDetailPage() {
         <div className="mt-3">
           <InlineNotice tone="info" message={shareNotice} />
         </div>
+      )}
+
+      {scheduleLine && (
+        <LineScheduleSheet label={scheduleLine} onClose={() => setScheduleLine(null)} />
       )}
     </div>
   );

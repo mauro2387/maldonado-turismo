@@ -12,10 +12,14 @@ import { useGeolocation, MALDONADO_CENTER } from '@hooks/useGeolocation';
 import { Basemap, DEFAULT_ZOOM } from '@components/map/basemap';
 import { MapControls } from '@components/map/MapControls';
 import { ArrivalRow } from '@components/transporte/ArrivalRow';
+import { SheetGrab } from '@components/ui/SheetGrab';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { distanceMeters, formatDistance } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import { stopMarker } from '@components/map/stopMarker';
+import { firstImage, photoMarker } from '@components/map/photoMarker';
+import { enlaceParaIr, useLoTuyoStore } from '@store/loTuyoStore';
+import { Estrella } from '@components/ui/Estrella';
 
 /**
  * El mapa de la app: dónde queda cada cosa en Maldonado.
@@ -44,21 +48,6 @@ const INITIAL_ZOOM = DEFAULT_ZOOM;
 const STOPS_MIN_ZOOM = 15;
 
 
-
-function pinIcon(color: string): DivIcon {
-  return new DivIcon({
-    className: '',
-    iconSize: [24, 30],
-    iconAnchor: [12, 30],
-    html: `<svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <path d="M12 29c0 0 10-11.2 10-17A10 10 0 1 0 2 12c0 5.8 10 17 10 17z" fill="${color}" stroke="#fff" stroke-width="2"/>
-             <circle cx="12" cy="11.5" r="3.6" fill="#fff"/>
-           </svg>`,
-  });
-}
-
-const placeIcon = pinIcon('#0B1F33');
-const eventIcon = pinIcon('#DC4227');
 
 const userIcon = new DivIcon({
   className: '',
@@ -123,8 +112,24 @@ type Selection =
       lat: number;
       lng: number;
     }
-  | { kind: 'place'; id: string; name: string; description?: string; category?: string }
-  | { kind: 'event'; id: string; name: string; location?: string; date?: string };
+  | {
+      kind: 'place';
+      id: string;
+      name: string;
+      description?: string;
+      category?: string;
+      lat: number;
+      lng: number;
+    }
+  | {
+      kind: 'event';
+      id: string;
+      name: string;
+      location?: string;
+      date?: string;
+      lat: number;
+      lng: number;
+    };
 
 export default function MapaPage() {
   const [searchParams] = useSearchParams();
@@ -200,11 +205,24 @@ export default function MapaPage() {
   );
 
   /** Las paradas que entran en pantalla, y sólo de cerca. */
+  /**
+   * Las paradas guardadas se ven siempre que la capa esté prendida, a
+   * cualquier zoom: son dos o tres, son las que la persona busca, y
+   * esconderlas junto con las mil de relleno cuando el mapa está lejos es
+   * esconder justo las que importan.
+   */
+  const guardadas = useLoTuyoStore((estado) => estado.paradas);
+  const idsGuardadas = useMemo(() => new Set(guardadas.map((parada) => parada.id)), [guardadas]);
+
   const visibleStops = useMemo(() => {
-    if (!active.paradas || zoom < STOPS_MIN_ZOOM) return [];
-    if (!bounds) return stops;
-    return stops.filter((stop) => bounds.contains([stop.lat, stop.lng]));
-  }, [stops, bounds, zoom, active.paradas]);
+    if (!active.paradas) return [];
+    const enPantalla = (stop: { lat: number; lng: number }) =>
+      !bounds || bounds.contains([stop.lat, stop.lng]);
+    if (zoom < STOPS_MIN_ZOOM) {
+      return stops.filter((stop) => idsGuardadas.has(stop.id) && enPantalla(stop));
+    }
+    return stops.filter(enPantalla);
+  }, [stops, bounds, zoom, active.paradas, idsGuardadas]);
 
   const visibleEvents = useMemo(
     () => events.filter((event) => (event.lat ?? event.latitude) && (event.lng ?? event.longitude)),
@@ -244,7 +262,11 @@ export default function MapaPage() {
           <Marker
             key={`stop-${stop.id}`}
             position={[stop.lat, stop.lng]}
-            icon={stopMarker({ zoom, accuracyM: stop.accuracy_m ?? null })}
+            icon={stopMarker({
+              zoom,
+              accuracyM: stop.accuracy_m ?? null,
+              guardada: idsGuardadas.has(stop.id),
+            })}
             eventHandlers={{
               click: () =>
                 setSelection({
@@ -266,13 +288,20 @@ export default function MapaPage() {
             <Marker
               key={`place-${place.id}`}
               position={[Number(place.lat ?? place.latitude), Number(place.lng ?? place.longitude)]}
-              icon={placeIcon}
+              icon={photoMarker({
+                name: place.name,
+                imageUrl: firstImage(place),
+                zoom,
+                selected: selection?.kind === 'place' && selection.id === place.id,
+              })}
               eventHandlers={{
                 click: () =>
                   setSelection({
                     kind: 'place',
                     id: place.id,
                     name: place.name,
+                    lat: Number(place.lat ?? place.latitude),
+                    lng: Number(place.lng ?? place.longitude),
                     description: place.description,
                     category: place.category,
                   }),
@@ -285,13 +314,20 @@ export default function MapaPage() {
             <Marker
               key={`event-${event.id}`}
               position={[Number(event.lat ?? event.latitude), Number(event.lng ?? event.longitude)]}
-              icon={eventIcon}
+              icon={photoMarker({
+                name: event.title,
+                imageUrl: firstImage(event),
+                zoom,
+                selected: selection?.kind === 'event' && selection.id === event.id,
+              })}
               eventHandlers={{
                 click: () =>
                   setSelection({
                     kind: 'event',
                     id: event.id,
                     name: event.title,
+                    lat: Number(event.lat ?? event.latitude),
+                    lng: Number(event.lng ?? event.longitude),
                     location: event.location,
                     date: event.date,
                   }),
@@ -403,6 +439,19 @@ function SelectionSheet({
 }) {
   const { arrivals } = useStopArrivals(selection.kind === 'stop' ? selection.id : undefined);
 
+  /**
+   * Guardar la parada desde el mapa.
+   *
+   * La estrella estaba en la ficha de la parada y no acá, así que la forma
+   * de guardar la parada que uno acaba de encontrar en el mapa era entrar a
+   * su ficha, guardarla y volver. Es el mismo gesto que en la ficha y el
+   * mismo componente.
+   */
+  const guardadas = useLoTuyoStore((estado) => estado.paradas);
+  const toggleParada = useLoTuyoStore((estado) => estado.toggleParada);
+  const guardada =
+    selection.kind === 'stop' && guardadas.some((parada) => parada.id === selection.id);
+
   const distance =
     selection.kind === 'stop' && userCoords
       ? distanceMeters(userCoords.lat, userCoords.lng, selection.lat, selection.lng)
@@ -410,7 +459,7 @@ function SelectionSheet({
 
   return (
     <div className="sheet absolute inset-x-0 bottom-0 z-[520] animate-sheet-up px-4 pb-5 pt-2">
-      <div className="sheet-grab" />
+      <SheetGrab onDismiss={onClose} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -424,9 +473,26 @@ function SelectionSheet({
             {distance !== null && ` · a ${formatDistance(distance)}`}
           </p>
         </div>
-        <button onClick={onClose} aria-label="Cerrar" className="flex-none p-1">
-          <X className="h-4 w-4 text-ink-400" strokeWidth={2} />
-        </button>
+        <div className="flex flex-none items-center">
+          {selection.kind === 'stop' && (
+            <Estrella
+              activa={guardada}
+              que="esta parada"
+              onToggle={() =>
+                toggleParada({
+                  id: selection.id,
+                  name: formatStopName(selection.name),
+                  lat: selection.lat,
+                  lng: selection.lng,
+                })
+              }
+              className="-my-2"
+            />
+          )}
+          <button onClick={onClose} aria-label="Cerrar" className="p-1">
+            <X className="h-4 w-4 text-ink-400" strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       {selection.kind === 'stop' && (
@@ -471,8 +537,17 @@ function SelectionSheet({
           <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
         </Link>
         {selection.kind !== 'stop' && (
+          // Con la coordenada del punto y no con su nombre: el planificador
+          // buscaba "Plaza San Fernando" en el catálogo y podía no encontrarla
+          // -o encontrar otra- cuando el lugar ya estaba ahí, marcado en el
+          // mapa que la persona está mirando.
           <Link
-            to={`/transporte/planificador?destino=${encodeURIComponent(selection.name)}`}
+            to={enlaceParaIr({
+              id: `mapa:${selection.kind}:${selection.id}`,
+              name: selection.name,
+              lat: selection.lat,
+              lng: selection.lng,
+            })}
             className="btn btn-secondary flex-none px-4"
             aria-label="Cómo llegar en ómnibus"
           >

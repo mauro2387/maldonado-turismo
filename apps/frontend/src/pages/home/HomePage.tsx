@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Bus, Waves, Wind } from 'lucide-react';
-import { useGeolocation } from '@hooks/useGeolocation';
+import { ChevronRight, Bus, Waves, Wind, Home, Briefcase } from 'lucide-react';
+import { useDondeEstoy } from '@hooks/useDondeEstoy';
 import { useTransportHealth } from '@hooks/useTransportHealth';
 import { useWeather } from '@hooks/useWeather';
 import { useNearbyDepartures } from '@hooks/useDepartures';
@@ -10,10 +10,13 @@ import { LineTag } from '@components/ui/LineTag';
 import { Thumb } from '@components/ui/Thumb';
 import { LiveIndicator } from '@components/ui/LiveIndicator';
 import { InlineNotice } from '@components/ui/States';
-import { arrivalLine, lineColor } from '@components/transporte/ArrivalRow';
+import { arrivalDestination, arrivalLine, lineColor } from '@components/transporte/ArrivalRow';
 import { formatDistance, walkingMinutes } from '@lib/geo';
 import { formatStopName } from '@lib/stopNames';
 import type { Arrival, NearbyDeparture } from '@services/transportService';
+import { ParadaGuardadaCard } from '@components/transporte/ParadaGuardadaCard';
+import { enlaceParaIr, useLoTuyoStore } from '@store/loTuyoStore';
+import { distanceMeters } from '@lib/geo';
 
 /**
  * Portada.
@@ -32,7 +35,20 @@ import type { Arrival, NearbyDeparture } from '@services/transportService';
  * Todo lo que se muestra acá sale de una fuente: si el clima falla, la tarjeta
  * no aparece; si no hay eventos hoy, la sección no aparece. Ningún dato de
  * relleno.
+ *
+ * **Y lo tuyo, si lo hay.** "A casa" y "Al trabajo" debajo del saludo, y
+ * "En tu parada" con las llegadas de las paradas guardadas: es lo que
+ * contesta a la mañana desde la cama, cuando "tu próximo ómnibus" no puede
+ * porque todavía no estás cerca de ninguna parada. Sin nada guardado no
+ * aparece nada; la portada no pide que se configure.
  */
+
+/**
+ * Cuántas paradas guardadas se muestran en la portada. Dos: la de casa y la
+ * del trabajo, que es lo que guarda casi todo el mundo; las demás están en
+ * Moverse.
+ */
+const MAX_PARADAS_EN_PORTADA = 2;
 
 function greeting(hour: number): string {
   if (hour < 6) return 'Buenas noches';
@@ -77,7 +93,10 @@ export default function HomePage() {
   // Si el GPS de las empresas está entrando. Decide entre "no viene
   // ninguno" y "no tenemos el dato", que no son lo mismo.
   const { sinGps, empresasCaidas } = useTransportHealth();
-  const { coords, granted, status, message, request } = useGeolocation();
+  // El mismo punto que Moverse: si la persona dijo dónde está, la portada
+  // mira desde ahí. Ver `useDondeEstoy`.
+  const { coords, granted, manual, nombre, status, message, request } = useDondeEstoy();
+  const { casa, trabajo, paradas } = useLoTuyoStore();
   const { weather } = useWeather(coords);
   const { stops, ready } = useNearbyDepartures(coords);
   const { events } = useEvents();
@@ -130,6 +149,25 @@ export default function HomePage() {
         <h1 className="mt-0.5 text-display text-ink-900">{greeting(new Date().getHours())}</h1>
       </header>
 
+      {/* ---------- A casa, al trabajo ----------
+          Sólo los que están puestos: la portada no pide configurar nada. */}
+      {(casa || trabajo) && (
+        <div className="chip-row mt-3">
+          {casa && (
+            <Link to={enlaceParaIr(casa)} className="chip chip-active">
+              <Home className="h-3.5 w-3.5" strokeWidth={2.5} />
+              A casa
+            </Link>
+          )}
+          {trabajo && (
+            <Link to={enlaceParaIr(trabajo)} className="chip chip-active">
+              <Briefcase className="h-3.5 w-3.5" strokeWidth={2.5} />
+              Al trabajo
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* ---------- Tu próximo ómnibus ---------- */}
       <section className="mt-4" aria-labelledby="proximo-omnibus">
         <h2 id="proximo-omnibus" className="sr-only">
@@ -158,7 +196,7 @@ export default function HomePage() {
                 />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-ink-900">
-                    {nextArrival.destination ?? nextArrival.line_name ?? 'En recorrido'}
+                    {arrivalDestination(nextArrival)}
                   </p>
                   <p className="truncate text-xs text-ink-400">
                     {formatStopName(nextStop.name)} · a {formatDistance(nextStop.distance_m)} tuyo
@@ -237,13 +275,43 @@ export default function HomePage() {
           </Link>
         )}
 
-        {!granted && status !== 'locating' && (
-          <InlineNotice
-            message={message ?? 'Activá tu ubicación para ver las paradas que tenés cerca.'}
-            action={{ label: 'Activar', onClick: request }}
-          />
+        {manual ? (
+          <InlineNotice tone="info" message={`Mirando desde ${nombre}.`} />
+        ) : (
+          !granted &&
+          status !== 'locating' && (
+            <InlineNotice
+              message={message ?? 'Activá tu ubicación para ver las paradas que tenés cerca.'}
+              action={{ label: 'Activar', onClick: request }}
+            />
+          )
         )}
       </section>
+
+      {/* ---------- En tu parada ---------- */}
+      {paradas.length > 0 && (
+        <section className="mt-6" aria-labelledby="en-tu-parada">
+          <div className="flex items-baseline justify-between">
+            <h2 id="en-tu-parada" className="section-label">
+              En tu parada
+            </h2>
+            <Link to="/moverse" className="text-xs font-bold text-coral-500">
+              Todas
+            </Link>
+          </div>
+          <div className="mt-3 flex flex-col gap-3">
+            {paradas.slice(0, MAX_PARADAS_EN_PORTADA).map((parada) => (
+              <ParadaGuardadaCard
+                key={parada.id}
+                parada={parada}
+                distanceM={
+                  granted ? distanceMeters(coords.lat, coords.lng, parada.lat, parada.lng) : null
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---------- Clima ---------- */}
       {weather && (

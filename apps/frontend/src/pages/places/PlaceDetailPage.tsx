@@ -5,12 +5,27 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { usePlace } from '@hooks/usePlaces';
+import { enlaceParaIr, useLoTuyoStore } from '@store/loTuyoStore';
 
 export default function PlaceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+
+  /**
+   * El corazón guarda de verdad.
+   *
+   * Era un `useState(false)`: se pintaba de rojo y se olvidaba al salir de la
+   * ficha. Ahora va a "tus lugares", que es lo mismo que la estrella del
+   * planificador, así que el lugar aparece como chip en Moverse y se puede ir
+   * en ómnibus con un toque. El id lleva el prefijo para no chocar con los
+   * ids del buscador de destinos, que son otra numeración.
+   */
+  const lugarId = `lugar:${id}`;
+  const isFavorite = useLoTuyoStore((estado) =>
+    estado.lugares.some((lugar) => lugar.id === lugarId),
+  );
+  const toggleLugar = useLoTuyoStore((estado) => estado.toggleLugar);
 
   // Confirmación de "enlace copiado" dentro de la interfaz. Antes era un
   // alert() del navegador, que bloquea la pantalla y se ve distinto en cada
@@ -107,7 +122,16 @@ export default function PlaceDetailPage() {
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsFavorite(!isFavorite)}
+              onClick={() => {
+                const lat = place.lat ?? place.latitude;
+                const lng = place.lng ?? place.longitude;
+                // Sin coordenada no hay a dónde ir: no se guarda un lugar al
+                // que después no se puede planificar.
+                if (typeof lat !== 'number' || typeof lng !== 'number') return;
+                toggleLugar({ id: lugarId, name: place.name, lat, lng });
+              }}
+              aria-pressed={isFavorite}
+              aria-label={isFavorite ? 'Quitar de tus lugares' : 'Guardar en tus lugares'}
               className="btn-ghost rounded-full p-2"
             >
               <Heart
@@ -234,8 +258,18 @@ export default function PlaceDetailPage() {
               tiene las paradas, las líneas y las unidades en vivo, así que
               "cómo llegar" no tiene por qué mandarte afuera. */}
           {((place.latitude && place.longitude) || (place.lat && place.lng)) && (
+            // Con la coordenada de la ficha y no con el nombre: mandado por
+            // nombre, el planificador lo buscaba de nuevo en el catálogo y
+            // podía no encontrarlo -o encontrar otro "Museo"- teniendo el
+            // punto exacto acá. El id es el mismo con el que lo guarda el
+            // corazón, así que el destino se reconoce como guardado.
             <Link
-              to={`/transporte/planificador?destino=${encodeURIComponent(place.name)}`}
+              to={enlaceParaIr({
+                id: lugarId,
+                name: place.name,
+                lat: Number(place.lat ?? place.latitude),
+                lng: Number(place.lng ?? place.longitude),
+              })}
               className="btn btn-primary flex flex-col items-center justify-center gap-1 py-3 text-xs sm:text-sm"
             >
               <Bus size={20} />

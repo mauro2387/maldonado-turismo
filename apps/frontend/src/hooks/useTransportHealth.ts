@@ -56,5 +56,21 @@ export function useTransportHealth() {
     .filter((feed) => feed.state === 'caido')
     .map((feed) => feed.operator);
 
-  return { health, sinGps, gpsParcial, empresasCaidas };
+  /**
+   * Si hay horario publicado cargado para la temporada de hoy.
+   *
+   * El backend lo sabe -sabe en qué temporada estamos y cuál importamos- y
+   * hasta ahora sólo lo miraba un monitor externo. Importa para la persona:
+   * el horario es la **única** fuente para un viaje que todavía no empezó,
+   * así que sin él "planificar para más tarde" no puede contestar nada, y
+   * eso hay que decirlo antes de que alguien lo pruebe. Pasa de verdad: el
+   * 1º de diciembre cambia la temporada y el horario de verano no está
+   * cargado hasta que alguien lo importa.
+   *
+   * `null` mientras no contestó el chequeo: no se sabe, y no se avisa nada.
+   */
+  const horariosCargados = health ? health.schedules.available : null;
+  const temporada = health?.schedules.season ?? null;
+
+  return { health, sinGps, gpsParcial, empresasCaidas, horariosCargados, temporada };
 }
