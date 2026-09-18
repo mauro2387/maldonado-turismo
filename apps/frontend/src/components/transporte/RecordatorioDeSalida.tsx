@@ -52,6 +52,17 @@ const PANTALLA_PRENDIDA_MS = 15 * 60_000;
  */
 const GRACIA_MS = 30 * 60_000;
 
+/**
+ * "en 12 min", "en 2 h 05 min": un recordatorio para el último de la noche
+ * puesto a la tarde quedaba en "en 369 min", que nadie convierte de cabeza.
+ */
+function enCuanto(minutos: number): string {
+  if (minutos < 60) return `en ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `en ${horas} h` : `en ${horas} h ${String(resto).padStart(2, '0')} min`;
+}
+
 export function RecordatorioDeSalida() {
   const pendiente = useRecordatorioStore((estado) => estado.pendiente);
   const marcarAvisado = useRecordatorioStore((estado) => estado.marcarAvisado);
@@ -139,7 +150,7 @@ export function RecordatorioDeSalida() {
               ? pasadoMin >= 1
                 ? `Tenías que salir hace ${pasadoMin} min`
                 : '¡Es hora de salir!'
-              : `Salís ${horaDeReloj(pendiente.salirA)} · en ${faltaMin} min`}
+              : `Salís ${horaDeReloj(pendiente.salirA)} · ${enCuanto(faltaMin)}`}
           </span>
           <span
             className={`block truncate text-xs ${esHora ? 'text-white/85' : 'text-ink-300'}`}

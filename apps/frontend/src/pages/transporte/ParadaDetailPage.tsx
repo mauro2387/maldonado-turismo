@@ -28,6 +28,8 @@ import { useLoTuyoStore } from '@store/loTuyoStore';
 import { usePreferenciasStore } from '@store/preferenciasStore';
 import { SoloAccesiblesChip } from '@components/transporte/SoloAccesiblesChip';
 import { useAlarmaStore, UMBRAL_MIN } from '@store/alarmaStore';
+import { useRecordatorioStore } from '@store/recordatorioStore';
+import { instanteDeHoy } from '@lib/hora';
 import { prepararAvisos } from '@lib/avisos';
 import { arrivalLine } from '@components/transporte/ArrivalRow';
 import { operatorName, operatorNames } from '@lib/operators';
@@ -149,6 +151,50 @@ export default function ParadaDetailPage() {
     // notificaciones, con contexto: acaba de tocar una campana.
     prepararAvisos();
     if (stop) ponerAlarma({ stopId: stop.id, stopName: formatStopName(stop.name), linea });
+  };
+
+  /**
+   * "Avisame antes del último."
+   *
+   * Es el recordatorio de salida puesto a la hora del último servicio de la
+   * línea en esta parada, según el horario publicado, diez minutos antes.
+   * Es la pregunta de la noche -"¿a qué hora pasa el último?"- convertida en
+   * un aviso, para no tener que acordarse. Diez minutos porque el horario es
+   * el papel y no el GPS: el coche puede pasar unos minutos antes, y llegar
+   * a la parada con el último ya ido no tiene arreglo.
+   */
+  const recordatorio = useRecordatorioStore((estado) => estado.pendiente);
+  const ponerRecordatorio = useRecordatorioStore((estado) => estado.poner);
+  const cancelarRecordatorio = useRecordatorioStore((estado) => estado.cancelar);
+  const ANTES_DEL_ULTIMO_MS = 10 * 60_000;
+  const salidaParaElUltimo = (lastAt: string): number | null => {
+    const pasa = instanteDeHoy(lastAt);
+    if (pasa === null) return null;
+    const salir = pasa - ANTES_DEL_ULTIMO_MS;
+    return salir > Date.now() ? salir : null;
+  };
+  const recordatorioDelUltimo = (linea: string, lastAt: string) =>
+    recordatorio !== null &&
+    recordatorio.linea === linea &&
+    recordatorio.pasaA !== null &&
+    recordatorio.pasaA === instanteDeHoy(lastAt) &&
+    recordatorio.enlace === `/transporte/paradas/${id}`;
+  const alternarRecordatorioDelUltimo = (linea: string, lastAt: string) => {
+    if (recordatorioDelUltimo(linea, lastAt)) {
+      cancelarRecordatorio();
+      return;
+    }
+    const salirA = salidaParaElUltimo(lastAt);
+    if (salirA === null || !stop) return;
+    prepararAvisos();
+    ponerRecordatorio({
+      salirA,
+      pasaA: instanteDeHoy(lastAt),
+      linea,
+      parada: formatStopName(stop.name),
+      destino: '',
+      enlace: `/transporte/paradas/${id}`,
+    });
   };
 
   /**
@@ -530,6 +576,33 @@ export default function ParadaDetailPage() {
                     {alarmaDe(linea.line_label)
                       ? `Te avisamos cuando venga la ${linea.line_label}`
                       : `Avisame cuando venga la ${linea.line_label}`}
+                  </button>
+                ))}
+            </div>
+          )}
+
+          {/* Y antes del último: un recordatorio a la hora del último
+              servicio publicado, diez minutos antes. Sólo si todavía no
+              pasó esa hora. */}
+          {schedule.lines.some(
+            (linea) => !linea.finished && salidaParaElUltimo(linea.last_at) !== null,
+          ) && (
+            <div className="chip-row mt-2">
+              {schedule.lines
+                .filter((linea) => !linea.finished && salidaParaElUltimo(linea.last_at) !== null)
+                .map((linea) => (
+                  <button
+                    key={`ultimo-${linea.operator}-${linea.line_label}`}
+                    onClick={() => alternarRecordatorioDelUltimo(linea.line_label, linea.last_at)}
+                    aria-pressed={recordatorioDelUltimo(linea.line_label, linea.last_at)}
+                    className={`chip ${
+                      recordatorioDelUltimo(linea.line_label, linea.last_at) ? 'chip-active' : ''
+                    }`}
+                  >
+                    <Bell className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    {recordatorioDelUltimo(linea.line_label, linea.last_at)
+                      ? `Te avisamos antes del último de la ${linea.line_label} (${linea.last_at})`
+                      : `Avisame antes del último de la ${linea.line_label} (${linea.last_at})`}
                   </button>
                 ))}
             </div>
