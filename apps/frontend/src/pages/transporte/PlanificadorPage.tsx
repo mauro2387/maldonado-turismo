@@ -207,7 +207,7 @@ export default function PlanificadorPage() {
    * decirlo "según el horario" en una opción y "en vivo" en otra parece un
    * capricho y no una empresa caída.
    */
-  const { empresasCaidas } = useTransportHealth();
+  const { empresasCaidas, horariosCargados, temporada } = useTransportHealth();
   /** Sólo ómnibus con rampa. Es la preferencia de toda la app, ver el store. */
   const soloAccesibles = usePreferenciasStore((estado) => estado.soloAccesibles);
   const agregarReciente = loTuyo.agregarReciente;
@@ -713,6 +713,22 @@ export default function PlanificadorPage() {
       {shareNotice && (
         <div className="px-4 pt-3">
           <InlineNotice tone="info" message={shareNotice} />
+        </div>
+      )}
+
+      {/* ---------- Sin horario de esta temporada no hay futuro ----------
+          Un viaje que todavía no empezó sólo se puede contestar con el
+          horario publicado. Si no está cargado el de la temporada de hoy, se
+          dice **antes** de elegir la hora, y no con un vacío después de
+          buscar: el vacío se lee como "no hay ómnibus". */}
+      {horariosCargados === false && (departAt !== null || arriveBy !== null) && (
+        <div className="px-4 pt-3">
+          <InlineNotice
+            tone="warn"
+            message={`Todavía no tenemos cargado el horario de la temporada de ${
+              temporada ?? 'esta temporada'
+            }, y es lo único con lo que se puede planificar a una hora futura. Con "ahora" sí podemos: miramos los ómnibus que están en la calle.`}
+          />
         </div>
       )}
 

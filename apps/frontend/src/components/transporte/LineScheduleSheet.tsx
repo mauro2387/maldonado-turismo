@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import { transportService, LineTimetable } from '@services/transportService';
+import { useTransportHealth } from '@hooks/useTransportHealth';
 import { SheetGrab } from '@components/ui/SheetGrab';
 import { formatStopName } from '@lib/stopNames';
 import { fechaDeGuardado } from '@lib/guardadoLocal';
@@ -39,6 +40,14 @@ const SENTIDO: Record<string, string> = { ida: 'Ida', vuelta: 'Vuelta', circular
 export function LineScheduleSheet({ label, onClose }: { label: string; onClose: () => void }) {
   const [schedule, setSchedule] = useState<LineTimetable | null>(null);
   const [loading, setLoading] = useState(true);
+  /**
+   * Por qué no hay horario, cuando no hay.
+   *
+   * No es lo mismo "esta línea no tiene horario cargado" que "no tenemos
+   * ninguno de esta temporada": lo segundo le pasa a todas las líneas y se
+   * arregla importando, y decirlo evita que alguien pruebe línea por línea.
+   */
+  const { horariosCargados, temporada } = useTransportHealth();
 
   useEffect(() => {
     let cancelled = false;
@@ -112,8 +121,15 @@ export function LineScheduleSheet({ label, onClose }: { label: string; onClose: 
 
         {!loading && !schedule?.available && (
           <div className="mt-5 rounded-card bg-sand-100 px-3.5 py-4">
-            <p className="text-sm font-bold text-ink-900">Todavía no cargamos el horario de esta línea</p>
+            <p className="text-sm font-bold text-ink-900">
+              {horariosCargados === false
+                ? `Todavía no cargamos los horarios de la temporada de ${temporada ?? 'esta temporada'}`
+                : 'Todavía no cargamos el horario de esta línea'}
+            </p>
             <p className="mt-1 text-xs text-ink-400">
+              {horariosCargados === false
+                ? 'Le pasa a todas las líneas hasta que se importen los que publican las empresas. '
+                : ''}
               Mientras tanto, el mapa te muestra por dónde viene cada ómnibus en vivo y en qué parada
               tomarlo.
             </p>
