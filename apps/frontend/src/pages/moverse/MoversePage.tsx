@@ -23,6 +23,7 @@ import { LineTag } from '@components/ui/LineTag';
 import { ArrivalRow, lineColor } from '@components/transporte/ArrivalRow';
 import { ParadaGuardadaCard } from '@components/transporte/ParadaGuardadaCard';
 import { ElegirLugarSheet } from '@components/transporte/ElegirLugarSheet';
+import { LineScheduleSheet } from '@components/transporte/LineScheduleSheet';
 import { Estrella } from '@components/ui/Estrella';
 import {
   cochesPorLinea,
@@ -114,6 +115,8 @@ export default function MoversePage() {
   const [query, setQuery] = useState('');
   /** Cuál de los dos se está configurando en el sheet, si alguno. */
   const [configurando, setConfigurando] = useState<'casa' | 'trabajo' | null>(null);
+  /** La línea cuyo horario se abrió desde el buscador. */
+  const [horarioDe, setHorarioDe] = useState<string | null>(null);
 
   const loTuyo = useLoTuyoStore();
   /** Sólo ómnibus con rampa. Es la preferencia de toda la app, ver el store. */
@@ -263,6 +266,24 @@ export default function MoversePage() {
   };
 
   /**
+   * Lo que se escribió es un número de línea.
+   *
+   * "¿A dónde vas?" es la caja más grande de la pantalla, y la gente escribe
+   * ahí lo primero que tiene en la cabeza, que muchas veces es "24": antes
+   * eso mandaba al planificador a buscar un destino llamado 24 y volvía con
+   * "no encontramos ese lugar". Si lo escrito empieza como el número de una
+   * línea, se ofrece la línea -por dónde va y sus horarios- arriba del
+   * resto, sin sacar el buscador de destinos.
+   */
+  const lineasQueCoinciden = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term || !/^\d/.test(term)) return [];
+    return lines
+      .filter((line) => (line.line_label ?? line.line_code).toLowerCase().startsWith(term))
+      .slice(0, 3);
+  }, [query, lines]);
+
+  /**
    * El enlace de un ómnibus lleva su coche y su línea. El coche es lo que se
    * quiere ver; la línea queda de respaldo para cuando ese coche ya terminó su
    * viaje y el mapa, en vez de quedarse mudo, muestra los que sí andan.
@@ -317,6 +338,45 @@ export default function MoversePage() {
             className="input pl-10 font-semibold"
           />
         </div>
+
+        {lineasQueCoinciden.length > 0 && (
+          <div className="mt-2 flex flex-col gap-2">
+            {lineasQueCoinciden.map((line) => (
+              <div
+                key={`${line.operator}-${line.line_code}`}
+                className="card flex items-center gap-3 py-3"
+              >
+                {/* La tarjeta entera abre el mapa con la línea, que es lo
+                    que se busca al escribir un número; el horario es el
+                    botón chico de al lado. Dos botones con texto no
+                    entraban en un teléfono sin cortar el nombre. */}
+                <Link
+                  to={`/moverse/bondis?linea=${encodeURIComponent(line.line_code)}`}
+                  className="flex min-w-0 flex-1 items-center gap-3"
+                >
+                  <LineTag code={line.line_label ?? line.line_code} color={lineColor(line.operator)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-data font-bold text-ink-900">
+                      Línea {line.line_label ?? line.line_code} · por dónde va
+                    </span>
+                    <span className="block truncate text-xs text-ink-400">
+                      {lineEndpoints(line)}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setHorarioDe(line.line_label ?? line.line_code)}
+                  aria-label={`Horarios de la línea ${line.line_label ?? line.line_code}`}
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-sand-100 text-ink-900 active:bg-sand-200"
+                >
+                  <Clock className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Lo tuyo primero. Casa y trabajo están siempre, configurados o no:
             un chip que dice "Agregá tu casa" es la única forma de que alguien
@@ -393,6 +453,8 @@ export default function MoversePage() {
           ))}
         </div>
       </form>
+
+      {horarioDe && <LineScheduleSheet label={horarioDe} onClose={() => setHorarioDe(null)} />}
 
       {configurando && (
         <ElegirLugarSheet
