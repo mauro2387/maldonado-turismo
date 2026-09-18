@@ -13,8 +13,9 @@ import {
   History,
   Plus,
   Ticket,
+  MapPinned,
 } from 'lucide-react';
-import { useGeolocation } from '@hooks/useGeolocation';
+import { useDondeEstoy } from '@hooks/useDondeEstoy';
 import { useNearbyDepartures, useVehiclePositions } from '@hooks/useDepartures';
 import { useAlerts, useLines } from '@hooks/useTransport';
 import { useTransportHealth } from '@hooks/useTransportHealth';
@@ -110,7 +111,10 @@ function catchable(arrival: Arrival, stop: NearbyDeparture): boolean {
 
 export default function MoversePage() {
   const navigate = useNavigate();
-  const { coords, granted, status, message, request } = useGeolocation();
+  const { coords, granted, manual, nombre, status, message, request, fijar, soltar } =
+    useDondeEstoy();
+  /** El sheet de "estoy en otro lado", abierto. */
+  const [eligiendoUbicacion, setEligiendoUbicacion] = useState(false);
   const [radiusIndex, setRadiusIndex] = useState(0);
   const [query, setQuery] = useState('');
   /** Cuál de los dos se está configurando en el sheet, si alguno. */
@@ -527,13 +531,70 @@ export default function MoversePage() {
         <ChevronRight className="h-4 w-4 flex-none text-ink-300" strokeWidth={2.5} />
       </Link>
 
-      {!granted && status !== 'locating' && (
+      {/* ---------- Desde dónde se mira ----------
+          Sin permiso de ubicación la app caía al centro de Maldonado y ahí
+          terminaba: las llegadas eran las del centro para alguien que puede
+          estar en San Carlos, y el permiso negado no se vuelve a pedir nunca.
+          Ahora el punto se puede decir a mano, y lo que se está usando se
+          dice siempre —también cuando es el GPS—. Ver `useDondeEstoy`. */}
+      {(!granted || manual) && status !== 'locating' && (
         <div className="mt-4">
           <InlineNotice
-            message={message ?? 'Activá tu ubicación para ver los ómnibus que te pasan cerca.'}
-            action={{ label: 'Activar', onClick: request }}
+            tone={manual ? 'info' : 'warn'}
+            message={
+              manual
+                ? `Estás mirando desde ${nombre}.`
+                : (message ?? 'Sin tu ubicación mostramos el centro de Maldonado.')
+            }
+            action={
+              manual
+                ? { label: 'Volver a mi ubicación', onClick: soltar }
+                : status === 'denied'
+                  ? { label: 'Decir dónde estoy', onClick: () => setEligiendoUbicacion(true) }
+                  : { label: 'Activar', onClick: request }
+            }
           />
+          {!manual && status === 'denied' && (
+            <p className="mt-1.5 px-1 text-xs text-ink-400">
+              El navegador no vuelve a preguntar por la ubicación una vez que se negó: hay que
+              habilitarla en la configuración del sitio, o decirnos dónde estás.
+            </p>
+          )}
         </div>
+      )}
+
+      {/* Con el GPS andando también se puede cambiar: quien planifica desde la
+          oficina el viaje que va a hacer desde su casa quiere ver las llegadas
+          de la parada de su casa. */}
+      {granted && (
+        <button
+          onClick={() => setEligiendoUbicacion(true)}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-coral-500"
+        >
+          <MapPinned className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Mirar desde otro lado
+        </button>
+      )}
+
+      {eligiendoUbicacion && (
+        <ElegirLugarSheet
+          titulo="Estás en"
+          actual={null}
+          conAtajos
+          alternativa={{
+            label: 'Usar mi ubicación',
+            onPick: () => {
+              soltar();
+              request();
+              setEligiendoUbicacion(false);
+            },
+          }}
+          onPick={(lugar) => {
+            fijar({ name: lugar.name, lat: lugar.lat, lng: lugar.lng });
+            setEligiendoUbicacion(false);
+          }}
+          onClose={() => setEligiendoUbicacion(false)}
+        />
       )}
 
       {/* ---------- Tus paradas ----------

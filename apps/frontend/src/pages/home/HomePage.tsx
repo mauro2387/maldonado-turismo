@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Bus, Waves, Wind, Home, Briefcase } from 'lucide-react';
-import { useGeolocation } from '@hooks/useGeolocation';
+import { useDondeEstoy } from '@hooks/useDondeEstoy';
 import { useTransportHealth } from '@hooks/useTransportHealth';
 import { useWeather } from '@hooks/useWeather';
 import { useNearbyDepartures } from '@hooks/useDepartures';
@@ -93,7 +93,9 @@ export default function HomePage() {
   // Si el GPS de las empresas está entrando. Decide entre "no viene
   // ninguno" y "no tenemos el dato", que no son lo mismo.
   const { sinGps, empresasCaidas } = useTransportHealth();
-  const { coords, granted, status, message, request } = useGeolocation();
+  // El mismo punto que Moverse: si la persona dijo dónde está, la portada
+  // mira desde ahí. Ver `useDondeEstoy`.
+  const { coords, granted, manual, nombre, status, message, request } = useDondeEstoy();
   const { casa, trabajo, paradas } = useLoTuyoStore();
   const { weather } = useWeather(coords);
   const { stops, ready } = useNearbyDepartures(coords);
@@ -273,11 +275,16 @@ export default function HomePage() {
           </Link>
         )}
 
-        {!granted && status !== 'locating' && (
-          <InlineNotice
-            message={message ?? 'Activá tu ubicación para ver las paradas que tenés cerca.'}
-            action={{ label: 'Activar', onClick: request }}
-          />
+        {manual ? (
+          <InlineNotice tone="info" message={`Mirando desde ${nombre}.`} />
+        ) : (
+          !granted &&
+          status !== 'locating' && (
+            <InlineNotice
+              message={message ?? 'Activá tu ubicación para ver las paradas que tenés cerca.'}
+              action={{ label: 'Activar', onClick: request }}
+            />
+          )
         )}
       </section>
 
