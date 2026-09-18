@@ -15,8 +15,10 @@ import {
   Footprints,
   Crosshair,
   Clock,
+  Star,
 } from 'lucide-react';
 import { useVehiclePositions } from '@hooks/useDepartures';
+import { useLoTuyoStore } from '@store/loTuyoStore';
 import { useGeolocation, MALDONADO_CENTER } from '@hooks/useGeolocation';
 import {
   transportService,
@@ -416,6 +418,16 @@ export default function BondisEnVivoPage() {
    * El código es el del feed —con el que se filtra— y la etiqueta es el número
    * del cartel: la 17/19 llega como "179", y ese número no existe en la calle.
    */
+  const misLineas = useLoTuyoStore((estado) => estado.lineas);
+
+  /**
+   * Las tuyas primero.
+   *
+   * La fila de filtros es la lista de las veinte líneas que están en la
+   * calle, ordenada por número: la propia queda en el medio y hay que
+   * buscarla desplazando de costado cada vez. Las guardadas van al principio
+   * y con estrella, que es el mismo criterio que en la lista de líneas.
+   */
   const linesOnStreet = useMemo(() => {
     const byCode = new Map<string, string>();
     for (const vehicle of vehicles) {
@@ -423,10 +435,16 @@ export default function BondisEnVivoPage() {
         byCode.set(vehicle.line_code, vehicle.line_label ?? vehicle.line_code);
       }
     }
+    const guardadas = new Set(misLineas.map((linea) => linea.code));
     return [...byCode.entries()]
-      .map(([code, label]) => ({ code, label }))
-      .sort((a, b) => Number(a.code) - Number(b.code) || a.code.localeCompare(b.code));
-  }, [vehicles]);
+      .map(([code, label]) => ({ code, label, guardada: guardadas.has(code) }))
+      .sort(
+        (a, b) =>
+          Number(b.guardada) - Number(a.guardada) ||
+          Number(a.code) - Number(b.code) ||
+          a.code.localeCompare(b.code),
+      );
+  }, [vehicles, misLineas]);
 
   const visibleVehicles = useMemo(
     () => (lineFilter ? vehicles.filter((vehicle) => vehicle.line_code === lineFilter) : vehicles),
@@ -637,7 +655,7 @@ export default function BondisEnVivoPage() {
             >
               Todas
             </button>
-            {linesOnStreet.map(({ code, label }) => (
+            {linesOnStreet.map(({ code, label, guardada }) => (
               <button
                 key={code}
                 onClick={() => {
@@ -646,6 +664,14 @@ export default function BondisEnVivoPage() {
                 }}
                 className={`chip shadow-float ${lineFilter === code ? 'chip-active' : ''}`}
               >
+                {guardada && (
+                  <Star
+                    className={`h-3 w-3 ${
+                      lineFilter === code ? 'fill-white text-white' : 'fill-coral-500 text-coral-500'
+                    }`}
+                    strokeWidth={2}
+                  />
+                )}
                 {label}
               </button>
             ))}
